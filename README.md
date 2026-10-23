@@ -88,3 +88,11 @@ The assistant now uses an accuracy-first instruction and, when another configure
 ## Live web research
 
 Mahi AI detects requests for current/latest information, news, prices, releases, explicit online search, and source links. It prefers Gemini and enables the built-in Google Search grounding tool for text-only requests; the streaming response includes a **Sources** list from Gemini grounding metadata when provided. Ordinary questions do not trigger web search. If the search provider fails and another provider is used, the answer must not pretend it performed live verification. Google Search grounding is subject to the Gemini model/account's availability, quota, and applicable terms.
+
+
+## Advanced retrieval and computation tools
+
+- Current/latest/news/source requests enable Gemini Google Search grounding when no inline attachment is being analyzed; grounded citations are collected from Gemini response metadata and appended as source links.
+- Prompts containing public `https://` URLs enable Gemini URL Context so it can read supported public pages and PDFs. URLs requiring login, paywalled content, private-network URLs, and some media/document types may not be retrievable.
+- Explicit arithmetic, numerical, statistics, or execution requests may enable Gemini's sandboxed Python code-execution tool. Requests to write a script remain code-generation tasks unless the user asks to run/test it.
+- These built-in tools depend on the selected Gemini model, API access, quota, and service terms. When retrieval is not available, the assistant must not claim a live search or execution occurred.
