@@ -443,10 +443,14 @@ async function* readOpenAIEventStream(response: Response): AsyncGenerator<string
       if (raw && raw !== "[DONE]") {
         try {
           const event = JSON.parse(raw);
+          if (event?.error) throw new Error("Provider stream returned an error");
+          if (event?.choices?.[0]?.finish_reason === "length") throw new Error("Provider response was truncated at its output limit");
           const value = event?.choices?.[0]?.delta?.content;
           const text = typeof value === "string" ? value : "";
           if (text) yield text;
-        } catch (_) {}
+        } catch (error) {
+          if (error instanceof Error && (error.message.includes("truncated") || error.message.includes("stream returned an error"))) throw error;
+        }
       }
     }
   } finally {
@@ -677,7 +681,7 @@ async function generateGeminiImage(prompt: string, attachments: PreparedAttachme
         }
       })
     },
-    90000
+    70000
   );
   if (!response.ok) throw new Error(await readProviderError(response));
   const data = await response.json();
@@ -845,7 +849,7 @@ async function streamChatResponse(
       const failures: string[] = [];
       let chosen: { provider: string; text: string } | null = null;
       const startedAt = Date.now();
-      const totalProviderBudgetMs = 128000;
+      const totalProviderBudgetMs = 115000;
       try {
         for (let index = 0; index < available.length; index++) {
           const remaining = totalProviderBudgetMs - (Date.now() - startedAt);
