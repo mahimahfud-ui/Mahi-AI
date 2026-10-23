@@ -120,6 +120,8 @@ async function prepareAttachments(userId: string, values: unknown): Promise<Prep
     if (!response.ok) throw new Error("Could not read attachment " + item.name + ". Please remove it and upload again.");
     const buffer = new Uint8Array(await response.arrayBuffer());
     if (buffer.byteLength > 15 * 1024 * 1024) throw new Error("Each attachment must be 15 MB or smaller.");
+    totalBytes = totalBytes - declared + buffer.byteLength;
+    if (totalBytes > 20 * 1024 * 1024) throw new Error("All attachments together must be 20 MB or smaller.");
     const mimeType = String(item.mime_type || response.headers.get("content-type") || "application/octet-stream").split(";")[0].toLowerCase();
     const attachment: PreparedAttachment = {
       path: item.path, name: item.name.slice(0, 160), mime_type: mimeType, mimeType,
