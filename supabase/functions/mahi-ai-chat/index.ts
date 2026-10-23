@@ -228,49 +228,110 @@ function shouldUseWebSearch(prompt: string): boolean {
 
 function classifyTask(prompt: string): string {
   const s = prompt.toLowerCase();
-  if (/(debug|stack trace|typescript|javascript|python|html|css|react|sql|api|function|compiler|program|code|bug|c[oó]digo|programar|depurar|erro de c[oó]digo|c[oó]digo fuente|programmieren|debuggen|код|программирование|отладка|代码|编程|调试|プログラム|コード|デバッグ|코드|프로그래밍|디버그|كود|برمجة|تصحيح|कोड|प्रोग्रामिंग|त्रुटि|کد|برنامه‌نویسی|কোড|প্রোগ্রামিং|বাগ|এরর|ত্রুটি)/i.test(s)) return "coding";
-  if (/(prove|proof|derive|equation|calculate|math|logic|reason|compare|evaluate|analy[sz]e|step by step|matem[aá]tica|calcular|analizar|raisonnement|calculer|mathematik|berechnen|ragionamento|calcolare|вычисл|доказательств|数学|推理|计算|数学|論理|推論|계산|추론|منطق|حساب|गणित|तर्क|गणনা|যুক্তি|বিশ্লেষণ|হিসাব|সমাধান)/i.test(s)) return "reasoning";
-  if (/(story|poem|creative|rewrite|write a|blog|script|caption|lyrics|cuento|poema|escribir|historia|histoire|po[eè]me|schreiben|geschichte|racconto|poesia|история|стихотвор|故事|诗|寫作|物語|詩|이야기|시|قصة|شعر|कहानी|कविता|গল্প|কবিতা|লিখে দাও|রচনা|ক্যাপশন)/i.test(s)) return "creative";
+  // Noun-only questions (e.g. "What is HTML?") should remain general. Route by action + code intent.
+  const codingAction = /\b(?:build|create|design|develop|implement|fix|debug|refactor|review|write|generate|make|run|execute|test|compile|convert|optimi[sz]e)\b/i.test(s) ||
+    /(?:banao|banai|toiri koro|code dao|code likhe dao|bug fix koro|thik kore dao|run koro|test koro|website banao|app banao|site banao|feature add koro)/i.test(s);
+  const codeContext = /\b(?:website|web site|web app|frontend|front-end|backend|back-end|landing page|component|api|script|app|database|sql|html|css|javascript|typescript|python|react|function|compiler|program|code|bug|stack trace|traceback|syntax error|exception|source code|programming)\b/i.test(s);
+  const explicitCodingIssue = /\b(?:debug|stack trace|traceback|syntax error|compile error|code review|fix (?:this|the|my) (?:code|script|bug|error)|run (?:this|the) code|execute (?:this|the) code|test (?:this|the) code|refactor (?:this|the|my) code)\b/i.test(s) ||
+    /(?:code ta kaj korchhe na|code e error|code er bug|error ta fix|website er bug|app er bug|script ta run|code run kore|code test kore)/i.test(s);
+  if (explicitCodingIssue || (codingAction && codeContext)) return "coding";
+  if (/(prove|proof|derive|equation|calculate|math|logic|reason|compare|evaluate|analy[sz]e|step by step|matem[aá]tica|calcular|analizar|raisonnement|calculer|mathematik|berechnen|ragionamento|calcolare|вычисл|доказательств|数学|推理|计算|数学|論理|推論|계산|추론|منطق|حساب|गणित|तर्क|গণনা|যুক্তি|বিশ্লেষণ|হিসাব|সমাধান)/i.test(s)) return "reasoning";
+  if (/(story|poem|creative|rewrite|write a|blog|script|caption|lyrics|cuento|poema|escribir|historia|histoire|po[eè]me|schreiben|geschichte|racconto|poesia|история|стихотвор|故事|诗|寫作|物語|詩|이야기|시|قصة|شعر|कहानी|কবিতা|লিখে দাও|রচনা|ক্যাপশন)/i.test(s)) return "creative";
   return "general";
 }
+
+function configuredSecret(names: string[]): boolean {
+  const value = envFirst(names);
+  return !!value && value.trim() !== "এপিয়াই" && !/^YOUR_.+_KEY$/i.test(value.trim());
+}
+
+function flagEnabled(name: string): boolean {
+  return envFirst([name])?.trim().toLowerCase() === "true";
+}
+
 function providerIsConfigured(name: string): boolean {
-  if (name === "gemini") return !!envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
-  if (name === "groq") return !!envFirst(["GROQ_API_KEY"]);
-  if (name === "openrouter") return !!envFirst(["OPENROUTER_API_KEY"]);
-  if (name === "deepseek") return !!envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
-  if (name === "mistral") return !!envFirst(["MISTRAL_API_KEY"]);
-  if (name === "nvidia") return !!envFirst(["NVIDIA_API_KEY"]);
-  if (name === "cloudflare") return !!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
-  if (name === "openai") return !!envFirst(["OPENAI_API_KEY"]);
-  if (name === "anthropic") return !!envFirst(["ANTHROPIC_API_KEY"]);
+  if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+  if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
+  if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
+  // Direct DeepSeek API requests may incur charges; require explicit opt-in.
+  if (name === "deepseek") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
+  if (name === "mistral") return configuredSecret(["MISTRAL_API_KEY"]);
+  if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
+  if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") &&
+    configuredSecret(["CLOUDFLARE_API_TOKEN"]) && configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
+  if (name === "openai") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["OPENAI_API_KEY"]);
+  if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
+function providerCooldownMs(reason: string): number {
+  const message = reason.toLowerCase();
+  if (/\b401\b|\b403\b|invalid api key|authentication failed|rejected the api key/.test(message)) return 30 * 60_000;
+  if (/\b429\b|quota|rate limit|too many requests/.test(message)) return 90_000;
+  if (/\b404\b|model not found|model .*unavailable/.test(message)) return 5 * 60_000;
+  if (/\b5\d\d\b|timeout|network error|temporarily unavailable|connection timeout/.test(message)) return 30_000;
+  return 0;
+}
+
+function rememberProviderFailure(name: string, reason: string): void {
+  const delay = providerCooldownMs(reason);
+  if (delay) providerCooldownUntil.set(name, Date.now() + delay);
+}
+
+function rememberProviderSuccess(name: string): void {
+  providerCooldownUntil.delete(name);
+}
+
+function providerIsCoolingDown(name: string): boolean {
+  const until = providerCooldownUntil.get(name) ?? 0;
+  if (until <= Date.now()) {
+    providerCooldownUntil.delete(name);
+    return false;
+  }
+  return true;
+}
+
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false): string[] {
   let preferred: string[];
   if (hasInlineAttachments) {
-    preferred = ["gemini", ...(hasInlineImages
-      ? ["openai", "openrouter", "deepseek", "mistral", "groq", "nvidia", "cloudflare", "anthropic"]
-      : ["openai", "openrouter", "deepseek", "groq", "mistral", "nvidia", "cloudflare", "anthropic"])];
+    // Gemini handles multimodal and file inputs directly; OpenRouter's free router
+    // is next and selects a free model with the needed feature when available.
+    preferred = ["gemini", "openrouter", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "web_research" || task === "code_execution") {
-    preferred = ["gemini", "openrouter", "deepseek", "groq", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
+    // Gemini has native Google Search, URL Context, and code-execution tool support.
+    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "coding") {
-    preferred = ["openrouter", "deepseek", "openai", "nvidia", "groq", "gemini", "mistral", "cloudflare", "anthropic"];
+    preferred = ["openrouter", "groq", "gemini", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "reasoning") {
-    preferred = ["gemini", "deepseek", "openrouter", "openai", "anthropic", "nvidia", "groq", "mistral", "cloudflare"];
+    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "creative") {
-    preferred = ["gemini", "openai", "anthropic", "groq", "openrouter", "deepseek", "mistral", "nvidia", "cloudflare"];
+    preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else {
-    preferred = ["groq", "gemini", "openrouter", "deepseek", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
+    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   }
-  // Every configured key is eligible for automatic fallback. Paid API calls may incur charges.
-  const all = [...preferred, "gemini", "groq", "openrouter", "deepseek", "mistral", "nvidia", "cloudflare", "openai", "anthropic"];
-  return [...new Set(all)].filter(providerIsConfigured);
+
+  // OpenAI is the final fallback because its API can incur charges. Other optional
+  // providers are eligible only when their server-side keys are configured.
+  const fallback = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+  const configured = [...new Set([...preferred, ...fallback])].filter(providerIsConfigured);
+  const healthy = configured.filter((name) => !providerIsCoolingDown(name));
+  // If every configured provider is cooling down, permit an eventual retry rather than
+  // leaving the user with no route at all.
+  return healthy.length ? healthy : configured;
 }
 
 function openRouterModel(task: string): string {
-  if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
-  if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3.5-lightning:free";
-  return envFirst(["OPENROUTER_MODEL"]) || "nvidia/nemotron-3.5-lightning:free";
+  const paidOptIn = flagEnabled("ENABLE_PAID_FALLBACK");
+  const freeModel = (model: string | undefined) => !!model &&
+    (model.trim() === "openrouter/free" || /:free$/i.test(model.trim()));
+  const specificName = task === "coding" ? "OPENROUTER_CODING_MODEL"
+    : task === "reasoning" ? "OPENROUTER_REASONING_MODEL" : "";
+  const specific = specificName ? envFirst([specificName]) : undefined;
+  const general = envFirst(["OPENROUTER_MODEL"]);
+  // When paid fallback is off, accept only explicitly free model overrides.
+  if (specific && (paidOptIn || freeModel(specific))) return specific;
+  if (general && (paidOptIn || freeModel(general))) return general;
+  return "openrouter/free";
 }
 function systemPrompt(task: string): string {
   const today = new Date().toISOString().slice(0, 10);
@@ -771,11 +832,9 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
   const aspectRatio = /(?:banner|thumbnail|landscape|wide|16:9)/i.test(prompt) ? "16:9"
     : /(?:phone wallpaper|mobile wallpaper|portrait|9:16|story format)/i.test(prompt) ? "9:16" : "";
   const generationConfig: Record<string, unknown> = {
-    responseModalities: ["TEXT", "IMAGE"]
+    responseModalities: ["TEXT", "IMAGE"],
+    ...(aspectRatio ? { imageConfig: { aspectRatio, imageSize: "1K" } } : {})
   };
-  if (aspectRatio) {
-    generationConfig.responseFormat = { image: { aspectRatio, imageSize: "1K" } };
-  }
   const url = "https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-image:generateContent";
   const requestBody = {
     contents: [{ role: "user", parts }],
@@ -789,8 +848,8 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
   if (!response.ok) {
     const status = response.status;
     const body = await response.text().catch(() => "");
-    if (status === 400 && generationConfig.responseFormat &&
-        /response_format.*aspect_ratio|aspect_ratio/i.test(body)) {
+    if (status === 400 && generationConfig.imageConfig &&
+        /image.?config|aspect.?ratio|image.?size/i.test(body)) {
       console.warn("Gemini rejected the requested image aspect ratio; retrying with its default image format.");
       response = await fetchWithTimeout(url, {
         method: "POST",
@@ -912,8 +971,11 @@ async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttac
 }
 
 async function generateImageWithFallback(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
+  if (!flagEnabled("ENABLE_PAID_IMAGE_GENERATION")) {
+    throw new Error("Paid image generation is disabled by default. Set ENABLE_PAID_IMAGE_GENERATION=true only if you accept possible image API charges.");
+  }
   const failures: string[] = [];
-  if (envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
+  if (configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
     try {
       return { ...(await generateGeminiImage(prompt, attachments)), provider: "gemini-image" };
     } catch (error) {
@@ -922,7 +984,7 @@ async function generateImageWithFallback(prompt: string, attachments: PreparedAt
       console.warn("Mahi AI Gemini image generation failed; trying Grok:", reason.slice(0, 180));
     }
   }
-  if (envFirst(["XAI_API_KEY", "GROK_API_KEY"])) {
+  if (configuredSecret(["XAI_API_KEY", "GROK_API_KEY"])) {
     try {
       return { ...(await generateGrokImage(prompt, attachments)), provider: "grok-image" };
     } catch (error) {
@@ -931,7 +993,7 @@ async function generateImageWithFallback(prompt: string, attachments: PreparedAt
       console.warn("Mahi AI Grok image generation failed; trying OpenAI fallback:", reason.slice(0, 180));
     }
   }
-  if (envFirst(["OPENAI_API_KEY"])) {
+  if (configuredSecret(["OPENAI_API_KEY"])) {
     try {
       return { ...(await generateOpenAIImage(prompt, attachments)), provider: "openai-image" };
     } catch (error) {
@@ -1000,10 +1062,12 @@ async function streamImageGenerationResponse(
         const reason = error instanceof Error ? error.message : String(error);
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
         await updateUsage(usageId, { success: false, provider: "gemini-grok-openai-image", task_type: "image_generation", error_code: "image_generation_failed" });
-        const hasGeminiKey = Boolean(envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]));
+        const hasGeminiKey = configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
         const lowerReason = reason.toLowerCase();
         let userMessage: string;
-        if (/429|resource_exhausted|exceeded your current quota|quota exceeded/.test(lowerReason)) {
+        if (/enable_paid_image_generation|paid image generation is disabled/.test(lowerReason)) {
+          userMessage = "ছবি তৈরির API-গুলো সম্ভাব্য paid, তাই খরচ এড়াতে default-এ বন্ধ রাখা হয়েছে। Supabase Edge Function Secrets-এ ENABLE_PAID_IMAGE_GENERATION=true সেট করলেই কেবল চালু হবে।";
+        } else if (/429|resource_exhausted|exceeded your current quota|quota exceeded/.test(lowerReason)) {
           userMessage = "ছবি তৈরি করা যায়নি: Gemini image API quota শেষ বা এই model-এর জন্য available নয় (429)। GEMINI_API_KEY আবার যোগ করার দরকার নেই। Google AI Studio-তে image model usage limit ও billing tier দেখুন। Gemini 3.1 Flash Image-এর API Free Tier নেই।";
         } else if (!hasGeminiKey) {
           userMessage = "ছবি তৈরি করা যায়নি। Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন।";
@@ -1038,9 +1102,11 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
 async function independentlyReviewAnswer(
   available: string[], originalPrompt: string, contextText: string, draft: string, task: string
 ): Promise<{ answer: string; reviewer: string | null }> {
-  // Avoid surprise paid calls for review; use a different configured non-paid provider.
-  const reviewer = available.find((name) => name !== "openai" && name !== "anthropic" && providerIsConfigured(name));
-  if (!reviewer || draft.length > 30000) return { answer: draft, reviewer: null };
+  // Review only with another eligible non-paid provider; retry alternatives if one is unhealthy.
+  const reviewers = available.filter((name) =>
+    name !== "openai" && name !== "anthropic" && providerIsConfigured(name) && !providerIsCoolingDown(name)
+  );
+  if (!reviewers.length || draft.length > 30000) return { answer: draft, reviewer: null };
   const reviewSystem = qualityReviewSystem();
   const reviewMessage = [
     "ORIGINAL USER REQUEST (verbatim):\n" + originalPrompt.slice(0, 10000),
@@ -1048,21 +1114,25 @@ async function independentlyReviewAnswer(
     "CANDIDATE ANSWER TO AUDIT:\n" + draft.slice(0, 30000),
     "Review independently for concrete correctness/completeness. If sound, return verdict=keep with the exact original answer. If wrong, return verdict=correct and a complete corrected answer in the original request's language. Never invent facts, citations, execution, or live web verification."
   ].join("\n\n---\n\n");
-  try {
-    const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem);
-    const parsed = parseReviewedAnswer(result.text);
-    if (!parsed || !parsed.answer.trim() || parsed.verdict !== "correct") return { answer: draft, reviewer };
-    const corrected = parsed.answer.trim();
-    if (corrected.length < Math.max(12, Math.floor(draft.length * 0.25)) || corrected.length > Math.min(40000, draft.length * 2 + 3000)) {
-      return { answer: draft, reviewer };
+  for (const reviewer of reviewers) {
+    try {
+      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem);
+      rememberProviderSuccess(reviewer);
+      const parsed = parseReviewedAnswer(result.text);
+      if (!parsed || !parsed.answer.trim()) continue;
+      if (parsed.verdict !== "correct") return { answer: draft, reviewer };
+      const corrected = parsed.answer.trim();
+      if (corrected.length < Math.max(12, Math.floor(draft.length * 0.25)) ||
+          corrected.length > Math.min(40000, draft.length * 2 + 3000)) continue;
+      return { answer: corrected, reviewer };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      rememberProviderFailure(reviewer, reason);
+      console.warn("Mahi AI independent review provider failed; trying another:", reviewer, reason.slice(0, 120));
     }
-    return { answer: corrected, reviewer };
-  } catch (error) {
-    console.warn("Mahi AI independent review unavailable; original answer retained:", error instanceof Error ? error.message.slice(0, 120) : "review failed");
-    return { answer: draft, reviewer: null };
   }
+  return { answer: draft, reviewer: null };
 }
-
 async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string
@@ -1111,11 +1181,13 @@ async function streamChatResponse(
             candidate.cleanup();
             if (!completeText.trim()) throw new Error("Provider returned an empty response");
             chosen = { provider, text: completeText.trim() };
+            rememberProviderSuccess(provider);
             break;
           } catch (error) {
             if (candidate) candidate.cleanup();
             const reason = error instanceof Error ? error.message : String(error);
             failures.push(provider + ":" + reason.slice(0, 100));
+            rememberProviderFailure(provider, reason);
             if (reason !== "Not configured") console.warn("Mahi AI full-response provider attempt failed:", provider, reason.slice(0, 180));
           }
         }
