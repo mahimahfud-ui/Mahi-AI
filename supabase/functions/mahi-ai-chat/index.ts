@@ -679,24 +679,45 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
       parts.push({ inline_data: { mime_type: attachment.mimeType, data: attachment.base64 } });
     }
   }
+  // Let Gemini use its native square default unless the prompt clearly asks for a wide or tall image.
+  // If the API rejects an explicit aspect-ratio enum, retry without the optional image format settings.
   const aspectRatio = /(?:banner|thumbnail|landscape|wide|16:9)/i.test(prompt) ? "16:9"
-    : /(?:phone wallpaper|mobile wallpaper|portrait|9:16|story format)/i.test(prompt) ? "9:16" : "1:1";
-  const response = await fetchWithTimeout(
-    "https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-image:generateContent",
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ role: "user", parts }],
-        generationConfig: {
-          responseModalities: ["TEXT", "IMAGE"],
-          responseFormat: { image: { aspectRatio, imageSize: "1K" } }
-        }
-      })
-    },
-    70000
-  );
-  if (!response.ok) throw new Error(await readProviderError(response));
+    : /(?:phone wallpaper|mobile wallpaper|portrait|9:16|story format)/i.test(prompt) ? "9:16" : "";
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ["TEXT", "IMAGE"]
+  };
+  if (aspectRatio) {
+    generationConfig.responseFormat = { image: { aspectRatio, imageSize: "1K" } };
+  }
+  const url = "https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-image:generateContent";
+  const requestBody = {
+    contents: [{ role: "user", parts }],
+    generationConfig
+  };
+  let response = await fetchWithTimeout(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify(requestBody)
+  }, 70000);
+  if (!response.ok) {
+    const status = response.status;
+    const body = await response.text().catch(() => "");
+    if (status === 400 && generationConfig.responseFormat &&
+        /response_format.*aspect_ratio|aspect_ratio/i.test(body)) {
+      console.warn("Gemini rejected the requested image aspect ratio; retrying with its default image format.");
+      response = await fetchWithTimeout(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts }],
+          generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
+        })
+      }, 70000);
+      if (!response.ok) throw new Error(await readProviderError(response));
+    } else {
+      throw new Error(status + " " + body.slice(0, 500));
+    }
+  }
   const data = await response.json();
   let text = "";
   let imageData = "";
@@ -709,11 +730,10 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
       mimeType = inline.mimeType || inline.mime_type || mimeType;
     }
   }
-  if (!imageData) throw new Error("Gemini did not return an image. Check the API key, quota, and image model availability.");
+  if (!imageData) throw new Error("Gemini did not return an image. Check model access, API quota, and safety feedback.");
   const bytes = Uint8Array.from(atob(imageData), (char) => char.charCodeAt(0));
   return { text: text.trim() || "Here is the image you requested.", bytes, mimeType };
 }
-
 async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
   const key = envFirst(["XAI_API_KEY", "GROK_API_KEY"]);
   if (!key) throw new Error("Grok image generation is not configured.");
@@ -881,7 +901,7 @@ async function streamImageGenerationResponse(
           userId, conversationId, displayUserText || messages[messages.length - 1].content
         );
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
-        sseEvent(controller, encoder, { type: "status", message: "Trying Gemini and Grok image generation…" });
+        sseEvent(controller, encoder, { type: "status", message: "Generating image…" });
         const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
@@ -893,10 +913,11 @@ async function streamImageGenerationResponse(
         const reason = error instanceof Error ? error.message : String(error);
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
         await updateUsage(usageId, { success: false, provider: "gemini-grok-openai-image", task_type: "image_generation", error_code: "image_generation_failed" });
-        sseEvent(controller, encoder, {
-          type: "error",
-          message: "ছবি তৈরি করা যায়নি। Supabase secrets-এ GEMINI_API_KEY ও XAI_API_KEY আছে কি না এবং image API quota আছে কি না যাচাই করে আবার চেষ্টা করুন।"
-        });
+        const hasGeminiKey = Boolean(envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]));
+        const userMessage = hasGeminiKey
+          ? "ছবি তৈরি করা যায়নি। Gemini image API request ব্যর্থ হয়েছে। GEMINI_API_KEY আবার যোগ করার দরকার নেই—Gemini image model access/usage limit দেখুন। Backup provider ব্যবহার হলে তার key ও credits আলাদা।"
+          : "ছবি তৈরি করা যায়নি। Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন। Backup image provider optional, তবে সেগুলোর API key ও credits আলাদা।";
+        sseEvent(controller, encoder, { type: "error", message: userMessage });
       } finally {
         try { controller.close(); } catch (_) {}
       }
