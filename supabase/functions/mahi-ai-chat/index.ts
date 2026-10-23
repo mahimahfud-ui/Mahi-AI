@@ -83,6 +83,10 @@ function isTextLikeFile(name: string, mimeType: string): boolean {
      "env", "gitignore", "dockerfile", "makefile", "tf", "graphql", "proto"].includes(extension) ||
     ["Dockerfile", "Makefile", ".gitignore", ".env"].includes(name);
 }
+function isCodeAttachment(name: string): boolean {
+  return /\.(py|js|mjs|cjs|ts|tsx|jsx|java|kt|go|rs|c|h|cpp|hpp|cs|php|rb|sql|sh|bash|zsh|bat|ps1|css|html|xml|yaml|yml|toml|tf|graphql|proto|diff|patch)$/i.test(name) ||
+    /^(Dockerfile|Makefile|\.gitignore|\.env)$/i.test(name);
+}
 function isGeminiInlineMime(mimeType: string): boolean {
   return /^image\/(png|jpeg|webp|heic|heif|gif|avif)$/i.test(mimeType) ||
     mimeType === "application/pdf" ||
@@ -865,7 +869,9 @@ Deno.serve(async (req: Request) => {
     : "";
   const displayUserText = (displayPrompt + attachmentLabels).slice(0, 12000);
   const contextualMessages = applyAttachmentContext(messages, attachments);
-  const task = isImageGenerationTask(displayPrompt) ? "image_generation" : classifyTask(displayPrompt);
+  const hasCodeAttachment = attachments.some((item) => isCodeAttachment(item.name));
+  const task = isImageGenerationTask(displayPrompt) ? "image_generation"
+    : hasCodeAttachment ? "coding" : classifyTask(displayPrompt);
   const now = new Date();
   const minuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
