@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#090b10">
+  <meta name="description" content="Mahi AI — one helpful assistant for your everyday tasks.">
+  <title>Mahi AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
+  <script src="./config.js"></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="brand-copy"><strong>Mahi AI</strong><span>YOUR EVERYDAY ASSISTANT</span></div>
+        <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu">×</button>
+      </div>
+      <button class="new-chat" id="newChat"><span class="plus">＋</span><span>New chat</span><kbd>Ctrl K</kbd></button>
+      <div class="history-heading"><span>RECENTS</span><button class="text-button" id="refreshChats" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
+      <nav id="chatList" class="chat-list" aria-label="Recent conversations"></nav>
+      <div class="sidebar-bottom">
+        <div class="privacy-note"><span class="status-dot"></span><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
+        <div class="profile-row"><div class="avatar">M</div><div class="profile-copy"><strong>Mahi AI</strong><small id="sessionLabel">Preparing your workspace…</small></div><span class="online-dot" title="App status"></span></div>
+      </div>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <button class="icon-button mobile-menu" id="openSidebar" aria-label="Open menu" title="Open menu">☰</button>
+        <div class="topbar-title"><span class="small-mark">✦</span><strong>Mahi AI</strong><span class="topbar-divider"></span><span class="topbar-subtitle">Your AI workspace</span></div>
+        <div class="topbar-right"><span class="secure-label"><span class="status-dot"></span>Ready to help</span></div>
+      </header>
+
+      <section class="conversation-area" id="conversationArea">
+        <section class="welcome" id="welcome">
+          <div class="welcome-glow"></div>
+          <div class="eyebrow"><span class="spark">✦</span> YOUR THINKING PARTNER</div>
+          <h1>Big ideas start<br>with <span>one question.</span></h1>
+          <p class="welcome-copy">Ask anything. Solve a problem, write something great, learn a new skill, or turn an idea into a plan.</p>
+          <div class="suggestion-grid">
+            <button class="suggestion-card" data-prompt="Help me break a difficult problem into clear, manageable steps."><span class="suggestion-icon violet">◇</span><span><strong>Think it through</strong><small>Break a difficult problem into steps</small></span><span class="suggestion-arrow">↗</span></button>
+            <button class="suggestion-card" data-prompt="Help me write a clear, engaging piece of writing. Ask any necessary questions first."><span class="suggestion-icon blue">✎</span><span><strong>Write something</strong><small>Turn rough ideas into clear words</small></span><span class="suggestion-arrow">↗</span></button>
+            <button class="suggestion-card" data-prompt="Teach me a new concept with a simple explanation and a practical example."><span class="suggestion-icon amber">⌘</span><span><strong>Learn a concept</strong><small>Understand it with examples</small></span><span class="suggestion-arrow">↗</span></button>
+            <button class="suggestion-card" data-prompt="Help me debug or build a coding project. Start by asking what I am trying to make."><span class="suggestion-icon green">{ }</span><span><strong>Build with code</strong><small>Debug, plan, or create a project</small></span><span class="suggestion-arrow">↗</span></button>
+          </div>
+        </section>
+        <section class="messages" id="messages" aria-live="polite" aria-label="Conversation"></section>
+        <div class="error-banner" id="errorBanner" role="alert" hidden></div>
+      </section>
+
+      <footer class="composer-wrap">
+        <form class="composer" id="chatForm">
+          <label for="promptInput" class="sr-only">Message Mahi AI</label>
+          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message Mahi AI…" autocomplete="off"></textarea>
+          <div class="composer-bottom"><span class="composer-hint"><span class="enter-icon">↵</span> Enter to send · Shift + Enter for a new line</span><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
+        </form>
+        <p class="footer-note">Mahi AI can make mistakes. Verify important information.</p>
+      </footer>
+    </main>
+  </div>
+  <div class="mobile-scrim" id="mobileScrim"></div>
+</body>
+</html>
