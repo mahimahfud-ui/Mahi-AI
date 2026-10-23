@@ -58,12 +58,12 @@ function classifyTask(prompt: string): string {
 }
 function providerOrder(task: string) {
   const base = task === "coding"
-    ? ["openrouter", "nvidia", "groq", "cloudflare", "gemini", "mistral"]
+    ? ["openrouter", "groq", "gemini", "mistral", "nvidia", "cloudflare"]
     : task === "reasoning"
-    ? ["gemini", "openrouter", "nvidia", "groq", "cloudflare", "mistral"]
+    ? ["gemini", "openrouter", "groq", "mistral", "nvidia", "cloudflare"]
     : task === "creative"
-    ? ["gemini", "mistral", "openrouter", "cloudflare", "groq", "nvidia"]
-    : ["gemini", "openrouter", "groq", "cloudflare", "nvidia", "mistral"];
+    ? ["gemini", "groq", "openrouter", "mistral", "nvidia", "cloudflare"]
+    : ["groq", "gemini", "openrouter", "mistral", "nvidia", "cloudflare"];
   return base.filter((name) => {
     if (name === "nvidia") return Deno.env.get("ENABLE_NVIDIA_FALLBACK") === "true";
     if (name === "cloudflare") return Deno.env.get("ENABLE_CLOUDFLARE_FALLBACK") === "true";
@@ -72,8 +72,8 @@ function providerOrder(task: string) {
 }
 function openRouterModel(task: string): string {
   if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
-  if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3-ultra-550b-a55b:free";
-  return envFirst(["OPENROUTER_MODEL"]) || "openrouter/free";
+  if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3.5-lightning:free";
+  return envFirst(["OPENROUTER_MODEL"]) || "nvidia/nemotron-3.5-lightning:free";
 }
 function systemPrompt(task: string): string {
   return "You are Mahi AI, a helpful and accurate general assistant. Reply in the language used by the user. Use clear Markdown. Be concise unless the user asks for detail. For code, provide working solutions and explain important assumptions. For uncertain claims, state uncertainty and do not invent facts. The task routing category is " + task + ". Do not mention internal providers, routing, or API infrastructure.";
@@ -113,7 +113,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
 async function callGemini(messages: ChatMessage[], task: string): Promise<string> {
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
-  const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.8-flash";
+  const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
   const normalizedMessages = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
   const contents = normalizedMessages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
@@ -228,6 +228,341 @@ async function getConversation(userId: string, id: string): Promise<boolean> {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+
+type ProviderStream = {
+  provider: string;
+  iterator: AsyncGenerator<string, void, unknown>;
+  cleanup: () => void;
+};
+
+async function* readOpenAIEventStream(response: Response): AsyncGenerator<string, void, unknown> {
+  if (!response.body) throw new Error("Provider returned an empty stream");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    while (true) {
+      const part = await reader.read();
+      buffer += decoder.decode(part.value, { stream: !part.done }).replace(/\r\n/g, "\n");
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const raw = line.slice(5).trim();
+        if (!raw) continue;
+        if (raw === "[DONE]") return;
+        let event: any;
+        try { event = JSON.parse(raw); } catch (_) { continue; }
+        const value = event?.choices?.[0]?.delta?.content;
+        const text = typeof value === "string"
+          ? value
+          : Array.isArray(value) ? value.map((p: any) => p?.text || "").join("") : "";
+        if (text) yield text;
+      }
+      if (part.done) break;
+    }
+    if (buffer.startsWith("data:")) {
+      const raw = buffer.slice(5).trim();
+      if (raw && raw !== "[DONE]") {
+        try {
+          const event = JSON.parse(raw);
+          const value = event?.choices?.[0]?.delta?.content;
+          const text = typeof value === "string" ? value : "";
+          if (text) yield text;
+        } catch (_) {}
+      }
+    }
+  } finally {
+    try { reader.releaseLock(); } catch (_) {}
+  }
+}
+
+async function* readGeminiEventStream(response: Response): AsyncGenerator<string, void, unknown> {
+  if (!response.body) throw new Error("Gemini returned an empty stream");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    while (true) {
+      const part = await reader.read();
+      buffer += decoder.decode(part.value, { stream: !part.done }).replace(/\r\n/g, "\n");
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const raw = line.slice(5).trim();
+        if (!raw) continue;
+        try {
+          const event = JSON.parse(raw);
+          const text = (event?.candidates?.[0]?.content?.parts || []).map((p: any) => p?.text || "").join("");
+          if (text) yield text;
+        } catch (_) {}
+      }
+      if (part.done) break;
+    }
+  } finally {
+    try { reader.releaseLock(); } catch (_) {}
+  }
+}
+
+async function* readAnthropicEventStream(response: Response): AsyncGenerator<string, void, unknown> {
+  if (!response.body) throw new Error("Anthropic returned an empty stream");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  try {
+    while (true) {
+      const part = await reader.read();
+      buffer += decoder.decode(part.value, { stream: !part.done }).replace(/\r\n/g, "\n");
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.startsWith("data:")) continue;
+        const raw = line.slice(5).trim();
+        if (!raw || raw === "[DONE]") continue;
+        try {
+          const event = JSON.parse(raw);
+          const text = event?.type === "content_block_delta" ? event?.delta?.text : "";
+          if (typeof text === "string" && text) yield text;
+        } catch (_) {}
+      }
+      if (part.done) break;
+    }
+  } finally {
+    try { reader.releaseLock(); } catch (_) {}
+  }
+}
+
+async function startProviderStream(name: string, messages: ChatMessage[], task: string): Promise<ProviderStream> {
+  const controller = new AbortController();
+  const totalTimer = setTimeout(() => controller.abort(), 45000);
+  const cleanup = () => { clearTimeout(totalTimer); controller.abort(); };
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  let url = "";
+  let body: Record<string, unknown> = {};
+  let useGemini = false;
+  let useAnthropic = false;
+
+  const chatMessages = [
+    { role: "system", content: systemPrompt(task) },
+    ...messages
+  ];
+  if (name === "gemini") {
+    const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+    if (!key) { cleanup(); throw new Error("Not configured"); }
+    const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
+    const normalized = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
+    url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) +
+      ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
+    body = {
+      systemInstruction: { parts: [{ text: systemPrompt(task) }] },
+      contents: normalized.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      generationConfig: { temperature: 0.3, maxOutputTokens: 1800 }
+    };
+    useGemini = true;
+  } else if (name === "anthropic") {
+    const key = envFirst(["ANTHROPIC_API_KEY"]);
+    if (!key) { cleanup(); throw new Error("Not configured"); }
+    url = "https://api.anthropic.com/v1/messages";
+    headers["x-api-key"] = key;
+    headers["anthropic-version"] = "2023-06-01";
+    body = {
+      model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-5",
+      max_tokens: 1800,
+      system: systemPrompt(task),
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      stream: true
+    };
+    useAnthropic = true;
+  } else {
+    let key = "";
+    if (name === "groq") { key = envFirst(["GROQ_API_KEY"]); url = "https://api.groq.com/openai/v1/chat/completions"; }
+    else if (name === "openrouter") {
+      key = envFirst(["OPENROUTER_API_KEY"]);
+      url = "https://openrouter.ai/api/v1/chat/completions";
+      headers["HTTP-Referer"] = "https://github.com/mahimahfud-ui/Mahi-AI";
+      headers["X-Title"] = "Mahi AI";
+    } else if (name === "mistral") { key = envFirst(["MISTRAL_API_KEY"]); url = "https://api.mistral.ai/v1/chat/completions"; }
+    else if (name === "openai") { key = envFirst(["OPENAI_API_KEY"]); url = "https://api.openai.com/v1/chat/completions"; }
+    else if (name === "nvidia") {
+      key = envFirst(["NVIDIA_API_KEY"]);
+      url = "https://integrate.api.nvidia.com/v1/chat/completions";
+    } else if (name === "cloudflare") {
+      key = envFirst(["CLOUDFLARE_API_TOKEN"]);
+      const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
+      if (key && accountId) url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
+      else key = "";
+    }
+    if (!key) { cleanup(); throw new Error("Not configured"); }
+    headers.Authorization = "Bearer " + key;
+    let model = "";
+    if (name === "groq") model = envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b";
+    else if (name === "openrouter") model = openRouterModel(task);
+    else if (name === "mistral") model = envFirst(["MISTRAL_MODEL"]) || "mistral-small-latest";
+    else if (name === "openai") model = envFirst(["OPENAI_MODEL"]) || "gpt-4.1-mini";
+    else if (name === "nvidia") model = task === "coding"
+      ? envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct"
+      : envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b";
+    else if (name === "cloudflare") model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+    body = { model, messages: chatMessages, temperature: 0.3, max_tokens: 1800, stream: true };
+  }
+
+  let headerTimer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    const request = fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
+    const response = await Promise.race([
+      request,
+      new Promise<Response>((_, reject) => {
+        headerTimer = setTimeout(() => {
+          controller.abort();
+          reject(new Error("Provider connection timeout"));
+        }, 9000);
+      })
+    ]);
+    if (headerTimer) clearTimeout(headerTimer);
+    if (!response.ok) {
+      const reason = await readProviderError(response);
+      cleanup();
+      throw new Error(reason);
+    }
+    const iterator = useGemini ? readGeminiEventStream(response)
+      : useAnthropic ? readAnthropicEventStream(response)
+      : readOpenAIEventStream(response);
+    return { provider: name, iterator, cleanup };
+  } catch (error) {
+    if (headerTimer) clearTimeout(headerTimer);
+    cleanup();
+    throw error;
+  }
+}
+
+function sseEvent(controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder, value: Record<string, unknown>) {
+  controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
+}
+
+async function streamChatResponse(
+  userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null
+): Promise<Response> {
+  const available = providerOrder(task);
+  const failures: string[] = [];
+  let chosen: ProviderStream | null = null;
+  let firstText = "";
+  for (const provider of available) {
+    let candidate: ProviderStream | null = null;
+    try {
+      candidate = await startProviderStream(provider, messages, task);
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const first = await Promise.race([
+        candidate.iterator.next(),
+        new Promise<IteratorResult<string>>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("First token timeout")), 8000);
+        })
+      ]);
+      if (timer) clearTimeout(timer);
+      if (!first.done && first.value) {
+        chosen = candidate;
+        firstText = first.value;
+        break;
+      }
+      candidate.cleanup();
+      failures.push(provider + ":empty stream");
+    } catch (error) {
+      if (candidate) candidate.cleanup();
+      const reason = error instanceof Error ? error.message : String(error);
+      if (reason !== "Not configured") console.warn("Mahi AI provider attempt failed:", provider, reason.slice(0, 140));
+      failures.push(provider + ":" + reason.slice(0, 90));
+    }
+  }
+  if (!chosen) {
+    await updateUsage(usageId, { success: false, error_code: "free_providers_unavailable" });
+    const configured = ["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY"].some((key) => !!envFirst([key])) ||
+      (!!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"])) ||
+      Deno.env.get("ENABLE_NVIDIA_FALLBACK") === "true" && !!envFirst(["NVIDIA_API_KEY"]) ||
+      Deno.env.get("ENABLE_PAID_FALLBACK") === "true" && ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"].some((key) => !!envFirst([key]));
+    if (!configured) return json(503, { error: "Mahi AI is being set up. Please try again later." });
+    console.error("All stream providers failed:", failures.join(" | ").slice(0, 1000));
+    return json(502, { error: "Mahi AI could not complete that request. Please try again." });
+  }
+
+  let conversationId = initialConversationId;
+  if (!conversationId) {
+    const firstPrompt = messages.find((m) => m.role === "user")?.content || "New chat";
+    const title = firstPrompt.replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
+    try {
+      const created = await rest("mahi_ai_conversations", {
+        method: "POST",
+        headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ user_id: userId, title })
+      });
+      if (!created.ok) throw new Error("Could not create conversation");
+      const rows = await created.json();
+      conversationId = rows?.[0]?.id || "";
+      if (!conversationId) throw new Error("No conversation id");
+    } catch (_) {
+      chosen.cleanup();
+      await updateUsage(usageId, { success: false, provider: chosen.provider, error_code: "database_unavailable" });
+      return json(503, { error: "Mahi AI could not save this conversation. Please try again." });
+    }
+  }
+
+  const encoder = new TextEncoder();
+  const selected = chosen;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
+      (async () => {
+        let completeText = firstText;
+        try {
+          sseEvent(controller, encoder, { type: "delta", text: firstText });
+          while (true) {
+            const next = await selected.iterator.next();
+            if (next.done) break;
+            if (!next.value) continue;
+            completeText += next.value;
+            sseEvent(controller, encoder, { type: "delta", text: next.value });
+          }
+          if (!completeText.trim()) throw new Error("Empty provider response");
+          const lastUser = messages[messages.length - 1].content;
+          const saved = await rest("mahi_ai_messages", {
+            method: "POST",
+            headers: { Prefer: "return=minimal" },
+            body: JSON.stringify([
+              { conversation_id: conversationId, user_id: userId, role: "user", content: lastUser },
+              { conversation_id: conversationId, user_id: userId, role: "assistant", content: completeText }
+            ])
+          });
+          if (!saved.ok) throw new Error("Mahi AI could not save the response");
+          await Promise.all([
+            rest("mahi_ai_conversations?id=eq." + encodeURIComponent(conversationId) + "&user_id=eq." + encodeURIComponent(userId), {
+              method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ updated_at: new Date().toISOString() })
+            }),
+            updateUsage(usageId, { success: true, provider: selected.provider, task_type: task, error_code: null })
+          ]);
+          sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
+        } catch (error) {
+          const reason = error instanceof Error ? error.message : String(error);
+          console.error("Mahi AI streaming completion failed:", selected.provider, reason.slice(0, 180));
+          await updateUsage(usageId, { success: false, provider: selected.provider, error_code: "stream_or_save_failed" });
+          sseEvent(controller, encoder, { type: "error", message: "The response was interrupted. Please try again." });
+        } finally {
+          selected.cleanup();
+          try { controller.close(); } catch (_) {}
+        }
+      })();
+    },
+    cancel() { selected.cleanup(); }
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no"
+    }
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" });
@@ -277,66 +612,5 @@ Deno.serve(async (req: Request) => {
   }
 
   const usageId = await logUsage(user.id, { task_type: task, success: false });
-  const available = providerOrder(task);
-  let output: { text: string; provider: string } | null = null;
-  const failures: string[] = [];
-  for (const provider of available) {
-    try {
-      output = await callProvider(provider, messages, task);
-      if (output.text.trim()) break;
-      output = null;
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason !== "Not configured") console.warn("Mahi AI provider attempt failed:", provider, reason.slice(0, 180));
-      failures.push(provider + ":" + reason.slice(0, 100));
-    }
-  }
-  if (!output) {
-    await updateUsage(usageId, { success: false, error_code: available.some((name) => name === "openai" || name === "anthropic") ? "providers_unavailable" : "free_providers_unavailable" });
-    const anyConfigured = ["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY"].some((key) => !!envFirst([key])) ||
-      (!!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"])) ||
-      (Deno.env.get("ENABLE_PAID_FALLBACK") === "true" && ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"].some((key) => !!envFirst([key])));
-    if (!anyConfigured) return json(503, { error: "Mahi AI is being set up. Please try again later." });
-    console.error("All available provider attempts failed:", failures.join(" | ").slice(0, 1200));
-    return json(502, { error: "Mahi AI could not complete that request. Please try again." });
-  }
-
-  if (!conversationId) {
-    const firstPrompt = messages.find((m) => m.role === "user")?.content || "New chat";
-    const title = firstPrompt.replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
-    const created = await rest("mahi_ai_conversations", {
-      method: "POST",
-      headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ user_id: user.id, title })
-    });
-    if (!created.ok) {
-      await updateUsage(usageId, { success: false, provider: output.provider, error_code: "database_unavailable" });
-      return json(503, { error: "Mahi AI could not save this conversation. Please try again." });
-    }
-    const rows = await created.json();
-    conversationId = rows?.[0]?.id || "";
-    if (!conversationId) return json(503, { error: "Mahi AI could not save this conversation. Please try again." });
-  }
-
-  const lastUser = messages[messages.length - 1].content;
-  const saved = await rest("mahi_ai_messages", {
-    method: "POST",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify([
-      { conversation_id: conversationId, user_id: user.id, role: "user", content: lastUser },
-      { conversation_id: conversationId, user_id: user.id, role: "assistant", content: output.text }
-    ])
-  });
-  if (!saved.ok) {
-    console.error("Mahi AI message save failed", saved.status, (await saved.text()).slice(0, 300));
-    await updateUsage(usageId, { success: false, provider: output.provider, error_code: "message_save_failed" });
-    return json(503, { error: "Mahi AI could not save this response. Please try again." });
-  }
-  await rest("mahi_ai_conversations?id=eq." + encodeURIComponent(conversationId) + "&user_id=eq." + encodeURIComponent(user.id), {
-    method: "PATCH",
-    headers: { Prefer: "return=minimal" },
-    body: JSON.stringify({ updated_at: new Date().toISOString() })
-  });
-  await updateUsage(usageId, { success: true, provider: output.provider, task_type: task, error_code: null });
-  return json(200, { conversation_id: conversationId, reply: output.text });
+  return await streamChatResponse(user.id, messages, task, conversationId, usageId);
 });
