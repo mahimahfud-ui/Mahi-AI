@@ -19,19 +19,18 @@ The database schema is in \`supabase/migrations/20261023075646_mahi_ai_core_sche
 3. Open **Edge Functions → Secrets** and add provider keys. Keys must be added there, not to GitHub or \`public/config.js\`.
 
 Recommended free-tier provider secrets (add one or more):
-- \`GEMINI_API_KEY\` — [Google AI Studio](https://aistudio.google.com/app/apikey)
-- \`GROQ_API_KEY\` — [Groq Console](https://console.groq.com/keys)
-- \`OPENROUTER_API_KEY\` — [OpenRouter](https://openrouter.ai/settings/keys)
-- \`MISTRAL_API_KEY\` — [Mistral La Plateforme](https://console.mistral.ai/api-keys)
+- `GEMINI_API_KEY` — [Google AI Studio](https://aistudio.google.com/app/apikey)
+- `GROQ_API_KEY` — [Groq Console](https://console.groq.com/keys)
+- `OPENROUTER_API_KEY` — [OpenRouter](https://openrouter.ai/settings/keys)
+- `MISTRAL_API_KEY` — [Mistral La Plateforme](https://console.mistral.ai/api-keys)
 
-Optional providers:
-- \`NVIDIA_API_KEY\` — [NVIDIA API Catalog](https://build.nvidia.com/); set \`ENABLE_NVIDIA_FALLBACK=true\` only after checking your account's free allowance and billing settings.
-- \`CLOUDFLARE_API_TOKEN\` and \`CLOUDFLARE_ACCOUNT_ID\` — [Cloudflare Dashboard](https://dash.cloudflare.com/); set \`ENABLE_CLOUDFLARE_FALLBACK=true\` only after checking your Workers AI allowance and billing settings.
-- \`OPENAI_API_KEY\` and/or \`ANTHROPIC_API_KEY\` — paid API fallback adapters. Set \`ENABLE_PAID_FALLBACK=true\` only if you intentionally accept possible charges. It defaults to off.
+Optional providers and opt-in flags:
+- `DEEPSEEK_API_KEY` (or legacy `DeepSeek`), `OPENAI_API_KEY`, and/or `ANTHROPIC_API_KEY` are treated as possible paid fallbacks. They are ignored unless `ENABLE_PAID_FALLBACK=true` is set in Supabase Edge Function Secrets.
+- `NVIDIA_API_KEY` is ignored unless `ENABLE_NVIDIA_FALLBACK=true` is set after checking your account's allowance and billing settings.
+- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are ignored unless `ENABLE_CLOUDFLARE_FALLBACK=true` is set after checking your Workers AI allowance and billing settings.
+- Image generation is disabled by default because the supported image APIs may incur charges. Set `ENABLE_PAID_IMAGE_GENERATION=true` only if you intentionally accept those charges. The current Gemini 3.1 Flash Image API model has no free tier; see [Google's API pricing](https://ai.google.dev/gemini-api/docs/pricing). When enabled, image routing tries Gemini, then Grok (if `XAI_API_KEY` or `GROK_API_KEY` is configured), then OpenAI (if `OPENAI_API_KEY` is configured).
 
-The router works with any subset of the enabled providers, classifies the prompt (coding, reasoning, creative writing, or general use), and tries provider/model combinations in a task-specific order. Provider names and keys are never sent to the browser. It retries other configured providers after errors and rate limits. You can override model IDs with \`GEMINI_MODEL\`, \`GROQ_MODEL\`, \`OPENROUTER_MODEL\`, \`OPENROUTER_CODING_MODEL\`, \`OPENROUTER_REASONING_MODEL\`, \`MISTRAL_MODEL\`, \`NVIDIA_MODEL\`, \`NVIDIA_CODING_MODEL\`, and \`CLOUDFLARE_MODEL\`.
-
-Free tiers have strict and changing quotas. OpenRouter currently lists 50 requests/day on its free plan; its \`openrouter/free\` route selects a model from its free set. Free access is not unlimited, and some providers may retain inputs for service improvement. A provider's free chat website does not imply free API usage. Do not add credentials to GitHub.
+The router classifies the actual request intent (coding, reasoning, creative writing, or general use) instead of classifying every question that merely mentions HTML/API/Python as coding. It uses task-specific provider priority, whole-response failover, and short-lived failure cooldowns. OpenRouter defaults to `openrouter/free`; free model overrides remain allowed while paid fallback is off, and non-free model overrides require `ENABLE_PAID_FALLBACK=true`. The free router selects a model from the currently available free set and can change its selection over time. Provider names and keys stay server-side. Free API tiers have changing quotas and do not imply unlimited usage. Never add credentials to GitHub.
 
 ## Attachments and media routing
 
@@ -39,8 +38,8 @@ Free tiers have strict and changing quotas. OpenRouter currently lists 50 reques
 - Attachments are uploaded to a private Supabase Storage bucket and are scoped to the authenticated guest user by Storage RLS.
 - Text and common source/code files are read as UTF-8 and included as prompt context. DOCX, XLSX/XLS/ODS, PPTX/ODP/ODT, and ZIP archives have best-effort client-side text extraction using on-demand browser libraries.
 - Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Any file type can be selected and uploaded, but unsupported binary types may only pass their name/type unless their contents can be extracted.
-- Requests to generate or edit an image try Gemini first, then OpenAI Image API if `OPENAI_API_KEY` is configured. Set `OPENAI_IMAGE_MODEL` to override its image model. Generated images are stored privately and shown through expiring signed links.
-- Image generation may incur charges and still depends on provider account access, model availability, and quota.
+- Requests to generate or edit an image are disabled by default to prevent accidental paid API calls. Set `ENABLE_PAID_IMAGE_GENERATION=true` in Supabase Edge Function Secrets only when you accept possible charges. The route tries Gemini, then Grok, then OpenAI for configured keys. Set `OPENAI_IMAGE_MODEL` or `XAI_IMAGE_MODEL` to override the respective model. Generated images are stored privately and shown through expiring signed links.
+- Google's Gemini 3.1 Flash Image API model has no free tier. Image generation still depends on provider account access, model availability, quota, and billing status.
 - API roles: task-specific routing tries configured providers until a complete response succeeds. OpenAI and Anthropic can incur charges when earlier providers fail. Image attachments can also be passed to OpenAI/OpenRouter vision routes when a configured model supports them.
 
 ## Deploy the Edge Function
