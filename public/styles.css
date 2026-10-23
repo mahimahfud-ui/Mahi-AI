@@ -47,3 +47,76 @@ body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:non
 /* Premium Mahi AI brand mark */
 .brand-logo{width:36px;height:36px;flex:0 0 36px;display:block;object-fit:contain;filter:drop-shadow(0 3px 10px rgba(132,115,255,.16))}
 .topbar-title .small-mark{display:block;width:24px;height:24px;flex:0 0 24px;object-fit:contain}
+
+
+/* Public API Library — isolated overlay; leaves the chat workspace intact. */
+.api-library-button{width:100%;min-height:40px;display:flex;align-items:center;gap:10px;margin-top:9px;padding:0 11px;border:1px solid rgba(169,179,215,.12);border-radius:10px;background:rgba(17,20,30,.72);color:#c7cce0;text-align:left;font-size:12px;transition:background .18s,border-color .18s,transform .18s}
+.api-library-button:hover{background:rgba(145,111,255,.11);border-color:rgba(169,145,255,.36);transform:translateY(-1px)}
+.api-library-icon{display:grid;place-items:center;width:25px;height:25px;flex:0 0 25px;border-radius:8px;background:rgba(145,111,255,.14);color:#c4b5ff;font-size:16px}
+.api-library-button>span:nth-child(2){flex:1;font-weight:600}
+.api-library-arrow{color:#7d87a0;font-size:13px}
+.api-explorer[hidden]{display:none!important}
+.api-explorer{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;color:var(--text);font-family:var(--font)}
+.api-explorer-scrim{position:absolute;inset:0;background:rgba(3,5,10,.78);backdrop-filter:blur(9px);-webkit-backdrop-filter:blur(9px)}
+.api-explorer-panel{position:relative;width:min(1180px,100%);height:min(900px,calc(100dvh - 32px));min-height:0;display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(175,184,222,.16);border-radius:20px;background:linear-gradient(155deg,#111521 0%,#0c0f17 58%,#101421 100%);box-shadow:0 28px 100px rgba(0,0,0,.55)}
+.api-explorer-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:23px 25px 19px;border-bottom:1px solid var(--line);background:linear-gradient(110deg,rgba(136,112,255,.09),transparent 48%)}
+.api-explorer-brand{display:flex;align-items:center;gap:13px;min-width:0}
+.api-explorer-brand-icon{width:46px;height:46px;display:grid;place-items:center;flex:0 0 46px;border-radius:14px;border:1px solid rgba(178,158,255,.28);background:linear-gradient(145deg,rgba(150,121,255,.22),rgba(85,121,255,.09));box-shadow:inset 0 1px rgba(255,255,255,.06);font-size:26px;color:#c6b8ff}
+.api-explorer-kicker{margin-bottom:5px;color:#a69ad3;font-size:9px;font-weight:700;letter-spacing:1.55px}
+.api-explorer-header h2{margin:0;color:#f1f0fa;font:800 clamp(19px,2.8vw,25px)/1.2 var(--display);letter-spacing:-.8px}
+.api-explorer-header p{margin:6px 0 0;color:#8d96aa;font-size:11px;line-height:1.5}
+.api-explorer-close{width:36px;height:36px;flex:0 0 36px;border-color:rgba(175,184,222,.13);background:rgba(255,255,255,.025);font-size:23px}
+.api-explorer-controls{display:grid;grid-template-columns:minmax(210px,2fr) minmax(160px,1.4fr) repeat(3,minmax(115px,1fr));gap:10px;padding:16px 22px 13px;border-bottom:1px solid rgba(175,184,222,.08)}
+.api-filter{display:flex;flex-direction:column;gap:6px;min-width:0}
+.api-filter>span{color:#818ba2;font-size:9px;font-weight:700;letter-spacing:.65px;text-transform:uppercase}
+.api-filter input,.api-filter select{width:100%;height:39px;min-width:0;padding:0 11px;border:1px solid rgba(175,184,222,.15);border-radius:9px;background:#121724;color:#e5e8f3;font:inherit;font-size:11px;outline:none}
+.api-filter input::placeholder{color:#68738a}
+.api-filter input:focus,.api-filter select:focus{border-color:rgba(169,145,255,.7);box-shadow:0 0 0 3px rgba(140,116,255,.08)}
+.api-explorer-body{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:18px 22px 13px;scrollbar-gutter:stable}
+.api-explorer-status{margin:0 0 12px;color:#8f98ae;font-size:11px;line-height:1.6}
+.api-explorer-status:empty{display:none}
+.api-explorer-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.api-card{min-width:0;display:flex;flex-direction:column;gap:9px;padding:14px;border:1px solid rgba(175,184,222,.12);border-radius:13px;background:linear-gradient(145deg,rgba(23,27,41,.86),rgba(15,18,28,.95));transition:transform .16s,border-color .16s,background .16s}
+.api-card:hover{transform:translateY(-1px);border-color:rgba(169,145,255,.32);background:linear-gradient(145deg,rgba(29,32,49,.97),rgba(17,21,33,.98))}
+.api-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.api-card h3{min-width:0;margin:0;color:#f0f1fa;font:700 13px/1.45 var(--display);overflow-wrap:anywhere}
+.api-category-tag{flex:0 0 auto;max-width:46%;padding:4px 6px;border:1px solid rgba(169,145,255,.16);border-radius:6px;background:rgba(145,111,255,.08);color:#b8acd9;font-size:8px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.api-card-description{margin:0;min-height:35px;color:#98a1b5;font-size:10px;line-height:1.65;overflow-wrap:anywhere}
+.api-card-badges{display:flex;flex-wrap:wrap;gap:5px;min-height:21px}
+.api-badge{padding:4px 6px;border:1px solid rgba(175,184,222,.1);border-radius:6px;background:rgba(255,255,255,.025);color:#aab2c4;font-size:8px;line-height:1.2}
+.api-badge.good{border-color:rgba(90,204,157,.17);background:rgba(90,204,157,.06);color:#9ddfc2}
+.api-badge.warn{border-color:rgba(235,185,106,.18);background:rgba(235,185,106,.06);color:#e9c58e}
+.api-card-actions{display:flex;align-items:center;gap:8px;margin-top:auto;padding-top:3px}
+.api-card-link,.api-card-ask{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:31px;padding:0 9px;border-radius:8px;text-decoration:none;font-size:10px;font-weight:600;white-space:nowrap}
+.api-card-link{border:1px solid rgba(175,184,222,.13);background:rgba(255,255,255,.025);color:#c7cce0}
+.api-card-link:hover{border-color:rgba(175,184,222,.28);background:rgba(255,255,255,.06);color:#fff}
+.api-card-ask{border:1px solid rgba(169,145,255,.23);background:rgba(145,111,255,.12);color:#d2c7ff}
+.api-card-ask:hover{border-color:rgba(169,145,255,.48);background:rgba(145,111,255,.2)}
+.api-explorer-more{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:45px;padding-top:14px;color:#778197;font-size:10px}
+.api-load-more{min-height:34px;padding:0 13px;border:1px solid rgba(169,145,255,.22);border-radius:9px;background:rgba(145,111,255,.1);color:#d5caff;font-size:10px;font-weight:600}
+.api-load-more:hover{background:rgba(145,111,255,.19)}
+.api-explorer-footer{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 22px 16px;border-top:1px solid var(--line);background:rgba(8,10,15,.45)}
+.api-explorer-footer p{max-width:780px;margin:0;color:#717b92;font-size:9px;line-height:1.6}
+.api-explorer-footer a{flex:0 0 auto;color:#b7a7ff;font-size:10px;text-decoration:none}
+.api-explorer-footer a:hover{text-decoration:underline;text-underline-offset:3px}
+.api-explorer input:focus-visible,.api-explorer select:focus-visible,.api-explorer button:focus-visible,.api-explorer a:focus-visible{outline:2px solid #9b8aff;outline-offset:2px}
+@media(max-width:1000px){.api-explorer-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.api-explorer-controls{grid-template-columns:repeat(4,minmax(0,1fr))}.api-search-filter{grid-column:span 2}}
+@media(max-width:650px){
+  .api-explorer{padding:0}
+  .api-explorer-panel{width:100%;height:var(--app-height,100dvh);max-height:var(--app-height,100dvh);border-radius:0;border:0}
+  .api-explorer-header{padding:calc(14px + env(safe-area-inset-top)) 15px 14px}
+  .api-explorer-brand{gap:10px}
+  .api-explorer-brand-icon{width:39px;height:39px;flex-basis:39px;border-radius:12px;font-size:22px}
+  .api-explorer-header h2{font-size:19px}
+  .api-explorer-header p{font-size:10px}
+  .api-explorer-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;padding:13px 14px 12px}
+  .api-search-filter{grid-column:1 / -1}
+  .api-filter input,.api-filter select{height:37px;font-size:11px}
+  .api-explorer-body{padding:13px 13px 12px}
+  .api-explorer-grid{grid-template-columns:1fr;gap:9px}
+  .api-card{padding:13px}
+  .api-card-description{min-height:0}
+  .api-explorer-footer{align-items:flex-start;padding:11px 14px calc(12px + env(safe-area-inset-bottom))}
+  .api-explorer-footer p{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){.api-card,.api-library-button{transition:none}}
