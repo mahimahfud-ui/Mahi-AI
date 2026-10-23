@@ -95,12 +95,10 @@ function isGeminiInlineMime(mimeType: string): boolean {
 }
 function isImageGenerationTask(prompt: string): boolean {
   const text = prompt.toLowerCase();
-  return /(?:generate|create|draw|make|design|illustrate|render|produce)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|illustration|poster|logo|wallpaper|thumbnail|artwork|visual|graphic|icon|banner)/i.test(text) ||
-    /(?:image|picture|photo|illustration|poster|logo|wallpaper|thumbnail|artwork)\s+(?:generation|generator|please|of\b)/i.test(text) ||
-    /(?:ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার|থাম্বনেইল).{0,40}(?:তৈরি|বানাও|আঁক|জেনারেট|generate|করো|দাও)/i.test(text) ||
-    /(?:তৈরি|বানাও|আঁক|জেনারেট).{0,35}(?:ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার)/i.test(text) ||
-    /(?:remove|replace|change|edit)\s+(?:the\s+)?(?:background|style|objects?)\b/i.test(text) &&
-      /(?:image|photo|picture|attached|uploaded|ছবি|ইমেজ)/i.test(text);
+  const visual = /(?:image|picture|photo|illustration|poster|logo|wallpaper|thumbnail|artwork|visual|graphic|icon|banner|imagen|foto|ilustraci[oó]n|cartel|logotipo|papel de parede|imagem|ilustra[cç][aã]o|cartaz|fundo de tela|image|photo|affiche|fond d[’']ecran|bild|hintergrundbild|immagine|manifesto|sfondo|изображение|картинк[ауи]|фото|иллюстраци[яи]|плакат|обои|صورة|صور|رسم|ملصق|خلفية|شعار|छवि|तस्वीर|चित्र|पोस्टर|लोगो|वॉलपेपर|تصویر|عکس|图片|图像|照片|插画|海报|壁纸|图标|画像|写真|イラスト|ポスター|壁紙|イメージ|이미지|사진|그림|포스터|배경화면|resim|fotoğraf|afiş|gambar|ilustrasi|ảnh|hình|ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার|থাম্বনেইল)/i.test(text);
+  const create = /(?:generat|creat|draw|mak(?:e|ing)|design|illustrat|render|produc|dibuja|dibujar|diseñ|genera|crear|crea|haz\b|hacer|créer|génér|dessine|dessiner|concevoir|erstelle|generiere|zeichne|gestalte|creare|disegna|gerar|cria|desenha|сгенерируй|создай|создать|нарисуй|нарисовать|сделай|изобрази|أنشئ|اصنع|ارسم|صمم|ولّد|انشئ|बनाओ|बनाएं|बनाना|तैयार करो|खींचो|ڈیزائن|بناؤ|بنائیں|画像生成|画像を作|写真を作|生成して|描いて|设计|生成|制作|画一张|画|만들어|생성|그려|디자인|oluştur|çiz|tasarla|buat|ciptakan|tạo|vẽ|thiết kế|তৈরি|বানাও|আঁক|জেনারেট)/i.test(text);
+  const edit = /(?:edit|remove|replace|change|modify|retouch|cambia|cambiar|editar|modifica|modifier|ändern|bearbeiten|modifica|измен|удали|замени|عدّل|عدل|غيّر|غير|تعديل|बदल|संपादित|बदलें|編集|修正|改变|修改|编辑|편집|수정|değiştir|ubah|sửa|পরিবর্তন|এডিট)/i.test(text);
+  return (create && visual) || (edit && visual);
 }
 async function prepareAttachments(userId: string, values: unknown): Promise<PreparedAttachment[]> {
   if (!Array.isArray(values)) return [];
@@ -208,9 +206,9 @@ async function saveChatTurn(userId: string, conversationId: string, userContent:
 
 function classifyTask(prompt: string): string {
   const s = prompt.toLowerCase();
-  if (/(debug|stack trace|typescript|javascript|python|html|css|react|sql|api|function|compiler|program|code|bug|কোড|প্রোগ্রামিং|বাগ|এরর|ত্রুটি)/i.test(s)) return "coding";
-  if (/(prove|proof|derive|equation|calculate|math|logic|reason|compare|evaluate|analy[sz]e|step by step|সমাধান|গণিত|যুক্তি|বিশ্লেষণ|হিসাব)/i.test(s)) return "reasoning";
-  if (/(story|poem|creative|rewrite|write a|blog|script|caption|lyrics|গল্প|কবিতা|লিখে দাও|রচনা|ক্যাপশন)/i.test(s)) return "creative";
+  if (/(debug|stack trace|typescript|javascript|python|html|css|react|sql|api|function|compiler|program|code|bug|c[oó]digo|programar|depurar|erro de c[oó]digo|c[oó]digo fuente|programmieren|debuggen|код|программирование|отладка|代码|编程|调试|プログラム|コード|デバッグ|코드|프로그래밍|디버그|كود|برمجة|تصحيح|कोड|प्रोग्रामिंग|त्रुटि|کد|برنامه‌نویسی|কোড|প্রোগ্রামিং|বাগ|এরর|ত্রুটি)/i.test(s)) return "coding";
+  if (/(prove|proof|derive|equation|calculate|math|logic|reason|compare|evaluate|analy[sz]e|step by step|matem[aá]tica|calcular|analizar|raisonnement|calculer|mathematik|berechnen|ragionamento|calcolare|вычисл|доказательств|数学|推理|计算|数学|論理|推論|계산|추론|منطق|حساب|गणित|तर्क|गणনা|যুক্তি|বিশ্লেষণ|হিসাব|সমাধান)/i.test(s)) return "reasoning";
+  if (/(story|poem|creative|rewrite|write a|blog|script|caption|lyrics|cuento|poema|escribir|historia|histoire|po[eè]me|schreiben|geschichte|racconto|poesia|история|стихотвор|故事|诗|寫作|物語|詩|이야기|시|قصة|شعر|कहानी|कविता|গল্প|কবিতা|লিখে দাও|রচনা|ক্যাপশন)/i.test(s)) return "creative";
   return "general";
 }
 function providerIsConfigured(name: string): boolean {
