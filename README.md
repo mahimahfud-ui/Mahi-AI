@@ -33,6 +33,16 @@ The router works with any subset of the enabled providers, classifies the prompt
 
 Free tiers have strict and changing quotas. OpenRouter currently lists 50 requests/day on its free plan; its \`openrouter/free\` route selects a model from its free set. Free access is not unlimited, and some providers may retain inputs for service improvement. A provider's free chat website does not imply free API usage. Do not add credentials to GitHub.
 
+## Attachments and media routing
+
+- The composer accepts up to 5 files per message, any file type, up to 15 MB per file and 20 MB total.
+- Attachments are uploaded to a private Supabase Storage bucket and are scoped to the authenticated guest user by Storage RLS.
+- Text and common source/code files are read as UTF-8 and included as prompt context.
+- Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Unsupported binary file types can still be attached, but the current backend only tells the model their name/type; it does not claim to understand their binary contents.
+- Requests to generate or edit an image route to Gemini's `gemini-3.1-flash-image` model. Generated image outputs are stored privately and displayed through expiring signed links.
+- Image generation needs a Gemini API key/account with access and quota for the image model. Generation is not guaranteed to be free.
+- API roles: coding routes to OpenRouter first, with optional OpenAI fallback only when `ENABLE_PAID_FALLBACK=true`; ordinary chat prefers Groq/Gemini; multimodal file analysis routes to Gemini. Paid providers remain disabled by default.
+
 ## Deploy the Edge Function
 
 The function source is \`supabase/functions/mahi-ai-chat/index.ts\`; it is deployed with JWT verification enabled. The deployed function name is \`mahi-ai-chat\`.
