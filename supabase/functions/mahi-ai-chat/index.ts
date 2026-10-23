@@ -54,6 +54,7 @@ type StoredAttachment = {
   name: string;
   mime_type?: string;
   size?: number;
+  extracted_text?: string;
 };
 type PreparedAttachment = StoredAttachment & {
   mimeType: string;
@@ -127,7 +128,10 @@ async function prepareAttachments(userId: string, values: unknown): Promise<Prep
       path: item.path, name: item.name.slice(0, 160), mime_type: mimeType, mimeType,
       size: buffer.byteLength, bytes: buffer, inline: false
     };
-    if (isTextLikeFile(attachment.name, mimeType)) {
+    const suppliedText = typeof item.extracted_text === "string" ? item.extracted_text.slice(0, 30000) : "";
+    if (suppliedText) {
+      attachment.extractedText = suppliedText;
+    } else if (isTextLikeFile(attachment.name, mimeType)) {
       const decoded = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
       attachment.extractedText = decoded.slice(0, 18000);
     } else if (isGeminiInlineMime(mimeType)) {
@@ -832,7 +836,7 @@ Deno.serve(async (req: Request) => {
   let input: any;
   try {
     const length = Number(req.headers.get("content-length") || "0");
-    if (length > 100000) return json(413, { error: "That message is too large." });
+    if (length > 200000) return json(413, { error: "That message is too large." });
     input = await req.json();
   } catch (_) {
     return json(400, { error: "Invalid request." });
