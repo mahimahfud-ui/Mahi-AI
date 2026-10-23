@@ -178,8 +178,92 @@
     updateCounter();
     setError(rejected.length ? rejected.join(" ") : "");
   }
+  const scriptPromises = Object.create(null);
+  function loadExternalScript(url, globalName) {
+    if (window[globalName]) return Promise.resolve(window[globalName]);
+    if (scriptPromises[url]) return scriptPromises[url];
+    scriptPromises[url] = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = url;
+      script.async = true;
+      script.onload = () => window[globalName] ? resolve(window[globalName]) : reject(new Error("Document parser failed to load."));
+      script.onerror = () => reject(new Error("Could not load the document parser. Try a PDF or plain-text export instead."));
+      document.head.appendChild(script);
+    });
+    return scriptPromises[url];
+  }
+  async function extractDocumentText(file) {
+    const lower = file.name.toLowerCase();
+    const extension = lower.split(".").pop() || "";
+    if (extension === "docx") {
+      await loadExternalScript("https://unpkg.com/mammoth@1.9.0/mammoth.browser.min.js", "mammoth");
+      const result = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+      return String(result.value || "").slice(0, 12000);
+    }
+    if (["xlsx", "xls", "ods"].includes(extension)) {
+      await loadExternalScript("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js", "XLSX");
+      const workbook = window.XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+      const sections = [];
+      let total = 0;
+      for (const sheetName of workbook.SheetNames || []) {
+        if (total >= 16000) break;
+        const part = "### Sheet: " + sheetName + "\n" +
+          window.XLSX.utils.sheet_to_csv(workbook.Sheets[sheetName]).slice(0, 16000 - total);
+        sections.push(part);
+        total += part.length;
+      }
+      return sections.join("\n\n").slice(0, 16000);
+    }
+    if (["pptx", "odp", "odt"].includes(extension)) {
+      await loadExternalScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js", "JSZip");
+      const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
+      const targetFiles = Object.keys(zip.files).filter((name) =>
+        !zip.files[name].dir &&
+        (extension === "pptx" ? /^ppt\/slides\/slide\d+\.xml$/i.test(name) :
+          /^(?:content\.xml|word\/document\.xml)$/i.test(name))
+      ).sort();
+      const parts = [];
+      let total = 0;
+      for (const name of targetFiles.slice(0, 40)) {
+        if (total >= 16000) break;
+        const xml = await zip.files[name].async("string");
+        const doc = new DOMParser().parseFromString(xml, "application/xml");
+        const nodes = extension === "pptx"
+          ? doc.getElementsByTagNameNS("*", "t")
+          : doc.getElementsByTagNameNS("urn:oasis:names:tc:opendocument:xmlns:text:1.0", "p");
+        const text = Array.from(nodes).map((node) => node.textContent || "").join(" ").trim();
+        if (text) {
+          parts.push((extension === "pptx" ? name.split("/").pop() : "Document text") + ":\n" + text);
+          total += text.length;
+        }
+      }
+      return parts.join("\n\n").slice(0, 16000);
+    }
+    if (extension === "zip") {
+      await loadExternalScript("https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js", "JSZip");
+      const zip = await window.JSZip.loadAsync(await file.arrayBuffer());
+      const readable = Object.keys(zip.files).filter((name) =>
+        !zip.files[name].dir && /\.(txt|md|csv|json|xml|html|css|js|ts|py|sql|yaml|yml|log|java|go|rs|c|cpp|sh)$/i.test(name)
+      ).slice(0, 20);
+      const parts = [];
+      let total = 0;
+      for (const name of readable) {
+        if (total >= 12000) break;
+        const entry = zip.files[name];
+        const size = entry._data && entry._data.uncompressedSize;
+        if (typeof size === "number" && size > 1024 * 1024) continue;
+        const text = (await entry.async("string")).slice(0, Math.min(4000, 12000 - total));
+        parts.push("### " + name + "\n" + text);
+        total += text.length;
+      }
+      return parts.join("\n\n").slice(0, 12000);
+    }
+    return "";
+  }
+
   async function uploadPendingAttachments(files) {
     const uploaded = [];
+    let totalExtracted = 0;
     for (const file of files) {
       const safeName = file.name.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(-100) || "attachment";
       const path = session.user.id + "/" + crypto.randomUUID() + "/" + safeName;
@@ -190,7 +274,22 @@
         if (uploaded.length) await client.storage.from("mahi-ai-attachments").remove(uploaded.map((item) => item.path));
         throw new Error("Mahi AI: Could not upload " + file.name + ". Check the Supabase attachment bucket setup and try again.");
       }
-      uploaded.push({ path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream", size: file.size });
+      let extractedText = "";
+      try {
+        extractedText = await extractDocumentText(file);
+      } catch (error) {
+        throw new Error("Mahi AI: Could not read " + file.name + ". Try exporting it as PDF or text. " +
+          (error instanceof Error ? error.message : ""));
+      }
+      if (extractedText) {
+        const remaining = Math.max(0, 30000 - totalExtracted);
+        extractedText = extractedText.slice(0, remaining);
+        totalExtracted += extractedText.length;
+      }
+      uploaded.push({
+        path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream",
+        size: file.size, extracted_text: extractedText
+      });
     }
     return uploaded;
   }
