@@ -10,7 +10,7 @@
   };
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [];
-  const MAX_HISTORY = 18;
+  const MAX_HISTORY = 12;
 
   function setError(message) {
     ui.error.textContent = message || "";
