@@ -114,7 +114,8 @@ async function callGemini(messages: ChatMessage[], task: string): Promise<string
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
   const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
-  const contents = messages.map((message) => ({
+  const normalizedMessages = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
+  const contents = normalizedMessages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }]
   }));
