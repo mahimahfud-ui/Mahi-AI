@@ -41,7 +41,7 @@ Free tiers have strict and changing quotas. OpenRouter currently lists 50 reques
 - Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Any file type can be selected and uploaded, but unsupported binary types may only pass their name/type unless their contents can be extracted.
 - Requests to generate or edit an image route to Gemini's `gemini-3.1-flash-image` model. Generated image outputs are stored privately and displayed through expiring signed links.
 - Image generation needs a Gemini API key/account with access and quota for the image model. Generation is not guaranteed to be free.
-- API roles: coding routes to OpenRouter first, with optional OpenAI fallback only when `ENABLE_PAID_FALLBACK=true`; ordinary chat prefers Groq/Gemini; multimodal file analysis routes to Gemini. Paid providers remain disabled by default.
+- API roles: coding routes to OpenRouter first and then to the configured `OPENAI_API_KEY` as a paid fallback; ordinary chat prefers Groq/Gemini; multimodal file analysis routes to Gemini. OpenAI can incur charges if the free OpenRouter model fails, is rate-limited, or is unavailable. Anthropic and other paid-task fallbacks remain disabled unless `ENABLE_PAID_FALLBACK=true`.
 
 ## Deploy the Edge Function
 
