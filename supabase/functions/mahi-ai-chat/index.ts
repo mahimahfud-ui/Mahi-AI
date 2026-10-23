@@ -603,17 +603,134 @@ function sseEvent(controller: ReadableStreamDefaultController<Uint8Array>, encod
   controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
 }
 
-async function streamChatResponse(
-  userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null
+async function generateGeminiImage(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+  const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+  if (!key) throw new Error("Gemini image generation is not configured.");
+  const parts: Record<string, unknown>[] = [{ text: prompt }];
+  for (const attachment of attachments) {
+    if (attachment.inline && attachment.base64 && attachment.mimeType.startsWith("image/")) {
+      parts.push({ inline_data: { mime_type: attachment.mimeType, data: attachment.base64 } });
+    }
+  }
+  const aspectRatio = /(?:banner|thumbnail|landscape|wide|16:9)/i.test(prompt) ? "16:9"
+    : /(?:phone wallpaper|mobile wallpaper|portrait|9:16|story format)/i.test(prompt) ? "9:16" : "1:1";
+  const response = await fetchWithTimeout(
+    "https://generativelanguage.googleapis.com/v1/models/gemini-3.1-flash-image:generateContent",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: {
+          responseModalities: ["TEXT", "IMAGE"],
+          responseFormat: { image: { aspectRatio, imageSize: "1K" } }
+        }
+      })
+    },
+    90000
+  );
+  if (!response.ok) throw new Error(await readProviderError(response));
+  const data = await response.json();
+  let text = "";
+  let imageData = "";
+  let mimeType = "image/png";
+  for (const part of data?.candidates?.[0]?.content?.parts || []) {
+    if (typeof part.text === "string") text += part.text;
+    const inline = part.inlineData || part.inline_data;
+    if (inline?.data) {
+      imageData = inline.data;
+      mimeType = inline.mimeType || inline.mime_type || mimeType;
+    }
+  }
+  if (!imageData) throw new Error("Gemini did not return an image. Check the API key, quota, and image model availability.");
+  const bytes = Uint8Array.from(atob(imageData), (char) => char.charCodeAt(0));
+  return { text: text.trim() || "Here is the image you requested.", bytes, mimeType };
+}
+
+async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: string): Promise<string> {
+  const ext = mimeType === "image/webp" ? "webp" : mimeType === "image/jpeg" ? "jpg" : "png";
+  const path = userId + "/" + crypto.randomUUID() + "." + ext;
+  const encodedPath = path.split("/").map(encodeURIComponent).join("/");
+  const response = await fetch(baseUrl + "/storage/v1/object/mahi-ai-generated/" + encodedPath, {
+    method: "POST",
+    headers: adminHeaders({ "Content-Type": mimeType, "x-upsert": "false" }),
+    body: bytes
+  });
+  if (!response.ok) {
+    console.error("Generated image storage failed:", response.status, (await response.text()).slice(0, 300));
+    throw new Error("Could not save the generated image.");
+  }
+  return path;
+}
+
+function eventStreamResponse(
+  onStart: (controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder) => void
+): Response {
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) { onStart(controller, new TextEncoder()); }
+  });
+  return new Response(stream, {
+    status: 200,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      "X-Accel-Buffering": "no"
+    }
+  });
+}
+
+async function streamImageGenerationResponse(
+  userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
+  attachments: PreparedAttachment[], displayUserText: string
 ): Promise<Response> {
-  const available = providerOrder(task);
+  return eventStreamResponse((controller, encoder) => {
+    (async () => {
+      let conversationId = initialConversationId;
+      try {
+        conversationId = await createConversationIfNeeded(
+          userId, conversationId, displayUserText || messages[messages.length - 1].content
+        );
+        sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
+        sseEvent(controller, encoder, { type: "status", message: "Gemini is creating your image…" });
+        const result = await generateGeminiImage(messages[messages.length - 1].content, attachments);
+        const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
+        const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
+        await saveChatTurn(userId, conversationId, displayUserText, reply);
+        await updateUsage(usageId, { success: true, provider: "gemini-image", task_type: "image_generation", error_code: null });
+        sseEvent(controller, encoder, { type: "delta", text: reply });
+        sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.error("Mahi AI image generation failed:", reason.slice(0, 300));
+        await updateUsage(usageId, { success: false, provider: "gemini-image", task_type: "image_generation", error_code: "image_generation_failed" });
+        sseEvent(controller, encoder, {
+          type: "error",
+          message: "I couldn't generate the image. Check that your Gemini API key has image-generation access and available quota, then try again."
+        });
+      } finally {
+        try { controller.close(); } catch (_) {}
+      }
+    })();
+  });
+}
+
+async function streamChatResponse(
+  userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
+  attachments: PreparedAttachment[], displayUserText: string
+): Promise<Response> {
+  if (isImageGenerationTask(messages[messages.length - 1]?.content || "")) {
+    return streamImageGenerationResponse(userId, messages, initialConversationId, usageId, attachments, displayUserText);
+  }
+  const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
+  const available = providerOrder(task, hasInlineAttachments);
   const failures: string[] = [];
   let chosen: ProviderStream | null = null;
   let firstText = "";
   for (const provider of available) {
     let candidate: ProviderStream | null = null;
     try {
-      candidate = await startProviderStream(provider, messages, task);
+      candidate = await startProviderStream(provider, messages, task, attachments);
       let timer: ReturnType<typeof setTimeout> | undefined;
       const first = await Promise.race([
         candidate.iterator.next(),
@@ -648,24 +765,14 @@ async function streamChatResponse(
   }
 
   let conversationId = initialConversationId;
-  if (!conversationId) {
-    const firstPrompt = messages.find((m) => m.role === "user")?.content || "New chat";
-    const title = firstPrompt.replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
-    try {
-      const created = await rest("mahi_ai_conversations", {
-        method: "POST",
-        headers: { Prefer: "return=representation" },
-        body: JSON.stringify({ user_id: userId, title })
-      });
-      if (!created.ok) throw new Error("Could not create conversation");
-      const rows = await created.json();
-      conversationId = rows?.[0]?.id || "";
-      if (!conversationId) throw new Error("No conversation id");
-    } catch (_) {
-      chosen.cleanup();
-      await updateUsage(usageId, { success: false, provider: chosen.provider, error_code: "database_unavailable" });
-      return json(503, { error: "Mahi AI could not save this conversation. Please try again." });
-    }
+  try {
+    conversationId = await createConversationIfNeeded(
+      userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
+    );
+  } catch (_) {
+    chosen.cleanup();
+    await updateUsage(usageId, { success: false, provider: chosen.provider, error_code: "database_unavailable" });
+    return json(503, { error: "Mahi AI could not save this conversation. Please try again." });
   }
 
   const encoder = new TextEncoder();
@@ -685,22 +792,8 @@ async function streamChatResponse(
             sseEvent(controller, encoder, { type: "delta", text: next.value });
           }
           if (!completeText.trim()) throw new Error("Empty provider response");
-          const lastUser = messages[messages.length - 1].content;
-          const saved = await rest("mahi_ai_messages", {
-            method: "POST",
-            headers: { Prefer: "return=minimal" },
-            body: JSON.stringify([
-              { conversation_id: conversationId, user_id: userId, role: "user", content: lastUser },
-              { conversation_id: conversationId, user_id: userId, role: "assistant", content: completeText }
-            ])
-          });
-          if (!saved.ok) throw new Error("Mahi AI could not save the response");
-          await Promise.all([
-            rest("mahi_ai_conversations?id=eq." + encodeURIComponent(conversationId) + "&user_id=eq." + encodeURIComponent(userId), {
-              method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ updated_at: new Date().toISOString() })
-            }),
-            updateUsage(usageId, { success: true, provider: selected.provider, task_type: task, error_code: null })
-          ]);
+          await saveChatTurn(userId, conversationId, displayUserText, completeText);
+          await updateUsage(usageId, { success: true, provider: selected.provider, task_type: task, error_code: null });
           sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
         } catch (error) {
           const reason = error instanceof Error ? error.message : String(error);
