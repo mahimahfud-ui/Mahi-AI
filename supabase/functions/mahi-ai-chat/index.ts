@@ -205,6 +205,20 @@ async function saveChatTurn(userId: string, conversationId: string, userContent:
   });
 }
 
+function shouldUseUrlContext(prompt: string): boolean {
+  return /https:\/\/[^\s<>"']+/i.test(prompt);
+}
+function shouldUseCodeExecution(prompt: string): boolean {
+  const s = prompt.toLowerCase();
+  if (/\b(?:write|create|build|generate|implement|debug|fix|refactor)\b.{0,50}\b(?:code|script|program|function|class|app)\b/i.test(s) &&
+      !/\b(?:run|execute|test|check|verify)\s+(?:this|the|my|that)?\s*(?:code|script|calculation|query)\b/i.test(s)) return false;
+  const explicit = /\b(?:calculate|compute|evaluate|solve numerically|run this code|execute this code|test this code|verify this calculation|sum of|average of|mean of|median of|standard deviation|variance of|statistics for|factorial|prime numbers|matrix multiplication|integrate this|differentiate this|analyze this data|analyse this data|process this dataset|data analysis|run (?:the )?calculation)\b/i.test(s) ||
+    /(?:হিসাব করে|হিসাব কর|গণনা কর|গণনা করে|যোগফল|গড় বের|গড় বের|শতকরা হিসাব|সমীকরণ সমাধান|ক্যালকুলেশন করে|কোড চালিয়ে|কোড চালিয়ে|কোড রান করে|ডেটা বিশ্লেষণ|ডাটা বিশ্লেষণ|গড় কত|গড় কত)/i.test(s) ||
+    /\b(?:hishab koro|hisab koro|gonona koro|jogfol ber|gor ber koro|code chalao|code run koro|calculation kore dao|calculate kore dao|math solve koro|data analyze koro)\b/i.test(s);
+  const simpleArithmetic = /^\s*(?:(?:what is|calculate|compute)\s+)?\d+(?:\.\d+)?(?:\s*(?:\+|\*|\/|×|÷|\^|%|\s+minus\s+|\s+plus\s+|\s+times\s+|\s+divided by\s+)\s*\d+(?:\.\d+)?)+\s*[?=]?\s*$/i.test(s);
+  return explicit || simpleArithmetic;
+}
+
 function shouldUseWebSearch(prompt: string): boolean {
   const s = prompt.toLowerCase();
   return /\b(search (?:the )?(?:web|internet)|look up online|find online|browse|web search|latest|current|currently|today|tonight|yesterday|right now|recent|newest|breaking|live|news|headline|release date|latest version|official documentation|source links?|citations?|fact.?check|verify online|price today|current price|exchange rate|weather today|who won|this week|this month|as of 20\d{2})\b/i.test(s) ||
@@ -236,7 +250,7 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     preferred = ["gemini", ...(hasInlineImages
       ? ["openai", "openrouter", "mistral", "groq", "nvidia", "cloudflare", "anthropic"]
       : ["openai", "openrouter", "groq", "mistral", "nvidia", "cloudflare", "anthropic"])];
-  } else if (task === "web_research") {
+  } else if (task === "web_research" || task === "code_execution") {
     preferred = ["gemini", "openrouter", "groq", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
   } else if (task === "coding") {
     preferred = ["openrouter", "openai", "nvidia", "groq", "gemini", "mistral", "cloudflare", "anthropic"];
@@ -262,7 +276,12 @@ function systemPrompt(task: string): string {
   const previewGuidance = task === "coding"
     ? " When the user asks to build, create, design, or preview a website, webpage, landing page, or visual frontend prototype, make the result previewable in Mahi AI: provide a complete runnable page in one fenced html code block, put CSS in an inline style element and JavaScript in an inline script element, and include responsive viewport metadata. For this single-file preview path, avoid JSX/TSX, package imports, and build steps. If the user explicitly asks for an existing repository, a framework, multiple files, or a specific format, respect that request and do not force a single HTML file. For unrelated code questions, answer in the most appropriate code format."
     : "";
-  return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + "." + previewGuidance + " Do not mention internal providers, routing, or API infrastructure.";
+  const toolGuidance = task === "web_research"
+    ? " When web search or URL-context tools are enabled, use them. Prefer primary or official sources, compare publication date and event date, and include source links returned by the search tool. Never invent links or claim live verification if retrieval was unavailable."
+    : task === "code_execution"
+    ? " Use sandboxed Python code execution for calculations, numerical tasks, statistics or explicit code execution when available. Base numerical conclusions on actual tool results. Do not say code ran unless the tool returned an execution result."
+    : "";
+  return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + "." + previewGuidance + toolGuidance + " Do not mention internal providers, routing, or API infrastructure.";
 }
 type ChatMessage = { role: "user" | "assistant"; content: string };
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000): Promise<Response> {
@@ -583,9 +602,20 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
     const normalized = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
     const latestPrompt = [...normalized].reverse().find((m) => m.role === "user")?.content || "";
-    const useWebSearch = shouldUseWebSearch(latestPrompt) && !attachments.some((item) => item.inline && item.base64);
+    const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
+    const useWebSearch = shouldUseWebSearch(latestPrompt) && !hasInlineAttachments;
+    const useUrlContext = shouldUseUrlContext(latestPrompt) && !hasInlineAttachments;
+    const useCodeExecution = shouldUseCodeExecution(latestPrompt) && !hasInlineAttachments;
+    const geminiTools: Record<string, unknown>[] = [];
+    if (useWebSearch) geminiTools.push({ google_search: {} });
+    if (useUrlContext) geminiTools.push({ url_context: {} });
+    if (useCodeExecution) geminiTools.push({ code_execution: {} });
     const geminiSystem = systemPrompt(task) + (useWebSearch
       ? " This request needs current information: use the built-in Google Search tool, base factual claims on retrieved pages, and include links from returned grounding metadata. If the search tool produces no sources, clearly say which facts you could not verify."
+      : "") + (useUrlContext
+      ? " Read and analyze the public URL(s) supplied in the user's prompt using URL Context. Do not pretend to access pages that retrieval reports as unavailable."
+      : "") + (useCodeExecution
+      ? " Use sandboxed Python code execution to check calculations or analyze data when necessary. Base numerical answers on actual tool results."
       : "");
     url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) +
       ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
@@ -603,7 +633,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         return { role: m.role === "assistant" ? "model" : "user", parts };
       }),
       generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
-      ...(useWebSearch ? { tools: [{ google_search: {} }] } : {})
+      ...(geminiTools.length ? { tools: geminiTools } : {})
     };
     useGemini = true;
   } else if (name === "anthropic") {
@@ -1052,7 +1082,8 @@ async function streamChatResponse(
           sseEvent(controller, encoder, {
             type: "status",
             message: index === 0
-              ? task === "web_research" ? "Searching the web for current information and sources…"
+              ? task === "web_research" ? "Checking live web sources and linked pages…"
+                : task === "code_execution" ? "Checking the calculation with a computation tool…"
                 : "Finding a model that can complete your request…"
               : "The previous attempt did not finish. Trying the next available model…"
           });
@@ -1091,7 +1122,8 @@ async function streamChatResponse(
         const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
         const contextText = messages[messages.length - 1]?.content || originalPrompt;
         const reviewProviders = available.filter((name) => name !== chosen!.provider && name !== "openai" && name !== "anthropic");
-        if (reviewProviders.length && !hasInlineAttachments && chosen.text.length <= 30000) {
+        if (reviewProviders.length && task !== "web_research" && task !== "code_execution" &&
+            !hasInlineAttachments && chosen.text.length <= 30000) {
           sseEvent(controller, encoder, { type: "status", message: "Checking the answer for accuracy and completeness…" });
           const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task);
           finalAnswer = review.answer;
@@ -1165,7 +1197,9 @@ Deno.serve(async (req: Request) => {
   const hasCodeAttachment = attachments.some((item) => isCodeAttachment(item.name));
   const task = isImageGenerationTask(displayPrompt) ? "image_generation"
     : hasCodeAttachment ? "coding"
-    : shouldUseWebSearch(displayPrompt) ? "web_research" : classifyTask(displayPrompt);
+    : shouldUseWebSearch(displayPrompt) || shouldUseUrlContext(displayPrompt) ? "web_research"
+    : shouldUseCodeExecution(displayPrompt) ? "code_execution"
+    : classifyTask(displayPrompt);
   let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
   if (conversationId) {
     try {
