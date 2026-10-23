@@ -13,6 +13,22 @@
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
   const MAX_HISTORY = 24;
+  // Use the visible viewport height so mobile browser chrome and virtual keyboards
+  // don't push the composer off-screen. CSS dvh remains the fallback.
+  function syncVisibleViewport() {
+    const visibleHeight = window.visualViewport && window.visualViewport.height
+      ? window.visualViewport.height
+      : window.innerHeight;
+    if (Number.isFinite(visibleHeight) && visibleHeight > 0) {
+      document.documentElement.style.setProperty("--app-height", Math.round(visibleHeight) + "px");
+    }
+  }
+  syncVisibleViewport();
+  window.addEventListener("resize", syncVisibleViewport, { passive: true });
+  window.addEventListener("orientationchange", syncVisibleViewport, { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", syncVisibleViewport, { passive: true });
+  }
 
   function setError(message) {
     ui.error.textContent = message || "";
