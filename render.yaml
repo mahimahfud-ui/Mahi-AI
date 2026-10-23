@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mahi-ai
+    runtime: node
+    plan: free
+    region: singapore
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
