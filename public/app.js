@@ -270,8 +270,9 @@
         try {
           extractedText = await extractDocumentText(file);
         } catch (error) {
-          throw new Error("Mahi AI: Could not read " + file.name + ". Try exporting it as PDF or text. " +
-            (error instanceof Error ? error.message : ""));
+          // Any file type remains attachable even when its optional text extractor is unavailable.
+          console.warn("Mahi AI could not extract document text:", file.name, error);
+          extractedText = "";
         }
         if (extractedText) {
           const remaining = Math.max(0, 30000 - totalExtracted);
@@ -306,7 +307,7 @@
       const path = match[1];
       if (!path.startsWith(session.user.id + "/")) continue;
       const { data, error } = await client.storage.from("mahi-ai-generated").createSignedUrl(path, 7 * 24 * 60 * 60);
-      if (!error && data && data.signedUrl) result = result.replace(match[0], data.signedUrl);
+      if (!error && data && data.signedUrl) result = result.replace(match[0], new URL(data.signedUrl, cfg.supabaseUrl).href);
       else result = result.replace("![" + "Generated image" + "](" + match[0] + ")", "[Generated image is stored, but the preview link could not be refreshed.]");
     }
     return result;
