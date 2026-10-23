@@ -237,6 +237,7 @@ function providerIsConfigured(name: string): boolean {
   if (name === "gemini") return !!envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (name === "groq") return !!envFirst(["GROQ_API_KEY"]);
   if (name === "openrouter") return !!envFirst(["OPENROUTER_API_KEY"]);
+  if (name === "deepseek") return !!envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
   if (name === "mistral") return !!envFirst(["MISTRAL_API_KEY"]);
   if (name === "nvidia") return !!envFirst(["NVIDIA_API_KEY"]);
   if (name === "cloudflare") return !!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
@@ -248,21 +249,21 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   let preferred: string[];
   if (hasInlineAttachments) {
     preferred = ["gemini", ...(hasInlineImages
-      ? ["openai", "openrouter", "mistral", "groq", "nvidia", "cloudflare", "anthropic"]
-      : ["openai", "openrouter", "groq", "mistral", "nvidia", "cloudflare", "anthropic"])];
+      ? ["openai", "openrouter", "deepseek", "mistral", "groq", "nvidia", "cloudflare", "anthropic"]
+      : ["openai", "openrouter", "deepseek", "groq", "mistral", "nvidia", "cloudflare", "anthropic"])];
   } else if (task === "web_research" || task === "code_execution") {
-    preferred = ["gemini", "openrouter", "groq", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
+    preferred = ["gemini", "openrouter", "deepseek", "groq", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
   } else if (task === "coding") {
-    preferred = ["openrouter", "openai", "nvidia", "groq", "gemini", "mistral", "cloudflare", "anthropic"];
+    preferred = ["openrouter", "deepseek", "openai", "nvidia", "groq", "gemini", "mistral", "cloudflare", "anthropic"];
   } else if (task === "reasoning") {
-    preferred = ["gemini", "openrouter", "openai", "anthropic", "nvidia", "groq", "mistral", "cloudflare"];
+    preferred = ["gemini", "deepseek", "openrouter", "openai", "anthropic", "nvidia", "groq", "mistral", "cloudflare"];
   } else if (task === "creative") {
-    preferred = ["gemini", "openai", "anthropic", "groq", "openrouter", "mistral", "nvidia", "cloudflare"];
+    preferred = ["gemini", "openai", "anthropic", "groq", "openrouter", "deepseek", "mistral", "nvidia", "cloudflare"];
   } else {
-    preferred = ["groq", "gemini", "openrouter", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
+    preferred = ["groq", "gemini", "openrouter", "deepseek", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
   }
   // Every configured key is eligible for automatic fallback. Paid API calls may incur charges.
-  const all = [...preferred, "gemini", "groq", "openrouter", "mistral", "nvidia", "cloudflare", "openai", "anthropic"];
+  const all = [...preferred, "gemini", "groq", "openrouter", "deepseek", "mistral", "nvidia", "cloudflare", "openai", "anthropic"];
   return [...new Set(all)].filter(providerIsConfigured);
 }
 
@@ -354,6 +355,12 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
     const key = envFirst(["OPENROUTER_API_KEY"]);
     if (!key) throw new Error("Not configured");
     return { text: await openAICompatible(name, "https://openrouter.ai/api/v1/chat/completions", key, openRouterModel(task), messages, { "HTTP-Referer": "https://github.com/mahimahfud-ui/Mahi-AI", "X-Title": "Mahi AI" }, timeoutMs, systemOverride), provider: name };
+  }
+  if (name === "deepseek") {
+    const key = envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
+    if (!key) throw new Error("Not configured");
+    const model = envFirst(["DEEPSEEK_MODEL"]) || "deepseek-flash";
+    return { text: await openAICompatible(name, "https://api.deepseek.com/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "nvidia") {
     const key = envFirst(["NVIDIA_API_KEY"]);
@@ -658,6 +665,9 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       url = "https://openrouter.ai/api/v1/chat/completions";
       headers["HTTP-Referer"] = "https://github.com/mahimahfud-ui/Mahi-AI";
       headers["X-Title"] = "Mahi AI";
+    } else if (name === "deepseek") {
+      key = envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
+      url = "https://api.deepseek.com/chat/completions";
     } else if (name === "mistral") { key = envFirst(["MISTRAL_API_KEY"]); url = "https://api.mistral.ai/v1/chat/completions"; }
     else if (name === "openai") { key = envFirst(["OPENAI_API_KEY"]); url = "https://api.openai.com/v1/chat/completions"; }
     else if (name === "nvidia") {
@@ -674,13 +684,14 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     let model = "";
     if (name === "groq") model = envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b";
     else if (name === "openrouter") model = openRouterModel(task);
+    else if (name === "deepseek") model = envFirst(["DEEPSEEK_MODEL"]) || "deepseek-flash";
     else if (name === "mistral") model = envFirst(["MISTRAL_MODEL"]) || "mistral-small-latest";
     else if (name === "openai") model = envFirst(["OPENAI_MODEL"]) || "gpt-4.1-mini";
     else if (name === "nvidia") model = task === "coding"
       ? envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct"
       : envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b";
     else if (name === "cloudflare") model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-    if ((name === "openai" || name === "openrouter") && attachments.some((item) =>
+    if ((name === "openai" || name === "openrouter" || name === "deepseek") && attachments.some((item) =>
       item.inline && item.base64 && item.mimeType.startsWith("image/"))) {
       const lastUserIndex = chatMessages.map((message: any) => message.role).lastIndexOf("user");
       if (lastUserIndex >= 0) {
