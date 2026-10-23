@@ -5,3 +5,41 @@
 /* File attachments */
 .composer-left-actions{display:flex;align-items:center;gap:12px;min-width:0}.attach-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:31px;padding:0 10px;border-radius:8px;border:1px solid rgba(169,179,215,.15);background:#191d29;color:#b5bdd0;font-size:11px;white-space:nowrap;transition:background .16s,border-color .16s,color .16s}.attach-button:hover{border-color:rgba(169,145,255,.45);background:#211d35;color:#e5ddff}.attach-button svg{height:15px;width:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}.attachment-list{display:flex;flex-wrap:wrap;gap:7px;padding:0 0 10px;max-height:128px;overflow:auto}.attachment-list[hidden]{display:none}.attachment-chip{display:flex;align-items:center;gap:8px;min-width:0;max-width:min(100%,260px);padding:6px 8px;border:1px solid rgba(169,179,215,.15);background:#191d29;border-radius:9px;color:#d8ddec;font-size:10px}.attachment-chip img{width:30px;height:30px;object-fit:cover;border-radius:5px;flex:0 0 30px}.attachment-file-icon{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:6px;background:#292440;color:#c2b3ff;font-size:10px;font-weight:700}.attachment-chip-info{display:flex;flex-direction:column;gap:3px;min-width:0}.attachment-chip-name{max-width:165px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.attachment-chip-size{color:#7f899f;font-size:9px}.attachment-remove{width:20px;height:20px;border:0;border-radius:5px;background:transparent;color:#8c96ab;font-size:15px;display:grid;place-items:center;flex-shrink:0}.attachment-remove:hover{background:#35232e;color:#ffbbc8}.message-attachments{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 9px}.message-attachment{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:7px;background:#1a1e2a;border:1px solid rgba(171,181,218,.12);color:#c5cde0;font-size:10px;max-width:220px}.message-attachment span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.message-content img{display:block;max-width:min(100%,680px);max-height:70vh;object-fit:contain;border:1px solid var(--line);border-radius:12px;margin:13px 0;background:#080a0f}.message-content.streaming-text{white-space:pre-wrap;overflow-wrap:anywhere;contain:content}
 @media(max-width:760px){.composer-left-actions{gap:7px}.attach-button{height:30px;padding:0 8px}.attach-button span{display:none}.attachment-chip{max-width:calc(100vw - 70px)}.attachment-chip-name{max-width:150px}.composer-hint{font-size:9px}.attachment-list{max-height:105px}}
+
+
+/* Device/browser viewport fit: keep the app inside the currently visible screen. */
+html{height:100%;min-height:100%;overscroll-behavior:none}
+body{width:100%;height:100%;min-height:0;overflow:hidden;overscroll-behavior:none}
+.app-shell{width:100%;height:var(--app-height,100dvh);min-height:0;max-height:var(--app-height,100dvh);overflow:hidden}
+.sidebar{height:100%;min-height:0;max-height:100%;overscroll-behavior:contain}
+.main-panel{width:0;min-width:0;height:100%;min-height:0;max-height:none;overflow:hidden}
+.conversation-area{min-height:0;min-width:0;overscroll-behavior:contain;scrollbar-gutter:stable}
+.messages,.message-body,.message-content{min-width:0;max-width:100%}
+.composer-wrap{flex-shrink:0;min-width:0;padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.composer{min-width:0;max-width:100%}
+@media(max-width:760px){
+  .app-shell{width:100%;height:var(--app-height,100dvh);min-height:0;max-height:var(--app-height,100dvh)}
+  .sidebar{height:var(--app-height,100dvh);min-height:0;max-height:var(--app-height,100dvh);padding-top:max(18px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+  .main-panel{width:100%;flex:1 1 auto}
+  .topbar{padding-left:max(12px,env(safe-area-inset-left));padding-right:max(12px,env(safe-area-inset-right))}
+  .conversation-area{flex:1 1 auto;padding-top:clamp(12px,3dvh,24px);padding-bottom:12px}
+  .welcome{margin:auto 0}
+  .composer-wrap{width:100%;padding-left:max(10px,env(safe-area-inset-left));padding-right:max(10px,env(safe-area-inset-right));padding-bottom:max(8px,env(safe-area-inset-bottom))}
+  .composer textarea{font-size:16px;max-height:min(180px,28dvh)}
+  .attachment-list{max-height:min(105px,18dvh)}
+  .mobile-scrim.show{height:var(--app-height,100dvh)}
+}
+@media(max-width:760px) and (orientation:landscape){
+  .topbar{height:48px;flex-basis:48px}
+  .conversation-area{padding-top:8px;padding-bottom:8px}
+  .welcome{padding:8px 0}
+  .eyebrow{margin-bottom:10px}
+  h1{font-size:clamp(27px,6vw,39px);letter-spacing:-1.2px}
+  .welcome-copy{margin:10px 0 13px}
+  .suggestion-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .suggestion-card{min-height:52px;padding:8px}
+  .suggestion-icon{width:27px;height:27px;flex-basis:27px}
+  .composer-wrap{padding-bottom:max(5px,env(safe-area-inset-bottom))}
+  .composer textarea{max-height:18dvh}
+  .attachment-list{max-height:13dvh}
+}
