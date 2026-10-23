@@ -237,6 +237,18 @@ Deno.serve(async (req: Request) => {
   const [recent, daily] = await Promise.all([recentResponse.json(), dailyResponse.json()]);
   if (recent.length >= 5 || daily.length >= 80) return json(429, { error: "You have reached the current usage limit. Please try again later." });
 
+  let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
+  if (conversationId) {
+    try {
+      const ok = await getConversation(user.id, conversationId);
+      if (!ok) {
+        return json(404, { error: "Conversation not found." });
+      }
+    } catch (_) {
+      return json(503, { error: "Mahi AI is temporarily unavailable." });
+    }
+  }
+
   const usageId = await logUsage(user.id, { task_type: task, success: false });
   const available = providerOrder(task);
   let output: { text: string; provider: string } | null = null;
@@ -261,19 +273,7 @@ Deno.serve(async (req: Request) => {
     return json(502, { error: "Mahi AI could not complete that request. Please try again." });
   }
 
-  let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
-  if (conversationId) {
-    try {
-      const ok = await getConversation(user.id, conversationId);
-      if (!ok) {
-        await updateUsage(usageId, { success: false, error_code: "conversation_not_found" });
-        return json(404, { error: "Conversation not found." });
-      }
-    } catch (_) {
-      await updateUsage(usageId, { success: false, error_code: "database_unavailable" });
-      return json(503, { error: "Mahi AI is temporarily unavailable." });
-    }
-  } else {
+  if (!conversationId) {
     const firstPrompt = messages.find((m) => m.role === "user")?.content || "New chat";
     const title = firstPrompt.replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
     const created = await rest("mahi_ai_conversations", {
