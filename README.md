@@ -1,13 +1,13 @@
 # Mahi AI
 
-Mahi AI is a dark, responsive chat app with automatic server-side task routing and Supabase-backed guest sessions, conversation history, and usage limits.
+Mahi AI is a dark, responsive multilingual chat app with task-aware provider routing, whole-response failover, and Supabase-backed guest sessions and conversation history.
 
 ## Architecture
 
 - Frontend: static HTML/CSS/JavaScript in \`public/\`.
 - Authentication and data: Supabase Auth guest sessions and Postgres tables with Row Level Security.
 - AI backend: Supabase Edge Function \`mahi-ai-chat\`. Provider selection happens on the server; the UI never receives the provider name or API key.
-- Providers supported by the router: Google Gemini, Groq, OpenRouter, and Mistral. Optional paid fallback adapters for OpenAI and Anthropic are disabled unless explicitly enabled.
+- Providers supported by the router: Google Gemini, Groq, OpenRouter, Mistral, NVIDIA, Cloudflare, OpenAI, and Anthropic. Every provider with a configured API key is eligible for automatic fallback.
 - Hosting: Node 18+; \`npm start\` serves the frontend. \`render.yaml\` configures Render to deploy commits on \`main\`.
 
 ## Supabase setup
@@ -39,9 +39,9 @@ Free tiers have strict and changing quotas. OpenRouter currently lists 50 reques
 - Attachments are uploaded to a private Supabase Storage bucket and are scoped to the authenticated guest user by Storage RLS.
 - Text and common source/code files are read as UTF-8 and included as prompt context. DOCX, XLSX/XLS/ODS, PPTX/ODP/ODT, and ZIP archives have best-effort client-side text extraction using on-demand browser libraries.
 - Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Any file type can be selected and uploaded, but unsupported binary types may only pass their name/type unless their contents can be extracted.
-- Requests to generate or edit an image route to Gemini's `gemini-3.1-flash-image` model. Generated image outputs are stored privately and displayed through expiring signed links.
-- Image generation needs a Gemini API key/account with access and quota for the image model. Generation is not guaranteed to be free.
-- API roles: coding routes to OpenRouter first and then to the configured `OPENAI_API_KEY` as a paid fallback; ordinary chat prefers Groq/Gemini; multimodal file analysis routes to Gemini. OpenAI can incur charges if the free OpenRouter model fails, is rate-limited, or is unavailable. Anthropic and other paid-task fallbacks remain disabled unless `ENABLE_PAID_FALLBACK=true`.
+- Requests to generate or edit an image try Gemini first, then OpenAI Image API if `OPENAI_API_KEY` is configured. Set `OPENAI_IMAGE_MODEL` to override its image model. Generated images are stored privately and shown through expiring signed links.
+- Image generation may incur charges and still depends on provider account access, model availability, and quota.
+- API roles: task-specific routing tries configured providers until a complete response succeeds. OpenAI and Anthropic can incur charges when earlier providers fail. Image attachments can also be passed to OpenAI/OpenRouter vision routes when a configured model supports them.
 
 ## Deploy the Edge Function
 
@@ -66,11 +66,11 @@ The root \`render.yaml\` targets the \`main\` branch and sets auto-deploy to com
 
 ## Free-tier notes
 
-The router is best-effort: it classifies each prompt (for example, coding, reasoning, writing, or general use), tries configured providers in task-specific order, then falls back after a failed request. It cannot guarantee a single objectively “best” model for every task, and it cannot create free API quota. OpenAI and Anthropic API use is disabled by default because their API access is not generally free.
+The router is best-effort: it fully buffers each provider response and then falls back on errors, timeouts, empty output, or known truncation. It follows the user's language and writing style where the selected model supports it. There is no app-defined daily/per-minute usage cap, but provider quota, billing, context/output token caps, file-processing constraints, and Supabase runtime limits still exist. Configured OpenAI/Anthropic/image APIs may charge.
 
 ## Security
 
 - Conversation reads/deletes are scoped to \`auth.uid()\` through RLS.
-- The function verifies the caller's Supabase JWT and checks per-user request limits.
+- The function verifies the caller's Supabase JWT. It does not enforce an app-defined daily or per-minute usage cap; provider and platform limits still apply.
 - Provider credentials stay in Supabase Edge Function secrets.
 - Guest accounts do not carry across browsers/devices unless users later link a sign-in identity.
