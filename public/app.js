@@ -12,7 +12,7 @@
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
-  const MAX_HISTORY = 12;
+  const MAX_HISTORY = 24;
 
   function setError(message) {
     ui.error.textContent = message || "";
