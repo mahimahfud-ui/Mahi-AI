@@ -228,20 +228,17 @@ function shouldUseWebSearch(prompt: string): boolean {
 
 function classifyTask(prompt: string): string {
   const s = prompt.toLowerCase();
-  // Prioritise clear prose requests before technology words, so "write an article about Python"
-  // doesn't become a coding task merely because it mentions a programming language.
-  const proseIntent = /\b(?:write|draft|compose|tell|create|generate)\b.{0,70}\b(?:article|essay|story|poem|blog post|caption|lyrics|speech|review|newsletter|script|fiction)\b/i.test(s) ||
-    /\b(?:article|essay|story|poem|blog post|caption|lyrics|speech|review|newsletter|fiction)\b.{0,70}\b(?:about|on|for|regarding)\b/i.test(s) ||
+  // Prioritise unambiguous prose requests before technology words.
+  const proseIntent = /\b(?:write|draft|compose|tell|create|generate)\b.{0,70}\b(?:article|essay|story|poem|blog post|caption|lyrics|speech|newsletter|fiction|youtube script|video script|voiceover script)\b/i.test(s) ||
+    /\b(?:article|essay|story|poem|blog post|caption|lyrics|speech|newsletter|fiction|youtube script|video script|voiceover script)\b.{0,70}\b(?:about|on|for|regarding)\b/i.test(s) ||
     /(?:golpo lekho|kobita lekho|caption likhe dao|article lekho|blog post lekho|rochona lekho|golpo banao|poem likhe dao)/i.test(s);
-  const explicitProseOnly = proseIntent &&
-    !/\b(?:website|web app|landing page|html|css|javascript|typescript|api endpoint|database|sql|function|component|source code|program|software feature)\b.{0,80}\b(?:build|create|design|develop|implement|fix|debug|refactor|code|program|website|app)\b/i.test(s);
-  if (explicitProseOnly) return "creative";
+  if (proseIntent) return "creative";
 
   // Classify by requested action plus technical context, not by technical nouns alone.
   const codingAction = /\b(?:build|create|design|develop|implement|fix|debug|refactor|review|write|generate|make|run|execute|test|compile|convert|optimi[sz]e)\b/i.test(s) ||
     /(?:banao|banai|toiri koro|code dao|code likhe dao|bug fix koro|thik kore dao|run koro|test koro|website banao|app banao|site banao|feature add koro)/i.test(s);
   const codeContext = /\b(?:website|web site|web app|frontend|front-end|backend|back-end|landing page|component|api|script|app|database|sql|html|css|javascript|typescript|python|react|function|compiler|program|code|bug|stack trace|traceback|syntax error|exception|source code|programming)\b/i.test(s);
-  const explicitCodingIssue = /\b(?:debug|stack trace|traceback|syntax error|compile error|code review|fix (?:this|the|my) (?:code|script|bug|error)|run (?:this|the) code|execute (?:this|the) code|test (?:this|the) code|refactor (?:this|the|my) code)\b/i.test(s) ||
+  const explicitCodingIssue = /\b(?:debug|stack trace|traceback|syntax error|compile error|code review|review (?:this|the|my) (?:code|script|program)|fix (?:this|the|my) (?:code|script|bug|error)|run (?:this|the) code|execute (?:this|the) code|test (?:this|the) code|refactor (?:this|the|my) code)\b/i.test(s) ||
     /(?:code ta kaj korchhe na|code e error|code er bug|error ta fix|website er bug|app er bug|script ta run|code run kore|code test kore)/i.test(s);
   if (explicitCodingIssue || (codingAction && codeContext)) return "coding";
   if (/(prove|proof|derive|equation|calculate|math|logic|reason|compare|evaluate|analy[sz]e|step by step|matem[aá]tica|calcular|analizar|raisonnement|calculer|mathematik|berechnen|ragionamento|calcolare|вычисл|доказательств|数学|推理|计算|数学|論理|推論|계산|추론|منطق|حساب|गणित|तर्क|গণনা|যুক্তি|বিশ্লেষণ|হিসাব|সমাধান)/i.test(s)) return "reasoning";
