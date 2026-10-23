@@ -719,7 +719,7 @@ async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string
 ): Promise<Response> {
-  if (isImageGenerationTask(messages[messages.length - 1]?.content || "")) {
+  if (task === "image_generation") {
     return streamImageGenerationResponse(userId, messages, initialConversationId, usageId, attachments, displayUserText);
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
@@ -845,7 +845,21 @@ Deno.serve(async (req: Request) => {
   if (lastUserIndex < 0 || lastUserIndex !== messages.length - 1) return json(400, { error: "Send a message to begin." });
   if (messages.reduce((sum, m) => sum + m.content.length, 0) > 50000) return json(413, { error: "Trim your message history and try again." });
 
-  const task = classifyTask(messages[messages.length - 1].content);
+  const displayPrompt = messages[messages.length - 1].content;
+  let attachments: PreparedAttachment[] = [];
+  try {
+    attachments = await prepareAttachments(user.id, input?.attachments);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : "The attachment could not be processed.";
+    const status = /15 MB|20 MB|12 MB|no more than 5/i.test(reason) ? 413 : 400;
+    return json(status, { error: reason });
+  }
+  const attachmentLabels = attachments.length
+    ? "\n\nAttached files: " + attachments.map((item) => item.name + " (" + item.mimeType + ")").join(", ")
+    : "";
+  const displayUserText = (displayPrompt + attachmentLabels).slice(0, 12000);
+  const contextualMessages = applyAttachmentContext(messages, attachments);
+  const task = isImageGenerationTask(displayPrompt) ? "image_generation" : classifyTask(displayPrompt);
   const now = new Date();
   const minuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
@@ -870,5 +884,5 @@ Deno.serve(async (req: Request) => {
   }
 
   const usageId = await logUsage(user.id, { task_type: task, success: false });
-  return await streamChatResponse(user.id, messages, task, conversationId, usageId);
+  return await streamChatResponse(user.id, contextualMessages, task, conversationId, usageId, attachments, displayUserText);
 });
