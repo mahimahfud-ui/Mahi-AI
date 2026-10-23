@@ -64,8 +64,11 @@ function providerOrder(task: string) {
     : task === "creative"
     ? ["gemini", "mistral", "openrouter", "cloudflare", "groq", "nvidia"]
     : ["gemini", "openrouter", "groq", "cloudflare", "nvidia", "mistral"];
-  if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") base.push("openai", "anthropic");
-  return base;
+  return base.filter((name) => {
+    if (name === "nvidia") return Deno.env.get("ENABLE_NVIDIA_FALLBACK") === "true";
+    if (name === "cloudflare") return Deno.env.get("ENABLE_CLOUDFLARE_FALLBACK") === "true";
+    return true;
+  }).concat(Deno.env.get("ENABLE_PAID_FALLBACK") === "true" ? ["openai", "anthropic"] : []);
 }
 function openRouterModel(task: string): string {
   if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
