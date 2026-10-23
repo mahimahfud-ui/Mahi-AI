@@ -455,7 +455,7 @@ async function streamChatResponse(
       const first = await Promise.race([
         candidate.iterator.next(),
         new Promise<IteratorResult<string>>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("First token timeout")), 8000);
+          timer = setTimeout(() => reject(new Error("First token timeout")), 4500);
         })
       ]);
       if (timer) clearTimeout(timer);
