@@ -95,11 +95,12 @@ function isGeminiInlineMime(mimeType: string): boolean {
 }
 function isImageGenerationTask(prompt: string): boolean {
   const text = prompt.toLowerCase();
-  const visual = /(?:image|picture|photo|illustration|poster|logo|wallpaper|thumbnail|artwork|visual|graphic|icon|banner|imagen|foto|ilustraci[oó]n|cartel|logotipo|papel de parede|imagem|ilustra[cç][aã]o|cartaz|fundo de tela|image|photo|affiche|fond d[’']ecran|bild|hintergrundbild|immagine|manifesto|sfondo|изображение|картинк[ауи]|фото|иллюстраци[яи]|плакат|обои|صورة|صور|رسم|ملصق|خلفية|شعار|छवि|तस्वीर|चित्र|पोस्टर|लोगो|वॉलपेपर|تصویر|عکس|图片|图像|照片|插画|海报|壁纸|图标|画像|写真|イラスト|ポスター|壁紙|イメージ|이미지|사진|그림|포스터|배경화면|resim|fotoğraf|afiş|gambar|ilustrasi|ảnh|hình|ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার|থাম্বনেইল)/i.test(text);
-  const create = /(?:generat|creat|draw|mak(?:e|ing)|design|illustrat|render|produc|dibuja|dibujar|diseñ|genera|crear|crea|haz\b|hacer|créer|génér|dessine|dessiner|concevoir|erstelle|generiere|zeichne|gestalte|creare|disegna|gerar|cria|desenha|сгенерируй|создай|создать|нарисуй|нарисовать|сделай|изобрази|أنشئ|اصنع|ارسم|صمم|ولّد|انشئ|बनाओ|बनाएं|बनाना|तैयार करो|खींचो|ڈیزائن|بناؤ|بنائیں|画像生成|画像を作|写真を作|生成して|描いて|设计|生成|制作|画一张|画|만들어|생성|그려|디자인|oluştur|çiz|tasarla|buat|ciptakan|tạo|vẽ|thiết kế|তৈরি|বানাও|আঁক|জেনারেট)/i.test(text);
-  const edit = /(?:edit|remove|replace|change|modify|retouch|cambia|cambiar|editar|modifica|modifier|ändern|bearbeiten|modifica|измен|удали|замени|عدّل|عدل|غيّر|غير|تعديل|बदल|संपादित|बदलें|編集|修正|改变|修改|编辑|편집|수정|değiştir|ubah|sửa|পরিবর্তন|এডিট)/i.test(text);
+  const visual = /(?:image|picture|photo|pic|img|illustration|poster|logo|wallpaper|thumbnail|artwork|visual|graphic|icon|banner|chobi|chhobi|chobi-ta|imagen|foto|ilustraci[oó]n|cartel|logotipo|imagem|cartaz|bild|immagine|изображение|картинк[ауи]|صورة|छवि|तस्वीर|चित्र|تصویر|عکس|图片|图像|照片|画像|写真|이미지|사진|resim|fotoğraf|gambar|ilustrasi|ảnh|hình|ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার|থাম্বনেইল)/i.test(text);
+  const create = /(?:generat|genarate|gen(?:e|a)rate|creat|draw|mak(?:e|ing)|design|illustrat|render|produc|dibuja|dibujar|diseñ|genera|crear|crea|haz\b|hacer|créer|génér|dessine|dessiner|concevoir|erstelle|generiere|zeichne|gestalte|creare|disegna|gerar|cria|desenha|сгенерируй|создай|создать|нарисуй|нарисовать|сделай|изобрази|أنشئ|اصنع|ارسم|صمم|ولّد|انشئ|बनाओ|बनाएं|बनाना|तैयार करो|खींचो|ڈیزائن|بناؤ|بنائیں|画像生成|画像を作|写真を作|生成して|描いて|设计|生成|制作|画一张|画|만들어|생성|그려|디자인|oluştur|çiz|tasarla|buat|ciptakan|tạo|vẽ|thiết kế|তৈরি|বানাও|আঁক|জেনারেট|banao|banaw|banai|baniye|toiri|koro|kor|kore\s+dao|dao|bana\s+do|bana\s+de|banake\s+do)/i.test(text);
+  const edit = /(?:edit|remove|replace|change|modify|retouch|cambia|cambiar|editar|modifica|modifier|ändern|bearbeiten|измен|удали|замени|عدّل|عدل|غيّر|غير|تعديل|बदल|संपादित|बदलें|編集|修正|改变|修改|编辑|편집|수정|değiştir|ubah|sửa|পরিবর্তন|এডিট|change\s+kore\s+dao|edit\s+kore\s+dao)/i.test(text);
   return (create && visual) || (edit && visual);
 }
+
 async function prepareAttachments(userId: string, values: unknown): Promise<PreparedAttachment[]> {
   if (!Array.isArray(values)) return [];
   if (values.length > 5) throw new Error("Please attach no more than 5 files per message.");
@@ -655,7 +656,21 @@ function sseEvent(controller: ReadableStreamDefaultController<Uint8Array>, encod
   controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
 }
 
-async function generateGeminiImage(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+function prepareImagePrompt(rawPrompt: string): string {
+  let prompt = rawPrompt.trim();
+  const banglish = /\b(?:chobi|chhobi|genarate|banao|banaw|banai|baniye|toiri|koro|kore\s+dao|bongobondhu)\b/i.test(prompt);
+  prompt = prompt.replace(/\bbongobondhu(?:r|er|ke)?\b/gi, "Bangabandhu Sheikh Mujibur Rahman");
+  prompt = prompt.replace(/\bgenarate\b/gi, "generate").replace(/\b(chobi|chhobi)\b/gi, "picture");
+  prompt = prompt.replace(/\s+/g, " ").trim();
+  const banglishRequest = prompt.match(/^(.+?)\s+(?:image|picture|photo)\s+(?:generate|create|make|draw)\s+(?:koro|kor|kore\s+dao|dao|banao|banaw)$/i);
+  if (banglishRequest) prompt = "Create an image of " + banglishRequest[1].trim();
+  return banglish
+    ? "Interpret this as a Banglish request (Bengali written in Latin letters, possibly with spelling mistakes). Translate the meaning into a clear visual prompt and generate the image directly. Do not answer with code, Python, SVG, or instructions. User's image request: " + prompt
+    : "Generate the requested image directly. Do not answer with code or instructions. User's image request: " + prompt;
+}
+
+async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+  const prompt = prepareImagePrompt(rawPrompt);
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Gemini image generation is not configured.");
   const parts: Record<string, unknown>[] = [{ text: prompt }];
@@ -699,7 +714,56 @@ async function generateGeminiImage(prompt: string, attachments: PreparedAttachme
   return { text: text.trim() || "Here is the image you requested.", bytes, mimeType };
 }
 
-async function generateOpenAIImage(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+  const key = envFirst(["XAI_API_KEY", "GROK_API_KEY"]);
+  if (!key) throw new Error("Grok image generation is not configured.");
+  const prompt = prepareImagePrompt(rawPrompt);
+  const imageInput = attachments.find((item) =>
+    item.inline && item.base64 && item.mimeType.startsWith("image/") &&
+    /^(image\/(png|jpeg|webp))$/i.test(item.mimeType)
+  );
+  const model = envFirst(["XAI_IMAGE_MODEL"]) || "grok-imagine-image-2.0";
+  const endpoint = imageInput ? "https://api.x.ai/v1/images/edits" : "https://api.x.ai/v1/images/generations";
+  const body: Record<string, unknown> = { model, prompt: prompt.slice(0, 32000), n: 1 };
+  if (imageInput?.base64) {
+    body.image = { url: "data:" + imageInput.mimeType + ";base64," + imageInput.base64, type: "image_url" };
+  }
+  const response = await fetchWithTimeout(endpoint, {
+    method: "POST",
+    headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  }, 45000);
+  if (!response.ok) throw new Error(await readProviderError(response));
+  const result = await response.json();
+  const item = result?.data?.[0];
+  if (!item) throw new Error("Grok image API returned no image.");
+  let bytes: Uint8Array;
+  let mimeType = String(item.mime_type || "image/jpeg").split(";")[0].toLowerCase();
+  if (typeof item.b64_json === "string" && item.b64_json) {
+    bytes = Uint8Array.from(atob(item.b64_json), (char) => char.charCodeAt(0));
+  } else if (typeof item.url === "string" && item.url) {
+    const imageUrl = new URL(item.url);
+    if (imageUrl.protocol !== "https:" || imageUrl.hostname !== "imgen.x.ai" || !imageUrl.pathname.startsWith("/xai-imgen/")) {
+      throw new Error("Grok returned an unexpected image URL.");
+    }
+    const imageResponse = await fetchWithTimeout(imageUrl.toString(), {}, 12000);
+    if (!imageResponse.ok) throw new Error("Could not download the image generated by Grok.");
+    mimeType = String(imageResponse.headers.get("content-type") || mimeType).split(";")[0].toLowerCase();
+    if (!/^image\/(jpeg|png|webp)$/i.test(mimeType)) throw new Error("Grok returned an unsupported image format.");
+    bytes = new Uint8Array(await imageResponse.arrayBuffer());
+  } else {
+    throw new Error("Grok image API returned neither image data nor a download URL.");
+  }
+  if (!/^image\/(jpeg|png|webp)$/i.test(mimeType)) mimeType = "image/jpeg";
+  if (!bytes.length || bytes.length > 10 * 1024 * 1024) throw new Error("Grok image output is empty or exceeds the storage limit.");
+  return {
+    text: typeof item.revised_prompt === "string" && item.revised_prompt.trim() ? item.revised_prompt.trim() : "Here is the image you requested.",
+    bytes, mimeType
+  };
+}
+
+async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+  const prompt = prepareImagePrompt(rawPrompt);
   const key = envFirst(["OPENAI_API_KEY"]);
   if (!key) throw new Error("OpenAI image generation is not configured.");
   const model = envFirst(["OPENAI_IMAGE_MODEL"]) || "gpt-image-2";
@@ -748,7 +812,16 @@ async function generateImageWithFallback(prompt: string, attachments: PreparedAt
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
       failures.push("Gemini: " + reason.slice(0, 160));
-      console.warn("Mahi AI Gemini image generation failed; trying fallback:", reason.slice(0, 180));
+      console.warn("Mahi AI Gemini image generation failed; trying Grok:", reason.slice(0, 180));
+    }
+  }
+  if (envFirst(["XAI_API_KEY", "GROK_API_KEY"])) {
+    try {
+      return { ...(await generateGrokImage(prompt, attachments)), provider: "grok-image" };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      failures.push("Grok: " + reason.slice(0, 160));
+      console.warn("Mahi AI Grok image generation failed; trying OpenAI fallback:", reason.slice(0, 180));
     }
   }
   if (envFirst(["OPENAI_API_KEY"])) {
@@ -808,7 +881,7 @@ async function streamImageGenerationResponse(
           userId, conversationId, displayUserText || messages[messages.length - 1].content
         );
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
-        sseEvent(controller, encoder, { type: "status", message: "Gemini is creating your image…" });
+        sseEvent(controller, encoder, { type: "status", message: "Trying Gemini and Grok image generation…" });
         const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
@@ -819,10 +892,10 @@ async function streamImageGenerationResponse(
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
-        await updateUsage(usageId, { success: false, provider: "gemini-image", task_type: "image_generation", error_code: "image_generation_failed" });
+        await updateUsage(usageId, { success: false, provider: "gemini-grok-openai-image", task_type: "image_generation", error_code: "image_generation_failed" });
         sseEvent(controller, encoder, {
           type: "error",
-          message: "Image generation failed on the available image providers. Check configured API keys, model access, and provider quota, then try again."
+          message: "ছবি তৈরি করা যায়নি। Supabase secrets-এ GEMINI_API_KEY ও XAI_API_KEY আছে কি না এবং image API quota আছে কি না যাচাই করে আবার চেষ্টা করুন।"
         });
       } finally {
         try { controller.close(); } catch (_) {}
