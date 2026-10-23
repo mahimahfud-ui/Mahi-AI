@@ -6,10 +6,12 @@
     sidebar: $("sidebar"), scrim: $("mobileScrim"), chatList: $("chatList"),
     welcome: $("welcome"), messages: $("messages"), form: $("chatForm"),
     input: $("promptInput"), send: $("sendButton"), error: $("errorBanner"),
-    session: $("sessionLabel"), charCount: $("charCount")
+    session: $("sessionLabel"), charCount: $("charCount"),
+    fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList")
   };
   let client = null, session = null, conversationId = null, conversations = [];
-  let busy = false, currentMessages = [];
+  let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
+  const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
   const MAX_HISTORY = 12;
 
   function setError(message) {
@@ -26,8 +28,10 @@
   }
   function setBusy(value) {
     busy = value;
-    ui.send.disabled = value || !ui.input.value.trim();
+    ui.send.disabled = value || (!ui.input.value.trim() && !pendingFiles.length);
     ui.input.disabled = value;
+    ui.attachButton.disabled = value;
+    ui.fileInput.disabled = value;
     ui.send.innerHTML = value
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h8v8H8z"/></svg>'
       : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>';
@@ -69,9 +73,30 @@
       article.innerHTML = '<div class="typing-dots" aria-label="Thinking"><span></span><span></span><span></span></div>';
       node.dataset.typing = "true";
     } else if (role === "user") {
+      if (Array.isArray(opts.files) && opts.files.length) {
+        const files = document.createElement("div");
+        files.className = "message-attachments";
+        opts.files.forEach((file) => {
+          const chip = document.createElement("span");
+          chip.className = "message-attachment";
+          const icon = document.createElement("b");
+          icon.textContent = file.type && file.type.startsWith("image/") ? "▧" : "↳";
+          const label = document.createElement("span");
+          label.textContent = file.name || "Attachment";
+          label.title = file.name || "Attachment";
+          chip.append(icon, label);
+          files.appendChild(chip);
+        });
+        body.appendChild(files);
+      }
       article.textContent = content;
     } else {
-      article.innerHTML = safeMarkdown(content);
+      article.textContent = content;
+      resolveStoredImageMarkers(content).then((resolved) => {
+        if (article.isConnected) article.innerHTML = safeMarkdown(resolved);
+      }).catch(() => {
+        if (article.isConnected) article.innerHTML = safeMarkdown(content.replace(/!\[Generated image\]\(mahi-storage:\/\/[^)]+\)/g, "[Generated image is stored in this chat.]"));
+      });
     }
     body.append(heading, article);
     node.append(avatar, body);
@@ -79,6 +104,111 @@
     scrollToBottom();
     return node;
   }
+  function formatBytes(value) {
+    if (value < 1024) return value + " B";
+    if (value < 1024 * 1024) return (value / 1024).toFixed(1) + " KB";
+    return (value / (1024 * 1024)).toFixed(1) + " MB";
+  }
+  function renderAttachmentList() {
+    previewUrls.forEach((url) => URL.revokeObjectURL(url));
+    previewUrls = [];
+    ui.attachmentList.replaceChildren();
+    ui.attachmentList.hidden = pendingFiles.length === 0;
+    pendingFiles.forEach((file, index) => {
+      const chip = document.createElement("div");
+      chip.className = "attachment-chip";
+      if (file.type && file.type.startsWith("image/")) {
+        const image = document.createElement("img");
+        const url = URL.createObjectURL(file);
+        previewUrls.push(url);
+        image.src = url;
+        image.alt = "";
+        chip.appendChild(image);
+      } else {
+        const fileIcon = document.createElement("span");
+        fileIcon.className = "attachment-file-icon";
+        fileIcon.textContent = (file.name.split(".").pop() || "FILE").slice(0, 4).toUpperCase();
+        chip.appendChild(fileIcon);
+      }
+      const details = document.createElement("span");
+      details.className = "attachment-chip-info";
+      const name = document.createElement("span");
+      name.className = "attachment-chip-name";
+      name.textContent = file.name;
+      name.title = file.name;
+      const size = document.createElement("span");
+      size.className = "attachment-chip-size";
+      size.textContent = formatBytes(file.size);
+      details.append(name, size);
+      const remove = document.createElement("button");
+      remove.className = "attachment-remove";
+      remove.type = "button";
+      remove.textContent = "×";
+      remove.title = "Remove " + file.name;
+      remove.setAttribute("aria-label", "Remove " + file.name);
+      remove.addEventListener("click", () => {
+        pendingFiles.splice(index, 1);
+        renderAttachmentList();
+        updateCounter();
+      });
+      chip.append(details, remove);
+      ui.attachmentList.appendChild(chip);
+    });
+  }
+  function addPendingFiles(files) {
+    let rejected = [];
+    for (const file of files) {
+      if (pendingFiles.length >= MAX_FILES) {
+        rejected.push("Maximum " + MAX_FILES + " files per message.");
+        break;
+      }
+      if (file.size > MAX_FILE_BYTES) {
+        rejected.push(file.name + " exceeds the 15 MB per-file limit.");
+        continue;
+      }
+      const total = pendingFiles.reduce((sum, item) => sum + item.size, 0);
+      if (total + file.size > MAX_TOTAL_BYTES) {
+        rejected.push("Attachments must total 20 MB or less.");
+        continue;
+      }
+      if (pendingFiles.some((item) => item.name === file.name && item.size === file.size)) continue;
+      pendingFiles.push(file);
+    }
+    renderAttachmentList();
+    updateCounter();
+    setError(rejected.length ? rejected.join(" ") : "");
+  }
+  async function uploadPendingAttachments(files) {
+    const uploaded = [];
+    for (const file of files) {
+      const safeName = file.name.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(-100) || "attachment";
+      const path = session.user.id + "/" + crypto.randomUUID() + "/" + safeName;
+      const result = await client.storage.from("mahi-ai-attachments").upload(path, file, {
+        upsert: false, contentType: file.type || "application/octet-stream", cacheControl: "3600"
+      });
+      if (result.error) {
+        if (uploaded.length) await client.storage.from("mahi-ai-attachments").remove(uploaded.map((item) => item.path));
+        throw new Error("Mahi AI: Could not upload " + file.name + ". Check the Supabase attachment bucket setup and try again.");
+      }
+      uploaded.push({ path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream", size: file.size });
+    }
+    return uploaded;
+  }
+  async function resolveStoredImageMarkers(content) {
+    if (!client || !session || !content) return content;
+    const expression = /mahi-storage:\/\/([A-Za-z0-9/_-]+\.(?:png|jpe?g|webp))/gi;
+    const matches = [...content.matchAll(expression)];
+    let result = content;
+    for (const match of matches) {
+      const path = match[1];
+      if (!path.startsWith(session.user.id + "/")) continue;
+      const { data, error } = await client.storage.from("mahi-ai-generated").createSignedUrl(path, 7 * 24 * 60 * 60);
+      if (!error && data && data.signedUrl) result = result.replace(match[0], data.signedUrl);
+      else result = result.replace("![" + "Generated image" + "](" + match[0] + ")", "[Generated image is stored, but the preview link could not be refreshed.]");
+    }
+    return result;
+  }
+
   function scrollToBottom() {
     requestAnimationFrame(() => {
       const area = $("conversationArea");
@@ -199,21 +329,26 @@
     closeMobileSidebar();
   }
   async function sendMessage(text) {
-    if (busy || !text.trim()) return;
+    if (busy || (!text.trim() && !pendingFiles.length)) return;
     if (!session) {
       try { await ensureSession(); } catch (error) { setError(plainError(error)); return; }
     }
     setError("");
-    const userText = text.trim();
+    const selectedFiles = pendingFiles.slice();
+    const userText = text.trim() || (selectedFiles.length === 1
+      ? "Please analyze the attached file."
+      : "Please analyze the attached files.");
     ui.input.value = "";
     ui.input.style.height = "auto";
     updateCounter();
     showWelcome(false);
     currentMessages.push({ role: "user", content: userText });
-    addMessage("user", userText);
+    addMessage("user", userText, { files: selectedFiles });
     const typing = addMessage("assistant", "", { typing: true });
     setBusy(true);
+    let uploadedAttachments = [];
     try {
+      uploadedAttachments = await uploadPendingAttachments(selectedFiles);
       const { data: authData, error: authError } = await client.auth.getSession();
       if (authError) throw authError;
       const accessToken = authData?.session?.access_token;
@@ -227,7 +362,8 @@
         },
         body: JSON.stringify({
           conversation_id: conversationId,
-          messages: currentMessages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content }))
+          messages: currentMessages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content })),
+          attachments: uploadedAttachments
         })
       });
       if (!response.ok) {
@@ -256,6 +392,8 @@
         try { payload = JSON.parse(payloadLines.join("\n")); } catch (_) { return; }
         if (payload.type === "meta" && payload.conversation_id) {
           conversationId = payload.conversation_id;
+        } else if (payload.type === "status" && typeof payload.message === "string") {
+          messageContent.textContent = payload.message;
         } else if (payload.type === "delta" && typeof payload.text === "string") {
           if (!fullText) messageContent.textContent = "";
           fullText += payload.text;
@@ -290,12 +428,19 @@
       messageContent.innerHTML = safeMarkdown(fullText);
       delete typing.dataset.typing;
       currentMessages.push({ role: "assistant", content: fullText });
+      pendingFiles = [];
+      renderAttachmentList();
+      updateCounter();
       await refreshConversations();
     } catch (error) {
       typing.remove();
       currentMessages.pop();
-      setError(plainError(error));
-      // Keep the draft available so the user can retry without retyping.
+      if (uploadedAttachments.length) {
+        try { await client.storage.from("mahi-ai-attachments").remove(uploadedAttachments.map((item) => item.path)); } catch (_) {}
+      }
+      setError(error instanceof Error && error.message.startsWith("Mahi AI: ")
+        ? error.message.slice(9) : plainError(error));
+      // Keep the draft and selected files available so the user can retry.
       ui.input.value = userText;
       updateCounter();
       if (!currentMessages.length) {
@@ -314,7 +459,7 @@
   }
   function updateCounter() {
     ui.charCount.textContent = ui.input.value.length + " / 12000";
-    ui.send.disabled = busy || !ui.input.value.trim();
+    ui.send.disabled = busy || (!ui.input.value.trim() && !pendingFiles.length);
     ui.input.style.height = "auto";
     ui.input.style.height = Math.min(ui.input.scrollHeight, 180) + "px";
   }
@@ -344,6 +489,11 @@
   ui.form.addEventListener("submit", (event) => {
     event.preventDefault();
     sendMessage(ui.input.value);
+  });
+  ui.attachButton.addEventListener("click", () => ui.fileInput.click());
+  ui.fileInput.addEventListener("change", () => {
+    addPendingFiles(Array.from(ui.fileInput.files || []));
+    ui.fileInput.value = "";
   });
   ui.input.addEventListener("input", updateCounter);
   ui.input.addEventListener("keydown", (event) => {
