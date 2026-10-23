@@ -264,34 +264,38 @@
   async function uploadPendingAttachments(files) {
     const uploaded = [];
     let totalExtracted = 0;
-    for (const file of files) {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(-100) || "attachment";
-      const path = session.user.id + "/" + crypto.randomUUID() + "/" + safeName;
-      const result = await client.storage.from("mahi-ai-attachments").upload(path, file, {
-        upsert: false, contentType: file.type || "application/octet-stream", cacheControl: "3600"
-      });
-      if (result.error) {
-        if (uploaded.length) await client.storage.from("mahi-ai-attachments").remove(uploaded.map((item) => item.path));
-        throw new Error("Mahi AI: Could not upload " + file.name + ". Check the Supabase attachment bucket setup and try again.");
+    try {
+      for (const file of files) {
+        let extractedText = "";
+        try {
+          extractedText = await extractDocumentText(file);
+        } catch (error) {
+          throw new Error("Mahi AI: Could not read " + file.name + ". Try exporting it as PDF or text. " +
+            (error instanceof Error ? error.message : ""));
+        }
+        if (extractedText) {
+          const remaining = Math.max(0, 30000 - totalExtracted);
+          extractedText = extractedText.slice(0, remaining);
+          totalExtracted += extractedText.length;
+        }
+        const safeName = file.name.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(-100) || "attachment";
+        const path = session.user.id + "/" + crypto.randomUUID() + "/" + safeName;
+        const result = await client.storage.from("mahi-ai-attachments").upload(path, file, {
+          upsert: false, contentType: file.type || "application/octet-stream", cacheControl: "3600"
+        });
+        if (result.error) throw new Error("Mahi AI: Could not upload " + file.name + ". Check the Supabase attachment bucket setup and try again.");
+        uploaded.push({
+          path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream",
+          size: file.size, extracted_text: extractedText
+        });
       }
-      let extractedText = "";
-      try {
-        extractedText = await extractDocumentText(file);
-      } catch (error) {
-        throw new Error("Mahi AI: Could not read " + file.name + ". Try exporting it as PDF or text. " +
-          (error instanceof Error ? error.message : ""));
+      return uploaded;
+    } catch (error) {
+      if (uploaded.length) {
+        try { await client.storage.from("mahi-ai-attachments").remove(uploaded.map((item) => item.path)); } catch (_) {}
       }
-      if (extractedText) {
-        const remaining = Math.max(0, 30000 - totalExtracted);
-        extractedText = extractedText.slice(0, remaining);
-        totalExtracted += extractedText.length;
-      }
-      uploaded.push({
-        path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream",
-        size: file.size, extracted_text: extractedText
-      });
+      throw error;
     }
-    return uploaded;
   }
   async function resolveStoredImageMarkers(content) {
     if (!client || !session || !content) return content;
