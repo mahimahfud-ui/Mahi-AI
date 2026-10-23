@@ -7,7 +7,7 @@ Mahi AI is a dark, responsive multilingual chat app with task-aware provider rou
 - Frontend: static HTML/CSS/JavaScript in \`public/\`.
 - Authentication and data: Supabase Auth guest sessions and Postgres tables with Row Level Security.
 - AI backend: Supabase Edge Function \`mahi-ai-chat\`. Provider selection happens on the server; the UI never receives the provider name or API key.
-- Providers supported by the router: Google Gemini, Groq, OpenRouter, Mistral, NVIDIA, Cloudflare, OpenAI, and Anthropic. Every provider with a configured API key is eligible for automatic fallback.
+- Providers supported by the router: Google Gemini, Groq, OpenRouter, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, and Anthropic. Provider eligibility follows server-side opt-in flags: paid fallbacks, NVIDIA/Cloudflare, and image generation stay disabled unless explicitly enabled.
 - Hosting: Node 18+; \`npm start\` serves the frontend. \`render.yaml\` configures Render to deploy commits on \`main\`.
 
 ## Supabase setup
@@ -40,7 +40,7 @@ The router classifies the actual request intent (coding, reasoning, creative wri
 - Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Any file type can be selected and uploaded, but unsupported binary types may only pass their name/type unless their contents can be extracted.
 - Requests to generate or edit an image are disabled by default to prevent accidental paid API calls. Set `ENABLE_PAID_IMAGE_GENERATION=true` in Supabase Edge Function Secrets only when you accept possible charges. The route tries Gemini, then Grok, then OpenAI for configured keys. Set `OPENAI_IMAGE_MODEL` or `XAI_IMAGE_MODEL` to override the respective model. Generated images are stored privately and shown through expiring signed links.
 - Google's Gemini 3.1 Flash Image API model has no free tier. Image generation still depends on provider account access, model availability, quota, and billing status.
-- API roles: task-specific routing tries configured providers until a complete response succeeds. OpenAI and Anthropic can incur charges when earlier providers fail. Image attachments can also be passed to OpenAI/OpenRouter vision routes when a configured model supports them.
+- API roles: task-specific routing tries eligible providers until a complete response succeeds. OpenAI, Anthropic, DeepSeek, non-free OpenRouter model overrides, and image generation require explicit opt-in flags before they can be used automatically. Image attachments can also be passed to OpenRouter/Gemini vision routes when a selected model supports them.
 
 ## Deploy the Edge Function
 
@@ -65,7 +65,7 @@ The root \`render.yaml\` targets the \`main\` branch and sets auto-deploy to com
 
 ## Free-tier notes
 
-The router is best-effort: it fully buffers each provider response and then falls back on errors, timeouts, empty output, or known truncation. It follows the user's language and writing style where the selected model supports it. There is no app-defined daily/per-minute usage cap, but provider quota, billing, context/output token caps, file-processing constraints, and Supabase runtime limits still exist. Configured OpenAI/Anthropic/image APIs may charge.
+The router is best-effort: it fully buffers each provider response and then falls back on errors, timeouts, empty output, or known truncation. It follows the user's language and writing style where the selected model supports it. There is currently no app-defined per-user daily or per-minute request cap; provider quotas, context/output token caps, file-processing constraints, and Supabase runtime limits still apply. Paid chat fallbacks require `ENABLE_PAID_FALLBACK=true`; image-generation APIs require `ENABLE_PAID_IMAGE_GENERATION=true`.
 
 ## Security
 
@@ -76,12 +76,12 @@ The router is best-effort: it fully buffers each provider response and then fall
 
 
 ### Banglish image generation
-Image intents recognize English, Bangla and Banglish requests (for example `bongobondhur image genarate koro`) and route them to image generation. The image prompt is normalized to avoid an unwanted code/tutorial answer. Image provider order is Gemini → Grok Imagine → OpenAI (when each API key is configured). Set `XAI_API_KEY` in Supabase Edge Function secrets to enable Grok.
+Image intents recognize English, Bangla and Banglish requests (for example `bongobondhur image genarate koro`) and route them to image generation. The image prompt is normalized to avoid an unwanted code/tutorial answer. For cost safety, image generation is disabled by default; after setting `ENABLE_PAID_IMAGE_GENERATION=true`, the provider order is Gemini → Grok Imagine → OpenAI for configured keys. Set `XAI_API_KEY` in Supabase Edge Function secrets to enable Grok.
 
 
 ## Accuracy and limitations
 
-The assistant now uses an accuracy-first instruction and, when another configured non-paid provider is available, a second-pass reviewer. The reviewer applies a correction only when it returns a valid structured decision; timeout or invalid output retains the original draft. This improves reliability but does not guarantee error-free output. The app does not provide a live web-search tool or execute generated code, so it must not describe current facts or code as externally verified/executed unless a tool actually did that. Google's guidance recommends search grounding for obscure/recent facts and code execution for calculations, but those tools are not automatically available in this chat router.
+The assistant uses an accuracy-first instruction and, when another eligible non-paid provider is available, a second-pass reviewer. The reviewer tries alternate providers after request errors and applies a correction only when it returns a valid structured decision; timeout or invalid output retains the original draft. The router can request Gemini's built-in Google Search grounding, URL Context, or sandboxed code execution for eligible prompts when the selected model/account supports those tools. Other fallback providers do not automatically inherit those tools, so a fallback answer must not claim live verification or code execution unless it actually occurred. These features depend on model availability and quota and do not guarantee error-free output.
 
 
 ## Live web research
