@@ -335,7 +335,7 @@ async function* readAnthropicEventStream(response: Response): AsyncGenerator<str
 
 async function startProviderStream(name: string, messages: ChatMessage[], task: string): Promise<ProviderStream> {
   const controller = new AbortController();
-  const totalTimer = setTimeout(() => controller.abort(), 45000);
+  const totalTimer = setTimeout(() => controller.abort(), 40000);
   const cleanup = () => { clearTimeout(totalTimer); controller.abort(); };
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   let url = "";
@@ -416,7 +416,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         headerTimer = setTimeout(() => {
           controller.abort();
           reject(new Error("Provider connection timeout"));
-        }, 9000);
+        }, 5000);
       })
     ]);
     if (headerTimer) clearTimeout(headerTimer);
@@ -593,8 +593,10 @@ Deno.serve(async (req: Request) => {
   const now = new Date();
   const minuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
   const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  const recentResponse = await rest("mahi_ai_usage_events?select=id&user_id=eq." + encodeURIComponent(user.id) + "&created_at=gte." + encodeURIComponent(minuteAgo) + "&limit=6");
-  const dailyResponse = await rest("mahi_ai_usage_events?select=id&user_id=eq." + encodeURIComponent(user.id) + "&created_at=gte." + encodeURIComponent(dayAgo) + "&limit=81");
+  const [recentResponse, dailyResponse] = await Promise.all([
+    rest("mahi_ai_usage_events?select=id&user_id=eq." + encodeURIComponent(user.id) + "&created_at=gte." + encodeURIComponent(minuteAgo) + "&limit=6"),
+    rest("mahi_ai_usage_events?select=id&user_id=eq." + encodeURIComponent(user.id) + "&created_at=gte." + encodeURIComponent(dayAgo) + "&limit=81")
+  ]);
   if (!recentResponse.ok || !dailyResponse.ok) return json(503, { error: "Mahi AI is temporarily unavailable." });
   const [recent, daily] = await Promise.all([recentResponse.json(), dailyResponse.json()]);
   if (recent.length >= 5 || daily.length >= 80) return json(429, { error: "You have reached the current usage limit. Please try again later." });
