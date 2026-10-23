@@ -425,7 +425,8 @@
       }
       if (!fullText.trim()) throw new Error("Mahi AI: No response was returned. Please try again.");
       messageContent.classList.remove("streaming-text");
-      messageContent.innerHTML = safeMarkdown(fullText);
+      const resolvedReply = await resolveStoredImageMarkers(fullText);
+      messageContent.innerHTML = safeMarkdown(resolvedReply);
       delete typing.dataset.typing;
       currentMessages.push({ role: "assistant", content: fullText });
       pendingFiles = [];
