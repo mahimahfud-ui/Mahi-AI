@@ -58,12 +58,19 @@ function classifyTask(prompt: string): string {
 }
 function providerOrder(task: string) {
   const base = task === "coding"
-    ? ["openrouter", "groq", "gemini", "mistral"]
+    ? ["openrouter", "nvidia", "groq", "cloudflare", "gemini", "mistral"]
+    : task === "reasoning"
+    ? ["gemini", "openrouter", "nvidia", "groq", "cloudflare", "mistral"]
     : task === "creative"
-    ? ["gemini", "mistral", "openrouter", "groq"]
-    : ["gemini", "groq", "openrouter", "mistral"];
+    ? ["gemini", "mistral", "openrouter", "cloudflare", "groq", "nvidia"]
+    : ["gemini", "openrouter", "groq", "cloudflare", "nvidia", "mistral"];
   if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") base.push("openai", "anthropic");
   return base;
+}
+function openRouterModel(task: string): string {
+  if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
+  if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3-ultra:free";
+  return envFirst(["OPENROUTER_MODEL"]) || "openrouter/free";
 }
 function systemPrompt(task: string): string {
   return "You are Mahi AI, a helpful and accurate general assistant. Reply in the language used by the user. Use clear Markdown. Be concise unless the user asks for detail. For code, provide working solutions and explain important assumptions. For uncertain claims, state uncertainty and do not invent facts. The task routing category is " + task + ". Do not mention internal providers, routing, or API infrastructure.";
@@ -136,7 +143,23 @@ async function callProvider(name: string, messages: ChatMessage[], task: string)
   if (name === "openrouter") {
     const key = envFirst(["OPENROUTER_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://openrouter.ai/api/v1/chat/completions", key, envFirst(["OPENROUTER_MODEL"]) || "openrouter/free", messages, { "HTTP-Referer": "https://github.com/mahimahfud-ui/Mahi-AI", "X-Title": "Mahi AI" }), provider: name };
+    return { text: await openAICompatible(name, "https://openrouter.ai/api/v1/chat/completions", key, openRouterModel(task), messages, { "HTTP-Referer": "https://github.com/mahimahfud-ui/Mahi-AI", "X-Title": "Mahi AI" }), provider: name };
+  }
+  if (name === "nvidia") {
+    const key = envFirst(["NVIDIA_API_KEY"]);
+    if (!key) throw new Error("Not configured");
+    const model = task === "coding"
+      ? envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct"
+      : envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b";
+    return { text: await openAICompatible(name, "https://integrate.api.nvidia.com/v1/chat/completions", key, model, messages), provider: name };
+  }
+  if (name === "cloudflare") {
+    const key = envFirst(["CLOUDFLARE_API_TOKEN"]);
+    const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
+    if (!key || !accountId) throw new Error("Not configured");
+    const url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
+    const model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+    return { text: await openAICompatible(name, url, key, model, messages), provider: name };
   }
   if (name === "mistral") {
     const key = envFirst(["MISTRAL_API_KEY"]);
@@ -266,7 +289,8 @@ Deno.serve(async (req: Request) => {
   }
   if (!output) {
     await updateUsage(usageId, { success: false, error_code: available.some((name) => name === "openai" || name === "anthropic") ? "providers_unavailable" : "free_providers_unavailable" });
-    const anyConfigured = ["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY"].some((key) => !!envFirst([key])) ||
+    const anyConfigured = ["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY"].some((key) => !!envFirst([key])) ||
+      (!!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"])) ||
       (Deno.env.get("ENABLE_PAID_FALLBACK") === "true" && ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"].some((key) => !!envFirst([key])));
     if (!anyConfigured) return json(503, { error: "Mahi AI is being set up. Please try again later." });
     console.error("All available provider attempts failed:", failures.join(" | ").slice(0, 1200));
