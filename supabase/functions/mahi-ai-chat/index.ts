@@ -226,6 +226,13 @@ function providerOrder(task: string, hasInlineAttachments = false) {
     if (name === "cloudflare") return Deno.env.get("ENABLE_CLOUDFLARE_FALLBACK") === "true";
     return true;
   });
+  // The user explicitly requested OpenAI as the coding fallback. Try it only after
+  // OpenRouter fails, because this provider can incur API charges.
+  if (task === "coding" && envFirst(["OPENAI_API_KEY"])) {
+    const result = ["openrouter", "openai", ...enabled.filter((name) => name !== "openrouter")];
+    if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") result.push("anthropic");
+    return result;
+  }
   if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") {
     return task === "coding"
       ? ["openrouter", "openai", ...enabled.filter((x) => x !== "openrouter"), "anthropic"]
