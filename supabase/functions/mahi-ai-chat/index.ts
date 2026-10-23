@@ -163,7 +163,8 @@ function applyAttachmentContext(messages: ChatMessage[], attachments: PreparedAt
       details.push("[Attached file received: " + item.name + " | " + item.mimeType + " | " +
         formatFileSize(item.size || 0) + ". Its binary format is not directly readable by the selected AI route.]");
     } else if (item.inline) {
-      details.push("[Attached media available to the Gemini multimodal model: " + item.name + " | " + item.mimeType + "]");
+      details.push("[Attached media: " + item.name + " | " + item.mimeType +
+        ". Inspect it only if its actual binary data is present in this provider's input; otherwise, clearly say that this provider could not access its contents.]");
     }
   }
   const combined = (prepared[lastIndex].content + "\n\n" + details.join("\n\n") +
@@ -212,41 +213,44 @@ function classifyTask(prompt: string): string {
   if (/(story|poem|creative|rewrite|write a|blog|script|caption|lyrics|গল্প|কবিতা|লিখে দাও|রচনা|ক্যাপশন)/i.test(s)) return "creative";
   return "general";
 }
-function providerOrder(task: string, hasInlineAttachments = false) {
-  if (hasInlineAttachments) return ["gemini"];
-  const base = task === "coding"
-    ? ["openrouter", "groq", "gemini", "mistral", "nvidia", "cloudflare"]
-    : task === "reasoning"
-    ? ["gemini", "openrouter", "groq", "mistral", "nvidia", "cloudflare"]
-    : task === "creative"
-    ? ["gemini", "groq", "openrouter", "mistral", "nvidia", "cloudflare"]
-    : ["groq", "gemini", "openrouter", "mistral", "nvidia", "cloudflare"];
-  const enabled = base.filter((name) => {
-    if (name === "nvidia") return Deno.env.get("ENABLE_NVIDIA_FALLBACK") === "true";
-    if (name === "cloudflare") return Deno.env.get("ENABLE_CLOUDFLARE_FALLBACK") === "true";
-    return true;
-  });
-  // The user explicitly requested OpenAI as the coding fallback. Try it only after
-  // OpenRouter fails, because this provider can incur API charges.
-  if (task === "coding" && envFirst(["OPENAI_API_KEY"])) {
-    const result = ["openrouter", "openai", ...enabled.filter((name) => name !== "openrouter")];
-    if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") result.push("anthropic");
-    return result;
-  }
-  if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") {
-    return task === "coding"
-      ? ["openrouter", "openai", ...enabled.filter((x) => x !== "openrouter"), "anthropic"]
-      : [...enabled, "openai", "anthropic"];
-  }
-  return enabled;
+function providerIsConfigured(name: string): boolean {
+  if (name === "gemini") return !!envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+  if (name === "groq") return !!envFirst(["GROQ_API_KEY"]);
+  if (name === "openrouter") return !!envFirst(["OPENROUTER_API_KEY"]);
+  if (name === "mistral") return !!envFirst(["MISTRAL_API_KEY"]);
+  if (name === "nvidia") return !!envFirst(["NVIDIA_API_KEY"]);
+  if (name === "cloudflare") return !!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
+  if (name === "openai") return !!envFirst(["OPENAI_API_KEY"]);
+  if (name === "anthropic") return !!envFirst(["ANTHROPIC_API_KEY"]);
+  return false;
 }
+function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false): string[] {
+  let preferred: string[];
+  if (hasInlineAttachments) {
+    preferred = ["gemini", ...(hasInlineImages
+      ? ["openai", "openrouter", "mistral", "groq", "nvidia", "cloudflare", "anthropic"]
+      : ["openai", "openrouter", "groq", "mistral", "nvidia", "cloudflare", "anthropic"])];
+  } else if (task === "coding") {
+    preferred = ["openrouter", "openai", "nvidia", "groq", "gemini", "mistral", "cloudflare", "anthropic"];
+  } else if (task === "reasoning") {
+    preferred = ["gemini", "openrouter", "openai", "anthropic", "nvidia", "groq", "mistral", "cloudflare"];
+  } else if (task === "creative") {
+    preferred = ["gemini", "openai", "anthropic", "groq", "openrouter", "mistral", "nvidia", "cloudflare"];
+  } else {
+    preferred = ["groq", "gemini", "openrouter", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
+  }
+  // Every configured key is eligible for automatic fallback. Paid API calls may incur charges.
+  const all = [...preferred, "gemini", "groq", "openrouter", "mistral", "nvidia", "cloudflare", "openai", "anthropic"];
+  return [...new Set(all)].filter(providerIsConfigured);
+}
+
 function openRouterModel(task: string): string {
   if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
   if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3.5-lightning:free";
   return envFirst(["OPENROUTER_MODEL"]) || "nvidia/nemotron-3.5-lightning:free";
 }
 function systemPrompt(task: string): string {
-  return "You are Mahi AI, a helpful and accurate general assistant. Reply in the language used by the user. Use clear Markdown. Be concise unless the user asks for detail. For code, provide working solutions and explain important assumptions. For uncertain claims, state uncertainty and do not invent facts. The task routing category is " + task + ". Do not mention internal providers, routing, or API infrastructure.";
+  return "You are Mahi AI, a capable multilingual assistant. Understand and respond in any language or script you can process, including non-Latin writing systems, regional languages, transliteration, dialects, and mixed-language messages. Automatically detect the language and style of the latest user message, and reply in that language and style unless the user explicitly requests another. Do not translate or switch to English unless asked. Preserve meaning, names, formatting, code, and technical terms carefully. Complete the requested task as fully as possible; for multi-step tasks, work through the steps instead of stopping at a superficial answer. For code, provide working solutions or a concrete patch. Never invent facts or claim to have inspected an attachment whose contents were not actually passed to this provider. If an approach fails, try the next available provider. The task routing category is " + task + ". Do not mention internal providers, routing, or API infrastructure.";
 }
 type ChatMessage = { role: "user" | "assistant"; content: string };
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000): Promise<Response> {
@@ -269,7 +273,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
       model,
       messages: [{ role: "system", content: systemPrompt(classifyTask(messages[messages.length - 1]?.content || "")) }, ...messages],
       temperature: 0.4,
-      max_tokens: 3000,
+      max_tokens: 8192,
       stream: false
     })
   });
@@ -297,7 +301,7 @@ async function callGemini(messages: ChatMessage[], task: string): Promise<string
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemPrompt(task) }] },
         contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 3000 }
+        generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
       })
     }
   );
@@ -353,7 +357,7 @@ async function callProvider(name: string, messages: ChatMessage[], task: string)
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
         model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-5",
-        max_tokens: 3000,
+        max_tokens: 8192,
         system: systemPrompt(task),
         messages: messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
       })
@@ -423,7 +427,10 @@ async function* readOpenAIEventStream(response: Response): AsyncGenerator<string
         if (raw === "[DONE]") return;
         let event: any;
         try { event = JSON.parse(raw); } catch (_) { continue; }
-        const value = event?.choices?.[0]?.delta?.content;
+        if (event?.error) throw new Error("Provider stream returned an error");
+        const choice = event?.choices?.[0];
+        if (choice?.finish_reason === "length") throw new Error("Provider response was truncated at its output limit");
+        const value = choice?.delta?.content;
         const text = typeof value === "string"
           ? value
           : Array.isArray(value) ? value.map((p: any) => p?.text || "").join("") : "";
@@ -464,9 +471,13 @@ async function* readGeminiEventStream(response: Response): AsyncGenerator<string
         if (!raw) continue;
         try {
           const event = JSON.parse(raw);
-          const text = (event?.candidates?.[0]?.content?.parts || []).map((p: any) => p?.text || "").join("");
+          const candidate = event?.candidates?.[0];
+          if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response was truncated at its output limit");
+          const text = (candidate?.content?.parts || []).map((p: any) => p?.text || "").join("");
           if (text) yield text;
-        } catch (_) {}
+        } catch (error) {
+          if (error instanceof Error && error.message.includes("truncated")) throw error;
+        }
       }
       if (part.done) break;
     }
@@ -492,9 +503,15 @@ async function* readAnthropicEventStream(response: Response): AsyncGenerator<str
         if (!raw || raw === "[DONE]") continue;
         try {
           const event = JSON.parse(raw);
+          if (event?.type === "error") throw new Error("Anthropic stream returned an error");
+          if (event?.type === "message_delta" && event?.delta?.stop_reason === "max_tokens") {
+            throw new Error("Anthropic response was truncated at its output limit");
+          }
           const text = event?.type === "content_block_delta" ? event?.delta?.text : "";
           if (typeof text === "string" && text) yield text;
-        } catch (_) {}
+        } catch (error) {
+          if (error instanceof Error && (error.message.includes("truncated") || error.message.includes("stream returned an error"))) throw error;
+        }
       }
       if (part.done) break;
     }
@@ -503,9 +520,9 @@ async function* readAnthropicEventStream(response: Response): AsyncGenerator<str
   }
 }
 
-async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = []): Promise<ProviderStream> {
+async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = [], timeoutMs = 25000): Promise<ProviderStream> {
   const controller = new AbortController();
-  const totalTimer = setTimeout(() => controller.abort(), 40000);
+  const totalTimer = setTimeout(() => controller.abort(), timeoutMs);
   const cleanup = () => { clearTimeout(totalTimer); controller.abort(); };
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   let url = "";
@@ -513,7 +530,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
   let useGemini = false;
   let useAnthropic = false;
 
-  const chatMessages = [
+  const chatMessages: any[] = [
     { role: "system", content: systemPrompt(task) },
     ...messages
   ];
@@ -537,7 +554,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         }
         return { role: m.role === "assistant" ? "model" : "user", parts };
       }),
-      generationConfig: { temperature: 0.3, maxOutputTokens: 1800 }
+      generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
     };
     useGemini = true;
   } else if (name === "anthropic") {
@@ -548,7 +565,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     headers["anthropic-version"] = "2023-06-01";
     body = {
       model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-5",
-      max_tokens: 1800,
+      max_tokens: 8192,
       system: systemPrompt(task),
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       stream: true
@@ -584,7 +601,23 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       ? envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct"
       : envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b";
     else if (name === "cloudflare") model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-    body = { model, messages: chatMessages, temperature: 0.3, max_tokens: 1800, stream: true };
+    if ((name === "openai" || name === "openrouter") && attachments.some((item) =>
+      item.inline && item.base64 && item.mimeType.startsWith("image/"))) {
+      const lastUserIndex = chatMessages.map((message: any) => message.role).lastIndexOf("user");
+      if (lastUserIndex >= 0) {
+        const imageInputs = attachments
+          .filter((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"))
+          .map((item) => ({
+            type: "image_url",
+            image_url: { url: "data:" + item.mimeType + ";base64," + item.base64 }
+          }));
+        chatMessages[lastUserIndex].content = [
+          { type: "text", text: String(chatMessages[lastUserIndex].content || "") },
+          ...imageInputs
+        ];
+      }
+    }
+    body = { model, messages: chatMessages, temperature: 0.3, max_tokens: 8192, stream: true };
   }
 
   let headerTimer: ReturnType<typeof setTimeout> | undefined;
@@ -596,7 +629,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         headerTimer = setTimeout(() => {
           controller.abort();
           reject(new Error("Provider connection timeout"));
-        }, 5000);
+        }, Math.min(8000, timeoutMs));
       })
     ]);
     if (headerTimer) clearTimeout(headerTimer);
@@ -664,6 +697,70 @@ async function generateGeminiImage(prompt: string, attachments: PreparedAttachme
   return { text: text.trim() || "Here is the image you requested.", bytes, mimeType };
 }
 
+async function generateOpenAIImage(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+  const key = envFirst(["OPENAI_API_KEY"]);
+  if (!key) throw new Error("OpenAI image generation is not configured.");
+  const model = envFirst(["OPENAI_IMAGE_MODEL"]) || "gpt-image-2";
+  const images = attachments.filter((item) =>
+    item.inline && item.bytes && item.mimeType.startsWith("image/") &&
+    /^(image\/(png|jpeg|webp))$/i.test(item.mimeType)
+  );
+  const editing = images.length > 0;
+  const url = editing ? "https://api.openai.com/v1/images/edits" : "https://api.openai.com/v1/images/generations";
+  let body: BodyInit;
+  const headers: Record<string, string> = { "Authorization": "Bearer " + key };
+  if (editing) {
+    const form = new FormData();
+    form.set("model", model);
+    form.set("prompt", prompt.slice(0, 32000));
+    form.set("size", "1024x1024");
+    form.set("quality", "medium");
+    form.set("output_format", "png");
+    const inputImage = images[0];
+    form.append("image", new Blob([inputImage.bytes!.buffer as ArrayBuffer], { type: inputImage.mimeType }), inputImage.name);
+    body = form;
+  } else {
+    headers["Content-Type"] = "application/json";
+    body = JSON.stringify({
+      model, prompt: prompt.slice(0, 32000), size: "1024x1024",
+      quality: "medium", output_format: "png", n: 1
+    });
+  }
+  const response = await fetchWithTimeout(url, { method: "POST", headers, body }, 55000);
+  if (!response.ok) throw new Error(await readProviderError(response));
+  const result = await response.json();
+  const encoded = result?.data?.[0]?.b64_json;
+  if (typeof encoded !== "string" || !encoded) throw new Error("OpenAI image API returned no image data");
+  const bytes = Uint8Array.from(atob(encoded), (char) => char.charCodeAt(0));
+  return {
+    text: typeof result?.data?.[0]?.revised_prompt === "string" ? result.data[0].revised_prompt : "Here is the image you requested.",
+    bytes, mimeType: "image/png"
+  };
+}
+
+async function generateImageWithFallback(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
+  const failures: string[] = [];
+  if (envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
+    try {
+      return { ...(await generateGeminiImage(prompt, attachments)), provider: "gemini-image" };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      failures.push("Gemini: " + reason.slice(0, 160));
+      console.warn("Mahi AI Gemini image generation failed; trying fallback:", reason.slice(0, 180));
+    }
+  }
+  if (envFirst(["OPENAI_API_KEY"])) {
+    try {
+      return { ...(await generateOpenAIImage(prompt, attachments)), provider: "openai-image" };
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      failures.push("OpenAI: " + reason.slice(0, 160));
+      console.warn("Mahi AI OpenAI image generation failed:", reason.slice(0, 180));
+    }
+  }
+  throw new Error("All configured image-generation providers failed: " + (failures.join(" | ") || "no image provider is configured"));
+}
+
 async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: string): Promise<string> {
   const ext = mimeType === "image/webp" ? "webp" : mimeType === "image/jpeg" ? "jpg" : "png";
   const path = userId + "/" + crypto.randomUUID() + "." + ext;
@@ -710,11 +807,11 @@ async function streamImageGenerationResponse(
         );
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
         sseEvent(controller, encoder, { type: "status", message: "Gemini is creating your image…" });
-        const result = await generateGeminiImage(messages[messages.length - 1].content, attachments);
+        const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
         await saveChatTurn(userId, conversationId, displayUserText, reply);
-        await updateUsage(usageId, { success: true, provider: "gemini-image", task_type: "image_generation", error_code: null });
+        await updateUsage(usageId, { success: true, provider: result.provider, task_type: "image_generation", error_code: null });
         sseEvent(controller, encoder, { type: "delta", text: reply });
         sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
       } catch (error) {
@@ -723,7 +820,7 @@ async function streamImageGenerationResponse(
         await updateUsage(usageId, { success: false, provider: "gemini-image", task_type: "image_generation", error_code: "image_generation_failed" });
         sseEvent(controller, encoder, {
           type: "error",
-          message: "I couldn't generate the image. Check that your Gemini API key has image-generation access and available quota, then try again."
+          message: "Image generation failed on the available image providers. Check configured API keys, model access, and provider quota, then try again."
         });
       } finally {
         try { controller.close(); } catch (_) {}
@@ -740,99 +837,83 @@ async function streamChatResponse(
     return streamImageGenerationResponse(userId, messages, initialConversationId, usageId, attachments, displayUserText);
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
-  const available = providerOrder(task, hasInlineAttachments);
-  const failures: string[] = [];
-  let chosen: ProviderStream | null = null;
-  let firstText = "";
-  for (const provider of available) {
-    let candidate: ProviderStream | null = null;
-    try {
-      candidate = await startProviderStream(provider, messages, task, attachments);
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const first = await Promise.race([
-        candidate.iterator.next(),
-        new Promise<IteratorResult<string>>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("First token timeout")), 4500);
-        })
-      ]);
-      if (timer) clearTimeout(timer);
-      if (!first.done && first.value) {
-        chosen = candidate;
-        firstText = first.value;
-        break;
-      }
-      candidate.cleanup();
-      failures.push(provider + ":empty stream");
-    } catch (error) {
-      if (candidate) candidate.cleanup();
-      const reason = error instanceof Error ? error.message : String(error);
-      if (reason !== "Not configured") console.warn("Mahi AI provider attempt failed:", provider, reason.slice(0, 140));
-      failures.push(provider + ":" + reason.slice(0, 90));
-    }
-  }
-  if (!chosen) {
-    await updateUsage(usageId, { success: false, error_code: "free_providers_unavailable" });
-    const configured = ["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY", "GROQ_API_KEY", "OPENROUTER_API_KEY", "MISTRAL_API_KEY"].some((key) => !!envFirst([key])) ||
-      (!!envFirst(["CLOUDFLARE_API_TOKEN"]) && !!envFirst(["CLOUDFLARE_ACCOUNT_ID"])) ||
-      Deno.env.get("ENABLE_NVIDIA_FALLBACK") === "true" && !!envFirst(["NVIDIA_API_KEY"]) ||
-      Deno.env.get("ENABLE_PAID_FALLBACK") === "true" && ["OPENAI_API_KEY", "ANTHROPIC_API_KEY"].some((key) => !!envFirst([key]));
-    if (!configured) return json(503, { error: "Mahi AI is being set up. Please try again later." });
-    console.error("All stream providers failed:", failures.join(" | ").slice(0, 1000));
-    return json(502, { error: "Mahi AI could not complete that request. Please try again." });
-  }
-
-  let conversationId = initialConversationId;
-  try {
-    conversationId = await createConversationIfNeeded(
-      userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
-    );
-  } catch (_) {
-    chosen.cleanup();
-    await updateUsage(usageId, { success: false, provider: chosen.provider, error_code: "database_unavailable" });
-    return json(503, { error: "Mahi AI could not save this conversation. Please try again." });
-  }
-
-  const encoder = new TextEncoder();
-  const selected = chosen;
-  const stream = new ReadableStream<Uint8Array>({
-    start(controller) {
-      sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
-      (async () => {
-        let completeText = firstText;
-        try {
-          sseEvent(controller, encoder, { type: "delta", text: firstText });
-          while (true) {
-            const next = await selected.iterator.next();
-            if (next.done) break;
-            if (!next.value) continue;
-            completeText += next.value;
-            sseEvent(controller, encoder, { type: "delta", text: next.value });
+  const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
+  const available = providerOrder(task, hasInlineAttachments, hasInlineImages);
+  return eventStreamResponse((controller, encoder) => {
+    (async () => {
+      let conversationId = initialConversationId;
+      const failures: string[] = [];
+      let chosen: { provider: string; text: string } | null = null;
+      const startedAt = Date.now();
+      const totalProviderBudgetMs = 128000;
+      try {
+        for (let index = 0; index < available.length; index++) {
+          const remaining = totalProviderBudgetMs - (Date.now() - startedAt);
+          if (remaining < 7000) {
+            failures.push("remaining_provider_budget_exhausted");
+            break;
           }
-          if (!completeText.trim()) throw new Error("Empty provider response");
-          await saveChatTurn(userId, conversationId, displayUserText, completeText);
-          await updateUsage(usageId, { success: true, provider: selected.provider, task_type: task, error_code: null });
-          sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
-        } catch (error) {
-          const reason = error instanceof Error ? error.message : String(error);
-          console.error("Mahi AI streaming completion failed:", selected.provider, reason.slice(0, 180));
-          await updateUsage(usageId, { success: false, provider: selected.provider, error_code: "stream_or_save_failed" });
-          sseEvent(controller, encoder, { type: "error", message: "The response was interrupted. Please try again." });
-        } finally {
-          selected.cleanup();
-          try { controller.close(); } catch (_) {}
+          const providersLeft = available.length - index;
+          const providerBudget = Math.max(7000, Math.min(30000, Math.floor(remaining / providersLeft)));
+          const provider = available[index];
+          sseEvent(controller, encoder, {
+            type: "status",
+            message: index === 0
+              ? "Finding a model that can complete your request…"
+              : "The previous attempt did not finish. Trying the next available model…"
+          });
+          let candidate: ProviderStream | null = null;
+          try {
+            candidate = await startProviderStream(provider, messages, task, attachments, providerBudget);
+            let completeText = "";
+            while (true) {
+              const next = await candidate.iterator.next();
+              if (next.done) break;
+              if (next.value) completeText += next.value;
+              if (completeText.length > 180000) throw new Error("Provider response exceeded the supported response size");
+            }
+            candidate.cleanup();
+            if (!completeText.trim()) throw new Error("Provider returned an empty response");
+            chosen = { provider, text: completeText.trim() };
+            break;
+          } catch (error) {
+            if (candidate) candidate.cleanup();
+            const reason = error instanceof Error ? error.message : String(error);
+            failures.push(provider + ":" + reason.slice(0, 100));
+            if (reason !== "Not configured") console.warn("Mahi AI full-response provider attempt failed:", provider, reason.slice(0, 180));
+          }
         }
-      })();
-    },
-    cancel() { selected.cleanup(); }
-  });
-  return new Response(stream, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      "X-Accel-Buffering": "no"
-    }
+        if (!chosen) {
+          await updateUsage(usageId, { success: false, error_code: "all_providers_failed" });
+          console.error("All Mahi AI providers failed:", failures.join(" | ").slice(0, 1400));
+          sseEvent(controller, encoder, {
+            type: "error",
+            message: "Mahi AI could not complete this request because the available models failed. Please try again."
+          });
+          return;
+        }
+        conversationId = await createConversationIfNeeded(
+          userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
+        );
+        await saveChatTurn(userId, conversationId, displayUserText, chosen.text);
+        await updateUsage(usageId, { success: true, provider: chosen.provider, task_type: task, error_code: null });
+        sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
+        for (let offset = 0; offset < chosen.text.length; offset += 700) {
+          sseEvent(controller, encoder, { type: "delta", text: chosen.text.slice(offset, offset + 700) });
+        }
+        sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        console.error("Mahi AI response handling failed:", reason.slice(0, 200));
+        await updateUsage(usageId, { success: false, error_code: "response_save_failed" });
+        sseEvent(controller, encoder, {
+          type: "error",
+          message: "Mahi AI could not finish or save the response. Please try again."
+        });
+      } finally {
+        try { controller.close(); } catch (_) {}
+      }
+    })();
   });
 }
 
@@ -847,7 +928,7 @@ Deno.serve(async (req: Request) => {
   let input: any;
   try {
     const length = Number(req.headers.get("content-length") || "0");
-    if (length > 200000) return json(413, { error: "That message is too large." });
+    if (length > 1500000) return json(413, { error: "That message is too large for a single request." });
     input = await req.json();
   } catch (_) {
     return json(400, { error: "Invalid request." });
@@ -855,12 +936,12 @@ Deno.serve(async (req: Request) => {
   const incoming = Array.isArray(input?.messages) ? input.messages : [];
   const messages: ChatMessage[] = incoming
     .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
-    .slice(-18)
-    .map((m: any) => ({ role: m.role, content: m.content.trim().slice(0, 12000) }))
+    .slice(-36)
+    .map((m: any) => ({ role: m.role, content: m.content.trim().slice(0, 30000) }))
     .filter((m: ChatMessage) => m.content.length > 0);
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf("user");
   if (lastUserIndex < 0 || lastUserIndex !== messages.length - 1) return json(400, { error: "Send a message to begin." });
-  if (messages.reduce((sum, m) => sum + m.content.length, 0) > 50000) return json(413, { error: "Trim your message history and try again." });
+  if (messages.reduce((sum, m) => sum + m.content.length, 0) > 120000) return json(413, { error: "Trim your message history and try again." });
 
   const displayPrompt = messages[messages.length - 1].content;
   let attachments: PreparedAttachment[] = [];
@@ -874,22 +955,11 @@ Deno.serve(async (req: Request) => {
   const attachmentLabels = attachments.length
     ? "\n\nAttached files: " + attachments.map((item) => item.name + " (" + item.mimeType + ")").join(", ")
     : "";
-  const displayUserText = (displayPrompt + attachmentLabels).slice(0, 12000);
+  const displayUserText = (displayPrompt + attachmentLabels).slice(0, 40000);
   const contextualMessages = applyAttachmentContext(messages, attachments);
   const hasCodeAttachment = attachments.some((item) => isCodeAttachment(item.name));
   const task = isImageGenerationTask(displayPrompt) ? "image_generation"
     : hasCodeAttachment ? "coding" : classifyTask(displayPrompt);
-  const now = new Date();
-  const minuteAgo = new Date(now.getTime() - 60 * 1000).toISOString();
-  const dayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString();
-  const [recentResponse, dailyResponse] = await Promise.all([
-    rest("mahi_ai_usage_events?select=id&user_id=eq." + encodeURIComponent(user.id) + "&created_at=gte." + encodeURIComponent(minuteAgo) + "&limit=6"),
-    rest("mahi_ai_usage_events?select=id&user_id=eq." + encodeURIComponent(user.id) + "&created_at=gte." + encodeURIComponent(dayAgo) + "&limit=81")
-  ]);
-  if (!recentResponse.ok || !dailyResponse.ok) return json(503, { error: "Mahi AI is temporarily unavailable." });
-  const [recent, daily] = await Promise.all([recentResponse.json(), dailyResponse.json()]);
-  if (recent.length >= 5 || daily.length >= 80) return json(429, { error: "You have reached the current usage limit. Please try again later." });
-
   let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
   if (conversationId) {
     try {
