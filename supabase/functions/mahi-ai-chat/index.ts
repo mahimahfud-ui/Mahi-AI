@@ -916,9 +916,17 @@ async function streamImageGenerationResponse(
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
         await updateUsage(usageId, { success: false, provider: "gemini-grok-openai-image", task_type: "image_generation", error_code: "image_generation_failed" });
         const hasGeminiKey = Boolean(envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]));
-        const userMessage = hasGeminiKey
-          ? "ছবি তৈরি করা যায়নি। Gemini image API request ব্যর্থ হয়েছে। GEMINI_API_KEY আবার যোগ করার দরকার নেই—Gemini image model access/usage limit দেখুন। Backup provider ব্যবহার হলে তার key ও credits আলাদা।"
-          : "ছবি তৈরি করা যায়নি। Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন। Backup image provider optional, তবে সেগুলোর API key ও credits আলাদা।";
+        const lowerReason = reason.toLowerCase();
+        let userMessage: string;
+        if (/gemini:\\s*429|resource_exhausted|exceeded your current quota|quota exceeded/.test(lowerReason)) {
+          userMessage = "ছবি তৈরি করা যায়নি: Gemini image API quota শেষ বা এই model-এর জন্য available নয় (429)। GEMINI_API_KEY পড়া হচ্ছে—আবার যোগ করার দরকার নেই। Google AI Studio-তে image model usage limit ও billing tier দেখুন। Gemini 3.1 Flash Image-এর API Free Tier নেই। বিকল্প হিসেবে credit-সহ image API provider configure করতে হবে।";
+        } else if (!hasGeminiKey) {
+          userMessage = "ছবি তৈরি করা যায়নি। Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন। বিকল্প image provider ব্যবহার করলে সেটির key ও credits-ও লাগবে।";
+        } else if (/401|403|api key not valid|permission denied|unauthorized/.test(lowerReason)) {
+          userMessage = "ছবি তৈরি করা যায়নি: image API key, model access বা project permissions প্রত্যাখ্যাত হয়েছে। Google AI Studio-তে key/project access যাচাই করুন; key-এর value কাউকে শেয়ার করবেন না।";
+        } else {
+          userMessage = "ছবি তৈরি করা যায়নি। Image API request বা storage ব্যর্থ হয়েছে। Supabase mahi-ai-chat logs-এ সর্বশেষ error দেখুন; fallback provider-এর key ও credits আলাদা হতে পারে।";
+        }
         sseEvent(controller, encoder, { type: "error", message: userMessage });
       } finally {
         try { controller.close(); } catch (_) {}
