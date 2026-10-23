@@ -185,7 +185,8 @@
       renderConversationList();
       closeMobileSidebar();
     } catch (error) {
-      setError(plainError(error));
+      setError(error instanceof Error && error.message.startsWith("Mahi AI: ")
+        ? error.message.slice(9) : plainError(error));
     }
   }
   function beginNewChat() {
@@ -213,22 +214,82 @@
     const typing = addMessage("assistant", "", { typing: true });
     setBusy(true);
     try {
-      const { data, error } = await client.functions.invoke("mahi-ai-chat", {
-        body: {
+      const { data: authData, error: authError } = await client.auth.getSession();
+      if (authError) throw authError;
+      const accessToken = authData?.session?.access_token;
+      if (!accessToken) throw new Error("Mahi AI: Your guest session expired. Reload the page and try again.");
+      const response = await fetch(cfg.supabaseUrl + "/functions/v1/mahi-ai-chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": cfg.supabasePublishableKey,
+          "Authorization": "Bearer " + accessToken
+        },
+        body: JSON.stringify({
           conversation_id: conversationId,
           messages: currentMessages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content }))
-        }
+        })
       });
-      if (error) {
-        let details = "";
-        try { details = await error.context.text(); } catch (_) {}
-        throw new Error(details || error.message || "Request failed");
+      if (!response.ok) {
+        let detail = "";
+        try {
+          const body = await response.json();
+          detail = typeof body?.error === "string" ? body.error : "";
+        } catch (_) {}
+        throw new Error("Mahi AI: " + (detail || "Request failed. Please try again."));
       }
-      if (!data || !data.reply || !data.conversation_id) throw new Error("Invalid response");
-      conversationId = data.conversation_id;
-      typing.remove();
-      currentMessages.push({ role: "assistant", content: data.reply });
-      addMessage("assistant", data.reply);
+      if (!response.body) throw new Error("Mahi AI: Streaming is not supported by this browser.");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let fullText = "";
+      let completed = false;
+      const messageContent = typing.querySelector(".message-content");
+      messageContent.classList.add("streaming-text");
+
+      const handleStreamEvent = (block) => {
+        const payloadLines = block.split("\n")
+          .filter((line) => line.startsWith("data:"))
+          .map((line) => line.slice(5).trim());
+        if (!payloadLines.length) return;
+        let payload;
+        try { payload = JSON.parse(payloadLines.join("\n")); } catch (_) { return; }
+        if (payload.type === "meta" && payload.conversation_id) {
+          conversationId = payload.conversation_id;
+        } else if (payload.type === "delta" && typeof payload.text === "string") {
+          if (!fullText) messageContent.textContent = "";
+          fullText += payload.text;
+          messageContent.textContent = fullText;
+          scrollToBottom();
+        } else if (payload.type === "done") {
+          if (payload.conversation_id) conversationId = payload.conversation_id;
+          completed = true;
+        } else if (payload.type === "error") {
+          throw new Error("Mahi AI: " + (payload.message || "The response was interrupted. Please try again."));
+        }
+      };
+
+      while (true) {
+        const part = await reader.read();
+        buffer += decoder.decode(part.value, { stream: !part.done }).replace(/\r\n/g, "\n");
+        let boundary;
+        while ((boundary = buffer.indexOf("\n\n")) !== -1) {
+          const block = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          handleStreamEvent(block);
+        }
+        if (completed || part.done) break;
+      }
+      if (completed) {
+        try { await reader.cancel(); } catch (_) {}
+      } else {
+        throw new Error("Mahi AI: The connection ended before the answer finished. Please try again.");
+      }
+      if (!fullText.trim()) throw new Error("Mahi AI: No response was returned. Please try again.");
+      messageContent.classList.remove("streaming-text");
+      messageContent.innerHTML = safeMarkdown(fullText);
+      delete typing.dataset.typing;
+      currentMessages.push({ role: "assistant", content: fullText });
       await refreshConversations();
     } catch (error) {
       typing.remove();
