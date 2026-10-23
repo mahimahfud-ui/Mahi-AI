@@ -72,7 +72,7 @@ function providerOrder(task: string) {
 }
 function openRouterModel(task: string): string {
   if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
-  if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3-ultra:free";
+  if (task === "reasoning") return envFirst(["OPENROUTER_REASONING_MODEL"]) || "nvidia/nemotron-3-ultra-550b-a55b:free";
   return envFirst(["OPENROUTER_MODEL"]) || "openrouter/free";
 }
 function systemPrompt(task: string): string {
@@ -113,7 +113,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
 async function callGemini(messages: ChatMessage[], task: string): Promise<string> {
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
-  const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
+  const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.8-flash";
   const normalizedMessages = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
   const contents = normalizedMessages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
@@ -168,7 +168,7 @@ async function callProvider(name: string, messages: ChatMessage[], task: string)
   if (name === "mistral") {
     const key = envFirst(["MISTRAL_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://api.mistral.ai/v1/chat/completions", key, envFirst(["MISTRAL_MODEL"]) || "ministral-8b-latest", messages), provider: name };
+    return { text: await openAICompatible(name, "https://api.mistral.ai/v1/chat/completions", key, envFirst(["MISTRAL_MODEL"]) || "mistral-small-latest", messages), provider: name };
   }
   if (name === "openai") {
     const key = envFirst(["OPENAI_API_KEY"]);
