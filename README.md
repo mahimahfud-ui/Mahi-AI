@@ -83,3 +83,8 @@ Image intents recognize English, Bangla and Banglish requests (for example `bong
 ## Accuracy and limitations
 
 The assistant now uses an accuracy-first instruction and, when another configured non-paid provider is available, a second-pass reviewer. The reviewer applies a correction only when it returns a valid structured decision; timeout or invalid output retains the original draft. This improves reliability but does not guarantee error-free output. The app does not provide a live web-search tool or execute generated code, so it must not describe current facts or code as externally verified/executed unless a tool actually did that. Google's guidance recommends search grounding for obscure/recent facts and code execution for calculations, but those tools are not automatically available in this chat router.
+
+
+## Live web research
+
+Mahi AI detects requests for current/latest information, news, prices, releases, explicit online search, and source links. It prefers Gemini and enables the built-in Google Search grounding tool for text-only requests; the streaming response includes a **Sources** list from Gemini grounding metadata when provided. Ordinary questions do not trigger web search. If the search provider fails and another provider is used, the answer must not pretend it performed live verification. Google Search grounding is subject to the Gemini model/account's availability, quota, and applicable terms.
