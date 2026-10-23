@@ -74,3 +74,7 @@ The router is best-effort: it fully buffers each provider response and then fall
 - The function verifies the caller's Supabase JWT. It does not enforce an app-defined daily or per-minute usage cap; provider and platform limits still apply.
 - Provider credentials stay in Supabase Edge Function secrets.
 - Guest accounts do not carry across browsers/devices unless users later link a sign-in identity.
+
+
+### Banglish image generation
+Image intents recognize English, Bangla and Banglish requests (for example `bongobondhur image genarate koro`) and route them to image generation. The image prompt is normalized to avoid an unwanted code/tutorial answer. Image provider order is Gemini → Grok Imagine → OpenAI (when each API key is configured). Set `XAI_API_KEY` in Supabase Edge Function secrets to enable Grok.
