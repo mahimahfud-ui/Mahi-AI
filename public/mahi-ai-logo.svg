@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Mahi AI</title>
+  <defs>
+    <linearGradient id="tile" x1="5" y1="4" x2="59" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#211b3a"/>
+      <stop offset=".55" stop-color="#151a2d"/>
+      <stop offset="1" stop-color="#101e31"/>
+    </linearGradient>
+    <linearGradient id="rim" x1="7" y1="5" x2="58" y2="59" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c7b5ff" stop-opacity=".78"/>
+      <stop offset=".48" stop-color="#8e82ff" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#83c0ff" stop-opacity=".62"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="17" y1="19" x2="48" y2="46" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#e0d2ff"/>
+      <stop offset=".46" stop-color="#ab9aff"/>
+      <stop offset="1" stop-color="#7bc5ff"/>
+    </linearGradient>
+    <filter id="glow" x="7" y="9" width="50" height="46" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="2.2"/>
+    </filter>
+  </defs>
+  <rect x="3.5" y="3.5" width="57" height="57" rx="18" fill="url(#tile)" stroke="url(#rim)"/>
+  <rect x="7" y="7" width="50" height="50" rx="15" stroke="#fff" stroke-opacity=".045"/>
+  <path d="M17.8 43V23.3c0-1.7 2.1-2.4 3.1-1L31.9 36.8 43.1 22.2c1-1.4 3.2-.7 3.2 1V43" fill="none" stroke="#a99aff" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round" opacity=".3" filter="url(#glow)"/>
+  <path d="M17.8 43V23.3c0-1.7 2.1-2.4 3.1-1L31.9 36.8 43.1 22.2c1-1.4 3.2-.7 3.2 1V43" fill="none" stroke="url(#mark)" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M47.8 11.4v7.3M44.2 15.05h7.2" stroke="#e2d7ff" stroke-width="1.6" stroke-linecap="round" opacity=".95"/>
+  <circle cx="48" cy="15" r="5.1" fill="#b4a1ff" opacity=".1"/>
+</svg>
