@@ -578,6 +578,249 @@
       ui.input.focus();
     }
   }
+  // Public API Library: catalogue metadata comes from the community-maintained public-apis README.
+  const apiUi = {
+    overlay: $("apiExplorer"),
+    open: $("openApiExplorer"),
+    close: $("closeApiExplorer"),
+    search: $("apiSearch"),
+    category: $("apiCategory"),
+    auth: $("apiAuth"),
+    https: $("apiHttps"),
+    cors: $("apiCors"),
+    status: $("apiExplorerStatus"),
+    results: $("apiExplorerResults"),
+    count: $("apiResultCount"),
+    more: $("apiLoadMore")
+  };
+  const API_README_URL = "https://raw.githubusercontent.com/public-apis/public-apis/master/README.md";
+  const API_PAGE_SIZE = 60;
+  let apiEntries = [];
+  let apiDirectoryLoaded = false;
+  let apiVisibleCount = API_PAGE_SIZE;
+  let apiPriorFocus = null;
+
+  function cleanApiMarkdown(value) {
+    return String(value || "")
+      .replace(/<img\b[^>]*>/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1")
+      .replace(/\u0060([^\u0060]+)\u0060/g, "$1")
+      .replace(/\*\*(.*?)\*\*/g, "$1")
+      .replace(/__(.*?)__/g, "$1")
+      .replace(/[*_~]/g, "")
+      .replace(/&amp;/g, "&")
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&lt;/g, "<")
+      .replace(/&gt;/g, ">")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function parsePublicApiReadme(markdown) {
+    const lines = String(markdown || "").split(/\r?\n/);
+    const entries = [];
+    let inIndex = false;
+    let category = "";
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (/^##\s+Index\s*$/i.test(line)) {
+        inIndex = true;
+        continue;
+      }
+      if (inIndex && /^##\s+/.test(line)) break;
+      if (!inIndex) continue;
+      const heading = line.match(/^###\s+(.+?)\s*$/);
+      if (heading) {
+        category = cleanApiMarkdown(heading[1]);
+        continue;
+      }
+      if (!line.startsWith("|")) continue;
+      if (/^\|\s*API\s*\|/i.test(line) || /^[|:\-\s]+$/.test(line)) continue;
+      const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+      if (cells.length < 5) continue;
+      const nameLink = cells[0].match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+      const name = cleanApiMarkdown(nameLink ? nameLink[1] : cells[0]);
+      const url = nameLink ? nameLink[2].trim() : "";
+      if (!name || !/^https?:\/\//i.test(url)) continue;
+      const authLabel = cleanApiMarkdown(cells[2]) || "Unknown";
+      const httpsLabel = cleanApiMarkdown(cells[3]) || "Unknown";
+      const corsLabel = cleanApiMarkdown(cells[4]) || "Unknown";
+      entries.push({
+        name,
+        url,
+        category: category || "Other",
+        description: cleanApiMarkdown(cells[1]) || "No description provided.",
+        authLabel,
+        auth: /^(no|none|n\/a)$/i.test(authLabel) ? "none" : /^(unknown|not sure)$/i.test(authLabel) ? "unknown" : "required",
+        httpsLabel,
+        https: /^yes$/i.test(httpsLabel) ? "yes" : /^no$/i.test(httpsLabel) ? "no" : "unknown",
+        corsLabel,
+        cors: /^yes$/i.test(corsLabel) ? "yes" : /^no$/i.test(corsLabel) ? "no" : "unknown"
+      });
+    }
+    return entries;
+  }
+
+  function makeApiBadge(label, style) {
+    const badge = document.createElement("span");
+    badge.className = "api-badge" + (style ? " " + style : "");
+    badge.textContent = label;
+    return badge;
+  }
+
+  function renderApiDirectory() {
+    const query = apiUi.search.value.trim().toLowerCase();
+    const category = apiUi.category.value;
+    const auth = apiUi.auth.value;
+    const https = apiUi.https.value;
+    const cors = apiUi.cors.value;
+    const filtered = apiEntries.filter((api) => {
+      if (category && api.category !== category) return false;
+      if (auth && (auth === "none" ? api.auth !== "none" : api.auth !== "required")) return false;
+      if (https && api.https !== https) return false;
+      if (cors && api.cors !== cors) return false;
+      if (query && !(api.name + " " + api.description + " " + api.category + " " + api.authLabel).toLowerCase().includes(query)) return false;
+      return true;
+    });
+    const shown = filtered.slice(0, apiVisibleCount);
+    apiUi.results.replaceChildren();
+    const fragment = document.createDocumentFragment();
+
+    for (const api of shown) {
+      const card = document.createElement("article");
+      card.className = "api-card";
+
+      const heading = document.createElement("div");
+      heading.className = "api-card-heading";
+      const name = document.createElement("h3");
+      name.textContent = api.name;
+      const categoryTag = document.createElement("span");
+      categoryTag.className = "api-category-tag";
+      categoryTag.textContent = api.category;
+      categoryTag.title = api.category;
+      heading.append(name, categoryTag);
+
+      const description = document.createElement("p");
+      description.className = "api-card-description";
+      description.textContent = api.description;
+
+      const badges = document.createElement("div");
+      badges.className = "api-card-badges";
+      badges.append(
+        makeApiBadge("Auth: " + api.authLabel, api.auth === "none" ? "good" : api.auth === "required" ? "warn" : ""),
+        makeApiBadge("HTTPS: " + api.httpsLabel, api.https === "yes" ? "good" : api.https === "no" ? "warn" : ""),
+        makeApiBadge("CORS: " + api.corsLabel, api.cors === "yes" ? "good" : api.cors === "no" ? "warn" : "")
+      );
+
+      const actions = document.createElement("div");
+      actions.className = "api-card-actions";
+      const openLink = document.createElement("a");
+      openLink.className = "api-card-link";
+      openLink.href = api.url;
+      openLink.target = "_blank";
+      openLink.rel = "noopener noreferrer";
+      openLink.textContent = "API details ↗";
+
+      const askButton = document.createElement("button");
+      askButton.className = "api-card-ask";
+      askButton.type = "button";
+      askButton.textContent = "Ask AI";
+      askButton.addEventListener("click", () => {
+        if (busy) {
+          closeApiDirectory();
+          setError("Please finish the current response before starting a new API integration chat.");
+          return;
+        }
+        closeApiDirectory();
+        beginNewChat();
+        ui.input.value =
+          "Help me understand and safely integrate this public API into my project:\n\n" +
+          "API: " + api.name + "\n" +
+          "Category: " + api.category + "\n" +
+          "Description: " + api.description + "\n" +
+          "Documentation/homepage: " + api.url + "\n" +
+          "Authentication listed: " + api.authLabel + "\n" +
+          "HTTPS: " + api.httpsLabel + "\n" +
+          "CORS: " + api.corsLabel + "\n\n" +
+          "Explain the API's intended use and show a practical integration approach. Check the official documentation before assuming endpoint paths or parameters. Keep private API keys server-side; do not put secrets in browser code. Mention usage limits and terms where relevant.";
+        updateCounter();
+        ui.input.focus();
+      });
+
+      actions.append(openLink, askButton);
+      card.append(heading, description, badges, actions);
+      fragment.append(card);
+    }
+    apiUi.results.append(fragment);
+
+    apiUi.status.textContent = apiEntries.length
+      ? "Loaded " + apiEntries.length.toLocaleString() + " community-listed APIs. Filter by category, authentication, HTTPS, or CORS."
+      : apiUi.status.textContent;
+    apiUi.count.textContent = filtered.length
+      ? "Showing " + shown.length.toLocaleString() + " of " + filtered.length.toLocaleString() + " matching APIs"
+      : "No APIs match these filters.";
+    apiUi.more.hidden = shown.length >= filtered.length;
+    if (!filtered.length) {
+      const empty = document.createElement("div");
+      empty.className = "api-empty-state";
+      empty.textContent = "No matches found. Try a different search or reset one of the filters.";
+      apiUi.results.append(empty);
+    }
+  }
+
+  async function loadApiDirectory() {
+    if (apiDirectoryLoaded || !apiUi.status) return;
+    apiUi.status.textContent = "Loading the latest community API catalogue…";
+    apiUi.results.replaceChildren();
+    apiUi.count.textContent = "";
+    try {
+      const response = await fetch(API_README_URL, { cache: "no-cache", headers: { Accept: "text/plain" } });
+      if (!response.ok) throw new Error("GitHub returned HTTP " + response.status);
+      const markdown = await response.text();
+      const parsed = parsePublicApiReadme(markdown);
+      if (!parsed.length) throw new Error("The repository returned no parseable API entries.");
+      apiEntries = parsed;
+      apiDirectoryLoaded = true;
+      const categories = Array.from(new Set(apiEntries.map((api) => api.category))).sort((a, b) => a.localeCompare(b));
+      apiUi.category.replaceChildren();
+      const all = document.createElement("option");
+      all.value = "";
+      all.textContent = "All categories";
+      apiUi.category.append(all);
+      for (const label of categories) {
+        const option = document.createElement("option");
+        option.value = label;
+        option.textContent = label;
+        apiUi.category.append(option);
+      }
+      apiUi.status.textContent = "";
+      renderApiDirectory();
+    } catch (error) {
+      apiUi.status.textContent = "Could not load the API list (" + (error instanceof Error ? error.message : "network error") + "). Check your connection and reopen the library to retry, or visit the source repository below.";
+      apiUi.results.replaceChildren();
+      apiUi.count.textContent = "";
+      apiDirectoryLoaded = false;
+    }
+  }
+
+  function closeApiDirectory() {
+    if (!apiUi.overlay) return;
+    apiUi.overlay.hidden = true;
+    if (apiPriorFocus && typeof apiPriorFocus.focus === "function") apiPriorFocus.focus();
+  }
+
+  function openApiDirectory() {
+    if (!apiUi.overlay) return;
+    apiPriorFocus = document.activeElement;
+    closeMobileSidebar();
+    apiUi.overlay.hidden = false;
+    if (apiDirectoryLoaded) renderApiDirectory();
+    else loadApiDirectory();
+    window.setTimeout(() => apiUi.search.focus(), 0);
+  }
+
   function updateCounter() {
     ui.charCount.textContent = ui.input.value.length + " / 12000";
     ui.send.disabled = busy || (!ui.input.value.trim() && !pendingFiles.length);
@@ -623,6 +866,14 @@
       if (!busy && ui.input.value.trim()) sendMessage(ui.input.value);
     }
   });
+  if (apiUi.open) apiUi.open.addEventListener("click", openApiDirectory);
+  if (apiUi.close) apiUi.close.addEventListener("click", closeApiDirectory);
+  if (apiUi.overlay) apiUi.overlay.querySelectorAll("[data-api-close]").forEach((el) => el.addEventListener("click", closeApiDirectory));
+  if (apiUi.search) apiUi.search.addEventListener("input", () => { apiVisibleCount = API_PAGE_SIZE; if (apiDirectoryLoaded) renderApiDirectory(); });
+  [apiUi.category, apiUi.auth, apiUi.https, apiUi.cors].forEach((select) => {
+    if (select) select.addEventListener("change", () => { apiVisibleCount = API_PAGE_SIZE; if (apiDirectoryLoaded) renderApiDirectory(); });
+  });
+  if (apiUi.more) apiUi.more.addEventListener("click", () => { apiVisibleCount += API_PAGE_SIZE; renderApiDirectory(); });
   $("newChat").addEventListener("click", beginNewChat);
   $("refreshChats").addEventListener("click", () => refreshConversations().catch((e) => setError(plainError(e))));
   $("openSidebar").addEventListener("click", openMobileSidebar);
@@ -640,7 +891,7 @@
       event.preventDefault();
       beginNewChat();
     }
-    if (event.key === "Escape") closeMobileSidebar();
+    if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); }
   });
   window.addEventListener("online", () => { if (!busy) setError(""); });
   boot();
