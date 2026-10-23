@@ -228,7 +228,16 @@ function shouldUseWebSearch(prompt: string): boolean {
 
 function classifyTask(prompt: string): string {
   const s = prompt.toLowerCase();
-  // Noun-only questions (e.g. "What is HTML?") should remain general. Route by action + code intent.
+  // Prioritise clear prose requests before technology words, so "write an article about Python"
+  // doesn't become a coding task merely because it mentions a programming language.
+  const proseIntent = /\b(?:write|draft|compose|tell|create|generate)\b.{0,70}\b(?:article|essay|story|poem|blog post|caption|lyrics|speech|review|newsletter|script|fiction)\b/i.test(s) ||
+    /\b(?:article|essay|story|poem|blog post|caption|lyrics|speech|review|newsletter|fiction)\b.{0,70}\b(?:about|on|for|regarding)\b/i.test(s) ||
+    /(?:golpo lekho|kobita lekho|caption likhe dao|article lekho|blog post lekho|rochona lekho|golpo banao|poem likhe dao)/i.test(s);
+  const explicitProseOnly = proseIntent &&
+    !/\b(?:website|web app|landing page|html|css|javascript|typescript|api endpoint|database|sql|function|component|source code|program|software feature)\b.{0,80}\b(?:build|create|design|develop|implement|fix|debug|refactor|code|program|website|app)\b/i.test(s);
+  if (explicitProseOnly) return "creative";
+
+  // Classify by requested action plus technical context, not by technical nouns alone.
   const codingAction = /\b(?:build|create|design|develop|implement|fix|debug|refactor|review|write|generate|make|run|execute|test|compile|convert|optimi[sz]e)\b/i.test(s) ||
     /(?:banao|banai|toiri koro|code dao|code likhe dao|bug fix koro|thik kore dao|run koro|test koro|website banao|app banao|site banao|feature add koro)/i.test(s);
   const codeContext = /\b(?:website|web site|web app|frontend|front-end|backend|back-end|landing page|component|api|script|app|database|sql|html|css|javascript|typescript|python|react|function|compiler|program|code|bug|stack trace|traceback|syntax error|exception|source code|programming)\b/i.test(s);
