@@ -18,19 +18,20 @@ The database schema is in \`supabase/migrations/20261023075646_mahi_ai_core_sche
 2. In **Authentication → Sign In / Providers**, enable **Anonymous Sign-Ins**. Guest chats are tied to the browser session; clearing site data or changing devices loses access to that guest account.
 3. Open **Edge Functions → Secrets** and add provider keys. Keys must be added there, not to GitHub or \`public/config.js\`.
 
-Minimum recommended secrets:
-- \`GEMINI_API_KEY\` — Google AI Studio
-- \`GROQ_API_KEY\` — Groq Console
-- \`OPENROUTER_API_KEY\` — OpenRouter
-- \`MISTRAL_API_KEY\` — Mistral La Plateforme
+Recommended free-tier provider secrets (add one or more):
+- \`GEMINI_API_KEY\` — [Google AI Studio](https://aistudio.google.com/app/apikey)
+- \`GROQ_API_KEY\` — [Groq Console](https://console.groq.com/keys)
+- \`OPENROUTER_API_KEY\` — [OpenRouter](https://openrouter.ai/settings/keys)
+- \`MISTRAL_API_KEY\` — [Mistral La Plateforme](https://console.mistral.ai/api-keys)
 
-The router works with any subset of these keys and falls back when a provider is missing, unavailable, or rate-limited. Model names can be overridden with \`GEMINI_MODEL\`, \`GROQ_MODEL\`, \`OPENROUTER_MODEL\`, and \`MISTRAL_MODEL\`.
+Optional providers:
+- \`NVIDIA_API_KEY\` — [NVIDIA API Catalog](https://build.nvidia.com/); set \`ENABLE_NVIDIA_FALLBACK=true\` only after checking your account's free allowance and billing settings.
+- \`CLOUDFLARE_API_TOKEN\` and \`CLOUDFLARE_ACCOUNT_ID\` — [Cloudflare Dashboard](https://dash.cloudflare.com/); set \`ENABLE_CLOUDFLARE_FALLBACK=true\` only after checking your Workers AI allowance and billing settings.
+- \`OPENAI_API_KEY\` and/or \`ANTHROPIC_API_KEY\` — paid API fallback adapters. Set \`ENABLE_PAID_FALLBACK=true\` only if you intentionally accept possible charges. It defaults to off.
 
-Optional paid adapters:
-- \`OPENAI_API_KEY\` and/or \`ANTHROPIC_API_KEY\`
-- Set \`ENABLE_PAID_FALLBACK=true\` only if you intentionally want paid APIs to be used after free providers fail. It defaults to off.
+The router works with any subset of the enabled providers, classifies the prompt (coding, reasoning, creative writing, or general use), and tries provider/model combinations in a task-specific order. Provider names and keys are never sent to the browser. It retries other configured providers after errors and rate limits. You can override model IDs with \`GEMINI_MODEL\`, \`GROQ_MODEL\`, \`OPENROUTER_MODEL\`, \`OPENROUTER_CODING_MODEL\`, \`OPENROUTER_REASONING_MODEL\`, \`MISTRAL_MODEL\`, \`NVIDIA_MODEL\`, \`NVIDIA_CODING_MODEL\`, and \`CLOUDFLARE_MODEL\`.
 
-Free API access has quotas and can change. A provider's free chat website does not imply free API access. Do not add credentials to GitHub.
+Free tiers have strict and changing quotas. OpenRouter currently lists 50 requests/day on its free plan; its \`openrouter/free\` route selects a model from its free set. Free access is not unlimited, and some providers may retain inputs for service improvement. A provider's free chat website does not imply free API usage. Do not add credentials to GitHub.
 
 ## Deploy the Edge Function
 
