@@ -205,6 +205,13 @@ async function saveChatTurn(userId: string, conversationId: string, userContent:
   });
 }
 
+function shouldUseWebSearch(prompt: string): boolean {
+  const s = prompt.toLowerCase();
+  return /\b(search (?:the )?(?:web|internet)|look up online|find online|browse|web search|latest|current|currently|today|tonight|yesterday|right now|recent|newest|breaking|live|news|headline|release date|latest version|official documentation|source links?|citations?|fact.?check|verify online|price today|current price|exchange rate|weather today|who won|this week|this month|as of 20\d{2})\b/i.test(s) ||
+    /(?:সর্বশেষ|বর্তমানে|বর্তমান|আজকের|আজকে|আজ |এখনকার|এখন |সাম্প্রতিক|সদ্য|সর্বনিকট|খবর|নিউজ|লাইভ|দাম কত|আজকের দাম|রেট কত|আপডেট|আপডেটেড|সূত্র দাও|সোর্স দাও|অনলাইনে খুঁজ|ওয়েবে খুঁজ|ওয়েবে খুঁজ|ওয়েব সার্চ|ওয়েব সার্চ|যাচাই করে বল|সর্বশেষ তথ্য|বর্তমান তথ্য|এখন কে|কে জিতেছে|কখন রিলিজ)/i.test(s) ||
+    /\b(?:ekhon|ajker|ajke|sorbosesh|shorbosesh|latest|current|notun update|khobor|dam koto|rate koto|online e khujo|web e khujo|source dao|source shoho|verify kore|check kore bolo|updated info|release hoise|ber hoise)\b/i.test(s);
+}
+
 function classifyTask(prompt: string): string {
   const s = prompt.toLowerCase();
   if (/(debug|stack trace|typescript|javascript|python|html|css|react|sql|api|function|compiler|program|code|bug|c[oó]digo|programar|depurar|erro de c[oó]digo|c[oó]digo fuente|programmieren|debuggen|код|программирование|отладка|代码|编程|调试|プログラム|コード|デバッグ|코드|프로그래밍|디버그|كود|برمجة|تصحيح|कोड|प्रोग्रामिंग|त्रुटि|کد|برنامه‌نویسی|কোড|প্রোগ্রামিং|বাগ|এরর|ত্রুটি)/i.test(s)) return "coding";
@@ -229,6 +236,8 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     preferred = ["gemini", ...(hasInlineImages
       ? ["openai", "openrouter", "mistral", "groq", "nvidia", "cloudflare", "anthropic"]
       : ["openai", "openrouter", "groq", "mistral", "nvidia", "cloudflare", "anthropic"])];
+  } else if (task === "web_research") {
+    preferred = ["gemini", "openrouter", "groq", "openai", "mistral", "nvidia", "cloudflare", "anthropic"];
   } else if (task === "coding") {
     preferred = ["openrouter", "openai", "nvidia", "groq", "gemini", "mistral", "cloudflare", "anthropic"];
   } else if (task === "reasoning") {
@@ -250,7 +259,10 @@ function openRouterModel(task: string): string {
 }
 function systemPrompt(task: string): string {
   const today = new Date().toISOString().slice(0, 10);
-  return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + ". Do not mention internal providers, routing, or API infrastructure.";
+  const webRule = task === "web_research"
+    ? " Use Google Search grounding when it is enabled for this request. Prefer primary/official sources and current publication dates, verify claims against multiple sources when practical, distinguish event date from publication date, and include source links returned by the search tool. Do not invent links or claim live verification if the search tool was unavailable."
+    : "";
+  return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + ". Do not mention internal providers, routing, or API infrastructure." + webRule;
 }
 type ChatMessage = { role: "user" | "assistant"; content: string };
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000): Promise<Response> {
@@ -464,6 +476,32 @@ async function* readGeminiEventStream(response: Response): AsyncGenerator<string
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  const groundedSources = new Map<string, string>();
+  const captureSources = (candidate: any) => {
+    for (const chunk of candidate?.groundingMetadata?.groundingChunks || []) {
+      const uri = chunk?.web?.uri;
+      if (typeof uri !== "string") continue;
+      try {
+        const parsed = new URL(uri);
+        if (parsed.protocol !== "https:" || groundedSources.has(parsed.toString())) continue;
+        const title = String(chunk?.web?.title || parsed.hostname).replace(/[\[\]<>\r\n]/g, "").slice(0, 110);
+        groundedSources.set(parsed.toString(), title || parsed.hostname);
+        if (groundedSources.size >= 8) break;
+      } catch (_) {}
+    }
+  };
+  const readEvent = async function* (raw: string): AsyncGenerator<string, void, unknown> {
+    try {
+      const event = JSON.parse(raw);
+      const candidate = event?.candidates?.[0];
+      captureSources(candidate);
+      if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response was truncated at its output limit");
+      const text = (candidate?.content?.parts || []).map((p: any) => p?.text || "").join("");
+      if (text) yield text;
+    } catch (error) {
+      if (error instanceof Error && (error.message.includes("truncated") || error.message.includes("stream returned an error"))) throw error;
+    }
+  };
   try {
     while (true) {
       const part = await reader.read();
@@ -473,21 +511,21 @@ async function* readGeminiEventStream(response: Response): AsyncGenerator<string
       for (const line of lines) {
         if (!line.startsWith("data:")) continue;
         const raw = line.slice(5).trim();
-        if (!raw) continue;
-        try {
-          const event = JSON.parse(raw);
-          const candidate = event?.candidates?.[0];
-          if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response was truncated at its output limit");
-          const text = (candidate?.content?.parts || []).map((p: any) => p?.text || "").join("");
-          if (text) yield text;
-        } catch (error) {
-          if (error instanceof Error && error.message.includes("truncated")) throw error;
-        }
+        if (!raw || raw === "[DONE]") continue;
+        yield* readEvent(raw);
       }
       if (part.done) break;
     }
+    const finalRaw = buffer.startsWith("data:") ? buffer.slice(5).trim() : "";
+    if (finalRaw && finalRaw !== "[DONE]") yield* readEvent(finalRaw);
   } finally {
     try { reader.releaseLock(); } catch (_) {}
+  }
+  if (groundedSources.size) {
+    const sourceList = [...groundedSources.entries()]
+      .map(([uri, title]) => "- [" + title + "](<" + uri + ">)")
+      .join("\n");
+    yield "\n\n**Sources**\n" + sourceList;
   }
 }
 
@@ -544,10 +582,15 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     if (!key) { cleanup(); throw new Error("Not configured"); }
     const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
     const normalized = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
+    const latestPrompt = [...normalized].reverse().find((m) => m.role === "user")?.content || "";
+    const useWebSearch = shouldUseWebSearch(latestPrompt) && !attachments.some((item) => item.inline && item.base64);
+    const geminiSystem = systemPrompt(task) + (useWebSearch
+      ? " This request needs current information: use the built-in Google Search tool, base factual claims on retrieved pages, and include links from returned grounding metadata. If the search tool produces no sources, clearly say which facts you could not verify."
+      : "");
     url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) +
       ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
     body = {
-      systemInstruction: { parts: [{ text: systemPrompt(task) }] },
+      systemInstruction: { parts: [{ text: geminiSystem }] },
       contents: normalized.map((m, index) => {
         const parts: Record<string, unknown>[] = [{ text: m.content }];
         if (m.role === "user" && index === normalized.length - 1) {
@@ -559,7 +602,8 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         }
         return { role: m.role === "assistant" ? "model" : "user", parts };
       }),
-      generationConfig: { temperature: 0.3, maxOutputTokens: 8192 }
+      generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+      ...(useWebSearch ? { tools: [{ google_search: {} }] } : {})
     };
     useGemini = true;
   } else if (name === "anthropic") {
@@ -1008,7 +1052,8 @@ async function streamChatResponse(
           sseEvent(controller, encoder, {
             type: "status",
             message: index === 0
-              ? "Finding a model that can complete your request…"
+              ? task === "web_research" ? "Searching the web for current information and sources…"
+                : "Finding a model that can complete your request…"
               : "The previous attempt did not finish. Trying the next available model…"
           });
           let candidate: ProviderStream | null = null;
@@ -1119,7 +1164,8 @@ Deno.serve(async (req: Request) => {
   const contextualMessages = applyAttachmentContext(messages, attachments);
   const hasCodeAttachment = attachments.some((item) => isCodeAttachment(item.name));
   const task = isImageGenerationTask(displayPrompt) ? "image_generation"
-    : hasCodeAttachment ? "coding" : classifyTask(displayPrompt);
+    : hasCodeAttachment ? "coding"
+    : shouldUseWebSearch(displayPrompt) ? "web_research" : classifyTask(displayPrompt);
   let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
   if (conversationId) {
     try {
