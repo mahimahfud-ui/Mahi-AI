@@ -237,7 +237,14 @@
       // Keep the draft available so the user can retry without retyping.
       ui.input.value = userText;
       updateCounter();
-      if (!currentMessages.length) showWelcome(true);
+      if (!currentMessages.length) {
+        showWelcome(true);
+      } else {
+        ui.messages.replaceChildren();
+        ui.welcome.hidden = true;
+        ui.messages.hidden = false;
+        currentMessages.forEach((m) => addMessage(m.role, m.content));
+      }
     } finally {
       setBusy(false);
       ui.input.disabled = false;
