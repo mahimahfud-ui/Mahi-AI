@@ -78,3 +78,8 @@ The router is best-effort: it fully buffers each provider response and then fall
 
 ### Banglish image generation
 Image intents recognize English, Bangla and Banglish requests (for example `bongobondhur image genarate koro`) and route them to image generation. The image prompt is normalized to avoid an unwanted code/tutorial answer. Image provider order is Gemini → Grok Imagine → OpenAI (when each API key is configured). Set `XAI_API_KEY` in Supabase Edge Function secrets to enable Grok.
+
+
+## Accuracy and limitations
+
+The assistant now uses an accuracy-first instruction and, when another configured non-paid provider is available, a second-pass reviewer. The reviewer applies a correction only when it returns a valid structured decision; timeout or invalid output retains the original draft. This improves reliability but does not guarantee error-free output. The app does not provide a live web-search tool or execute generated code, so it must not describe current facts or code as externally verified/executed unless a tool actually did that. Google's guidance recommends search grounding for obscure/recent facts and code execution for calculations, but those tools are not automatically available in this chat router.
