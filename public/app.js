@@ -68,6 +68,109 @@
     const parsed = marked.parse(String(value || ""), { breaks: true, gfm: true, renderer });
     return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
   }
+
+  function buildLivePreviewDocument(html, cssBlocks, jsBlocks) {
+    let doc = String(html || "").trim();
+    if (!doc) return "";
+    if (!/<html\b/i.test(doc)) {
+      doc = '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head><body>' + doc + '</body></html>';
+    } else {
+      if (!/<!doctype\s+html/i.test(doc)) doc = "<!doctype html>\n" + doc;
+      if (!/<head\b/i.test(doc)) {
+        doc = doc.replace(/<html\b[^>]*>/i, '  function addMessage(role, content, options) {<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
+      } else {
+        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {<meta charset="utf-8">');
+        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {<meta name="viewport" content="width=device-width, initial-scale=1">');
+      }
+    }
+    const styles = (cssBlocks || []).filter(Boolean);
+    if (styles.length) {
+      const styleText = '<style>\n' + styles.join('\n\n').replace(/<\/style/gi, '<\\/style') + '\n</style>';
+      if (/<\/head>/i.test(doc)) doc = doc.replace(/<\/head>/i, styleText + '</head>');
+      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {' + styleText);
+      else doc = doc.replace(/<html\b[^>]*>/i, '  function addMessage(role, content, options) {<head>' + styleText + '</head>');
+    }
+    const scripts = (jsBlocks || []).filter(Boolean);
+    if (scripts.length) {
+      const jsText = scripts.join('\n\n').replace(/<\/script/gi, '<\\/script');
+      const moduleScript = scripts.some((code) => /(^|\n)\s*(?:import|export)\s/m.test(code));
+      const scriptTag = '<script' + (moduleScript ? ' type="module"' : '') + '>\n' + jsText + '\n</script>';
+      if (/<\/body>/i.test(doc)) doc = doc.replace(/<\/body>/i, scriptTag + '</body>');
+      else doc += scriptTag;
+    }
+    return doc;
+  }
+
+  function extractLivePreviewDocument(markdown) {
+    const source = String(markdown || "");
+    const fence = new RegExp("\\x60{3}([^\\r\\n]*)\\r?\\n([\\s\\S]*?)\\x60{3}", "g");
+    const blocks = [];
+    let match;
+    while ((match = fence.exec(source)) !== null) {
+      const info = String(match[1] || "").trim();
+      const lang = (info.split(/\s+/)[0] || "").toLowerCase();
+      blocks.push({ lang, code: String(match[2] || "").trim() });
+    }
+    if (!blocks.length) return "";
+    const htmlBlock = blocks.find((block) => ["html", "htm", "xhtml"].includes(block.lang))
+      || blocks.find((block) => !block.lang && /(?:<!doctype\s+html|<html\b)/i.test(block.code));
+    if (!htmlBlock || !htmlBlock.code) return "";
+    const styles = blocks.filter((block) => block.lang === "css").map((block) => block.code);
+    const scripts = blocks.filter((block) => ["js", "javascript", "mjs"].includes(block.lang)).map((block) => block.code);
+    return buildLivePreviewDocument(htmlBlock.code, styles, scripts);
+  }
+
+  function renderLivePreview(messageNode, article, markdown) {
+    if (!messageNode || !article || messageNode.dataset.livePreviewRendered === "true") return;
+    const documentSource = extractLivePreviewDocument(markdown);
+    if (!documentSource || documentSource.length > 260000) return;
+    const body = article.parentElement;
+    if (!body) return;
+    messageNode.dataset.livePreviewRendered = "true";
+    const card = document.createElement("section");
+    card.className = "live-preview-card";
+    card.setAttribute("aria-label", "Live website preview");
+    card.innerHTML =
+      '<div class="live-preview-toolbar">' +
+        '<div class="live-preview-label"><span class="live-preview-spark" aria-hidden="true">✦</span><span><strong>Live Preview</strong><small>Runs in an isolated browser</small></span></div>' +
+        '<div class="live-preview-controls">' +
+          '<button type="button" class="live-preview-mode is-active" data-preview-mode="desktop" aria-pressed="true">Desktop</button>' +
+          '<button type="button" class="live-preview-mode" data-preview-mode="tablet" aria-pressed="false">Tablet</button>' +
+          '<button type="button" class="live-preview-mode" data-preview-mode="mobile" aria-pressed="false">Mobile</button>' +
+          '<button type="button" class="live-preview-icon-button" data-preview-reload title="Reload preview" aria-label="Reload preview">↻</button>' +
+          '<button type="button" class="live-preview-expand" data-preview-expand>Expand</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="live-preview-browser">' +
+        '<div class="live-preview-browserbar"><span class="live-preview-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="live-preview-address"><span aria-hidden="true">⌕</span> mahi-ai.local / preview</div><span class="live-preview-sandbox-tag">SANDBOX</span></div>' +
+        '<div class="live-preview-stage"><div class="live-preview-viewport" data-device="desktop"><iframe title="Generated website preview" sandbox="allow-scripts" referrerpolicy="no-referrer" loading="lazy"></iframe></div></div>' +
+      '</div>' +
+      '<div class="live-preview-footnote"><span class="live-preview-status-dot" aria-hidden="true"></span> Preview generated from the HTML/CSS/JavaScript in this answer.</div>';
+    const frame = card.querySelector("iframe");
+    const viewport = card.querySelector(".live-preview-viewport");
+    const modeButtons = Array.from(card.querySelectorAll("[data-preview-mode]"));
+    const expandButton = card.querySelector("[data-preview-expand]");
+    const loadPreview = () => { frame.srcdoc = documentSource; };
+    modeButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        viewport.dataset.device = button.getAttribute("data-preview-mode") || "desktop";
+        modeButtons.forEach((item) => {
+          const active = item === button;
+          item.classList.toggle("is-active", active);
+          item.setAttribute("aria-pressed", active ? "true" : "false");
+        });
+      });
+    });
+    card.querySelector("[data-preview-reload]").addEventListener("click", loadPreview);
+    expandButton.addEventListener("click", () => {
+      const expanded = card.classList.toggle("is-expanded");
+      expandButton.textContent = expanded ? "Collapse" : "Expand";
+      expandButton.setAttribute("aria-expanded", expanded ? "true" : "false");
+    });
+    body.insertBefore(card, article);
+    loadPreview();
+  }
+
   function addMessage(role, content, options) {
     const opts = options || {};
     const empty = $("welcome");
@@ -109,9 +212,15 @@
     } else {
       article.textContent = content;
       resolveStoredImageMarkers(content).then((resolved) => {
-        if (article.isConnected) article.innerHTML = safeMarkdown(resolved);
+        if (article.isConnected) {
+          article.innerHTML = safeMarkdown(resolved);
+          renderLivePreview(node, article, content);
+        }
       }).catch(() => {
-        if (article.isConnected) article.innerHTML = safeMarkdown(content.replace(/!\[Generated image\]\(mahi-storage:\/\/[^)]+\)/g, "[Generated image is stored in this chat.]"));
+        if (article.isConnected) {
+          article.innerHTML = safeMarkdown(content.replace(/!\[Generated image\]\(mahi-storage:\/\/[^)]+\)/g, "[Generated image is stored in this chat.]"));
+          renderLivePreview(node, article, content);
+        }
       });
     }
     body.append(heading, article);
@@ -431,7 +540,7 @@
       ui.messages.replaceChildren();
       ui.welcome.hidden = true;
       ui.messages.hidden = false;
-      currentMessages.forEach((m) => addMessage(m.role, m.content));
+      currentMessages.forEach((m, index) => addMessage(m.role, m.content, { userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
       renderConversationList();
       closeMobileSidebar();
     } catch (error) {
@@ -547,6 +656,7 @@
       messageContent.classList.remove("streaming-text");
       const resolvedReply = await resolveStoredImageMarkers(fullText);
       messageContent.innerHTML = safeMarkdown(resolvedReply);
+      renderLivePreview(typing, messageContent, fullText);
       delete typing.dataset.typing;
       currentMessages.push({ role: "assistant", content: fullText });
       pendingFiles = [];
@@ -570,7 +680,7 @@
         ui.messages.replaceChildren();
         ui.welcome.hidden = true;
         ui.messages.hidden = false;
-        currentMessages.forEach((m) => addMessage(m.role, m.content));
+        currentMessages.forEach((m, index) => addMessage(m.role, m.content, { userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
       }
     } finally {
       setBusy(false);
