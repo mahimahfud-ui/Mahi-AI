@@ -49,6 +49,152 @@ async function verifyUser(req: Request): Promise<{ id: string } | null> {
   return typeof user.id === "string" ? { id: user.id } : null;
 }
 
+type StoredAttachment = {
+  path: string;
+  name: string;
+  mime_type?: string;
+  size?: number;
+};
+type PreparedAttachment = StoredAttachment & {
+  mimeType: string;
+  bytes?: Uint8Array;
+  base64?: string;
+  inline: boolean;
+  extractedText?: string;
+  unsupported?: boolean;
+};
+
+function encodeBase64(bytes: Uint8Array): string {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(offset, Math.min(offset + chunkSize, bytes.length)));
+  }
+  return btoa(binary);
+}
+function isTextLikeFile(name: string, mimeType: string): boolean {
+  const extension = name.toLowerCase().split(".").pop() || "";
+  return mimeType.startsWith("text/") ||
+    ["application/json", "application/xml", "application/javascript", "application/x-yaml"].includes(mimeType) ||
+    ["txt", "md", "markdown", "csv", "tsv", "json", "jsonl", "xml", "html", "htm", "css", "js", "mjs", "cjs",
+     "ts", "tsx", "jsx", "py", "pyi", "java", "kt", "go", "rs", "c", "h", "cpp", "hpp", "cs", "php", "rb",
+     "sql", "sh", "bash", "zsh", "bat", "ps1", "yaml", "yml", "toml", "ini", "conf", "log", "diff", "patch",
+     "env", "gitignore", "dockerfile", "makefile", "tf", "graphql", "proto"].includes(extension) ||
+    ["Dockerfile", "Makefile", ".gitignore", ".env"].includes(name);
+}
+function isGeminiInlineMime(mimeType: string): boolean {
+  return /^image\/(png|jpeg|webp|heic|heif|gif|avif)$/i.test(mimeType) ||
+    mimeType === "application/pdf" ||
+    /^audio\/(mpeg|mp3|wav|ogg|opus|webm|flac|aac|mp4|m4a|3gpp)$/i.test(mimeType) ||
+    /^video\/(mp4|mpeg|quicktime|webm|x-msvideo|x-flv|3gpp|x-ms-wmv)$/i.test(mimeType);
+}
+function isImageGenerationTask(prompt: string): boolean {
+  const text = prompt.toLowerCase();
+  return /(?:generate|create|draw|make|design|illustrate|render|produce)\s+(?:me\s+)?(?:an?\s+)?(?:image|picture|photo|illustration|poster|logo|wallpaper|thumbnail|artwork|visual|graphic|icon|banner)/i.test(text) ||
+    /(?:image|picture|photo|illustration|poster|logo|wallpaper|thumbnail|artwork)\s+(?:generation|generator|please|of\b)/i.test(text) ||
+    /(?:ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার|থাম্বনেইল).{0,40}(?:তৈরি|বানাও|আঁক|জেনারেট|generate|করো|দাও)/i.test(text) ||
+    /(?:তৈরি|বানাও|আঁক|জেনারেট).{0,35}(?:ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার)/i.test(text) ||
+    /(?:remove|replace|change|edit)\s+(?:the\s+)?(?:background|style|objects?)\b/i.test(text) &&
+      /(?:image|photo|picture|attached|uploaded|ছবি|ইমেজ)/i.test(text);
+}
+async function prepareAttachments(userId: string, values: unknown): Promise<PreparedAttachment[]> {
+  if (!Array.isArray(values)) return [];
+  if (values.length > 5) throw new Error("Please attach no more than 5 files per message.");
+  let totalBytes = 0;
+  let inlineBytes = 0;
+  const result: PreparedAttachment[] = [];
+  for (const raw of values) {
+    const item = raw as Partial<StoredAttachment>;
+    if (typeof item.path !== "string" || typeof item.name !== "string") throw new Error("An attachment reference is invalid.");
+    if (!item.path.startsWith(userId + "/") || item.path.includes("..") || item.path.startsWith("/")) {
+      throw new Error("An attachment reference is invalid.");
+    }
+    const declared = Number(item.size || 0);
+    if (declared > 15 * 1024 * 1024) throw new Error("Each attachment must be 15 MB or smaller.");
+    totalBytes += declared;
+    if (totalBytes > 20 * 1024 * 1024) throw new Error("All attachments together must be 20 MB or smaller.");
+    const encodedPath = item.path.split("/").map(encodeURIComponent).join("/");
+    const response = await fetch(baseUrl + "/storage/v1/object/mahi-ai-attachments/" + encodedPath, {
+      headers: adminHeaders()
+    });
+    if (!response.ok) throw new Error("Could not read attachment " + item.name + ". Please remove it and upload again.");
+    const buffer = new Uint8Array(await response.arrayBuffer());
+    if (buffer.byteLength > 15 * 1024 * 1024) throw new Error("Each attachment must be 15 MB or smaller.");
+    const mimeType = String(item.mime_type || response.headers.get("content-type") || "application/octet-stream").split(";")[0].toLowerCase();
+    const attachment: PreparedAttachment = {
+      path: item.path, name: item.name.slice(0, 160), mime_type: mimeType, mimeType,
+      size: buffer.byteLength, bytes: buffer, inline: false
+    };
+    if (isTextLikeFile(attachment.name, mimeType)) {
+      const decoded = new TextDecoder("utf-8", { fatal: false }).decode(buffer);
+      attachment.extractedText = decoded.slice(0, 18000);
+    } else if (isGeminiInlineMime(mimeType)) {
+      inlineBytes += buffer.byteLength;
+      if (inlineBytes > 12 * 1024 * 1024) throw new Error("Images, PDFs, audio, and video attachments must total 12 MB or less for reliable AI analysis. Remove a file or compress it.");
+      attachment.inline = true;
+      attachment.base64 = encodeBase64(buffer);
+    } else {
+      attachment.unsupported = true;
+    }
+    result.push(attachment);
+  }
+  return result;
+}
+function applyAttachmentContext(messages: ChatMessage[], attachments: PreparedAttachment[]): ChatMessage[] {
+  if (!attachments.length) return messages;
+  const prepared = [...messages];
+  const lastIndex = prepared.length - 1;
+  const details: string[] = [];
+  for (const item of attachments) {
+    if (item.extractedText) {
+      details.push("[Attached file: " + item.name + " | " + item.mimeType + "]\n" +
+        item.extractedText + "\n[End attached file]");
+    } else if (item.unsupported) {
+      details.push("[Attached file received: " + item.name + " | " + item.mimeType + " | " +
+        formatFileSize(item.size || 0) + ". Its binary format is not directly readable by the selected AI route.]");
+    } else if (item.inline) {
+      details.push("[Attached media available to the Gemini multimodal model: " + item.name + " | " + item.mimeType + "]");
+    }
+  }
+  const combined = (prepared[lastIndex].content + "\n\n" + details.join("\n\n") +
+    "\n\nWhen discussing attachments, use only content you can actually inspect. If a binary format could not be read, say that clearly.").slice(0, 55000);
+  prepared[lastIndex] = { ...prepared[lastIndex], content: combined };
+  return prepared;
+}
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+}
+async function createConversationIfNeeded(userId: string, initialConversationId: string, titlePrompt: string): Promise<string> {
+  if (initialConversationId) return initialConversationId;
+  const title = titlePrompt.replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
+  const created = await rest("mahi_ai_conversations", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({ user_id: userId, title })
+  });
+  if (!created.ok) throw new Error("Could not create conversation");
+  const rows = await created.json();
+  const conversationId = rows?.[0]?.id || "";
+  if (!conversationId) throw new Error("No conversation id");
+  return conversationId;
+}
+async function saveChatTurn(userId: string, conversationId: string, userContent: string, assistantContent: string): Promise<void> {
+  const saved = await rest("mahi_ai_messages", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify([
+      { conversation_id: conversationId, user_id: userId, role: "user", content: userContent.slice(0, 60000) },
+      { conversation_id: conversationId, user_id: userId, role: "assistant", content: assistantContent.slice(0, 60000) }
+    ])
+  });
+  if (!saved.ok) throw new Error("Mahi AI could not save the response");
+  await rest("mahi_ai_conversations?id=eq." + encodeURIComponent(conversationId) + "&user_id=eq." + encodeURIComponent(userId), {
+    method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ updated_at: new Date().toISOString() })
+  });
+}
+
 function classifyTask(prompt: string): string {
   const s = prompt.toLowerCase();
   if (/(debug|stack trace|typescript|javascript|python|html|css|react|sql|api|function|compiler|program|code|bug|কোড|প্রোগ্রামিং|বাগ|এরর|ত্রুটি)/i.test(s)) return "coding";
@@ -56,7 +202,8 @@ function classifyTask(prompt: string): string {
   if (/(story|poem|creative|rewrite|write a|blog|script|caption|lyrics|গল্প|কবিতা|লিখে দাও|রচনা|ক্যাপশন)/i.test(s)) return "creative";
   return "general";
 }
-function providerOrder(task: string) {
+function providerOrder(task: string, hasInlineAttachments = false) {
+  if (hasInlineAttachments) return ["gemini"];
   const base = task === "coding"
     ? ["openrouter", "groq", "gemini", "mistral", "nvidia", "cloudflare"]
     : task === "reasoning"
@@ -64,11 +211,17 @@ function providerOrder(task: string) {
     : task === "creative"
     ? ["gemini", "groq", "openrouter", "mistral", "nvidia", "cloudflare"]
     : ["groq", "gemini", "openrouter", "mistral", "nvidia", "cloudflare"];
-  return base.filter((name) => {
+  const enabled = base.filter((name) => {
     if (name === "nvidia") return Deno.env.get("ENABLE_NVIDIA_FALLBACK") === "true";
     if (name === "cloudflare") return Deno.env.get("ENABLE_CLOUDFLARE_FALLBACK") === "true";
     return true;
-  }).concat(Deno.env.get("ENABLE_PAID_FALLBACK") === "true" ? ["openai", "anthropic"] : []);
+  });
+  if (Deno.env.get("ENABLE_PAID_FALLBACK") === "true") {
+    return task === "coding"
+      ? ["openrouter", "openai", ...enabled.filter((x) => x !== "openrouter"), "anthropic"]
+      : [...enabled, "openai", "anthropic"];
+  }
+  return enabled;
 }
 function openRouterModel(task: string): string {
   if (task === "coding") return envFirst(["OPENROUTER_CODING_MODEL"]) || "cohere/north-mini-code:free";
@@ -333,7 +486,7 @@ async function* readAnthropicEventStream(response: Response): AsyncGenerator<str
   }
 }
 
-async function startProviderStream(name: string, messages: ChatMessage[], task: string): Promise<ProviderStream> {
+async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = []): Promise<ProviderStream> {
   const controller = new AbortController();
   const totalTimer = setTimeout(() => controller.abort(), 40000);
   const cleanup = () => { clearTimeout(totalTimer); controller.abort(); };
@@ -356,7 +509,17 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
     body = {
       systemInstruction: { parts: [{ text: systemPrompt(task) }] },
-      contents: normalized.map((m) => ({ role: m.role === "assistant" ? "model" : "user", parts: [{ text: m.content }] })),
+      contents: normalized.map((m, index) => {
+        const parts: Record<string, unknown>[] = [{ text: m.content }];
+        if (m.role === "user" && index === normalized.length - 1) {
+          for (const attachment of attachments) {
+            if (attachment.inline && attachment.base64 && attachment.mimeType) {
+              parts.push({ inline_data: { mime_type: attachment.mimeType, data: attachment.base64 } });
+            }
+          }
+        }
+        return { role: m.role === "assistant" ? "model" : "user", parts };
+      }),
       generationConfig: { temperature: 0.3, maxOutputTokens: 1800 }
     };
     useGemini = true;
