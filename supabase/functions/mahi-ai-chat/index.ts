@@ -1150,7 +1150,7 @@ async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: 
   const response = await fetch(baseUrl + "/storage/v1/object/mahi-ai-generated/" + encodedPath, {
     method: "POST",
     headers: adminHeaders({ "Content-Type": mimeType, "x-upsert": "false" }),
-    body: bytes
+    body: bytes.slice().buffer as ArrayBuffer
   });
   if (!response.ok) {
     console.error("Generated image storage failed:", response.status, (await response.text()).slice(0, 300));
