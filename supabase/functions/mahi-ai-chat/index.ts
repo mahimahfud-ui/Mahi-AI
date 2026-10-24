@@ -2492,7 +2492,27 @@ async function streamChatResponse(
       const startedAt = Date.now();
       const totalProviderBudgetMs = 115000;
       const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
-      const contextText = messages[messages.length - 1]?.content || originalPrompt;
+      const providerMessages = messages.map((message) => ({ ...message }));
+      const styleInstructions: Record<string, string> = {
+        friendly: "Use a warm, friendly, conversational tone without being overly familiar.",
+        concise: "Prefer concise, direct answers; include only details needed to answer well.",
+        detailed: "Give a thorough, well-structured answer with useful examples when appropriate.",
+        professional: "Use a professional, polished, neutral tone.",
+      };
+      const preferenceNotes = [
+        responseStyle !== "default" ? styleInstructions[responseStyle] : "",
+        customInstructions ? "User's saved preferences (follow when relevant; do not override safety, accuracy, or the current request): " + customInstructions : "",
+      ].filter(Boolean);
+      if (preferenceNotes.length && providerMessages.length) {
+        const lastIndex = providerMessages.length - 1;
+        providerMessages[lastIndex] = {
+          ...providerMessages[lastIndex],
+          content: providerMessages[lastIndex].content
+            + "\n\n[OPTIONAL USER PERSONALIZATION — lower priority than system and safety instructions]\n"
+            + preferenceNotes.join("\n"),
+        };
+      }
+      const contextText = providerMessages[providerMessages.length - 1]?.content || originalPrompt;
       try {
         for (let index = 0; index < available.length; index++) {
           if (cancelled) return;
@@ -2521,7 +2541,7 @@ async function streamChatResponse(
           });
           let candidate: ProviderStream | null = null;
           try {
-            candidate = await startProviderStream(provider, messages, task, attachments, providerBudget);
+            candidate = await startProviderStream(provider, providerMessages, task, attachments, providerBudget);
             activeCandidate = candidate;
             if (cancelled) {
               candidate.cleanup();
@@ -2798,6 +2818,13 @@ Deno.serve(async (req: Request) => {
   }
   const temporaryChat = input?.temporary_chat === true;
   const branchContext = input?.branch_context === true;
+  const customInstructions = typeof input?.custom_instructions === "string"
+    ? input.custom_instructions.replace(/[\\u0000-\\u001f\\u007f]/g, "").trim().slice(0, 3000)
+    : "";
+  const allowedResponseStyles = ["default", "friendly", "concise", "detailed", "professional"];
+  const responseStyle = typeof input?.response_style === "string" && allowedResponseStyles.includes(input.response_style)
+    ? input.response_style
+    : "default";
   const editFromCreatedAt = typeof input?.edit_from_created_at === "string" ? input.edit_from_created_at.slice(0, 80) : "";
   const editFromContent = typeof input?.edit_from_content === "string" ? input.edit_from_content.slice(0, 60000) : "";
   const replacementRequested = !!editFromCreatedAt;
