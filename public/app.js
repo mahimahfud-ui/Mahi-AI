@@ -20,7 +20,7 @@
   let voiceModeActive = false, voicePaused = false, voiceIsListening = false, voiceIsSpeaking = false;
   let voiceRecognition = null, voiceCurrentUtterance = null, voiceRestartTimer = null;
   let voiceForceRecorder = false, voiceRecorder = null, voiceMediaStream = null, voiceMediaChunks = [];
-  let voiceRecorderSubmitOnStop = true, voiceRecorderStopTimer = null;
+  let voiceRecorderSubmitOnStop = true, voiceRecorderStopTimer = null, voiceNoSpeechCount = 0;
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let accountMethod = "email", accountMode = "register";
@@ -530,6 +530,7 @@
       }
       if (voiceUI.interim) voiceUI.interim.textContent = interim;
       if (interim && voiceUI.transcript) voiceUI.transcript.textContent = interim;
+      if (interim || finalTranscript) voiceNoSpeechCount = 0;
       if (finalTranscript && !submitted) {
         submitted = true;
         const finalText = finalTranscript.trim();
@@ -552,8 +553,15 @@
         voicePaused = true;
         setVoiceStatus("No microphone was found", "error");
       } else if (error === "no-speech") {
+        voiceNoSpeechCount++;
         retryDelay = 700;
-        if (voiceUI.transcript) voiceUI.transcript.textContent = "I didn’t catch that. Try speaking again.";
+        if (voiceNoSpeechCount >= 3) {
+          voiceForceRecorder = true;
+          retryDelay = 350;
+          if (voiceUI.transcript) voiceUI.transcript.textContent = "Speech recognition could not detect your voice. Switching to microphone recording…";
+        } else if (voiceUI.transcript) {
+          voiceUI.transcript.textContent = "I didn’t catch that. Try speaking again.";
+        }
       } else {
         voiceForceRecorder = true;
         retryDelay = 350;
