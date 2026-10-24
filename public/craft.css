@@ -1,0 +1,342 @@
+/* =====================================================================
+   Mahi AI · Craft pass
+   ---------------------------------------------------------------------
+   Load AFTER styles.css (and motion-b.css if present):
+     <link rel="stylesheet" href="./craft.css">
+
+   Scope: surfaces, edges, states, content rendering, a11y.
+   Out of scope (left to other passes): keyframes, entrance/exit motion,
+   drawer/modal movement, layout, spacing system, type scale, palette.
+   The only transitions here are colour/opacity on states that previously
+   snapped (chat rows, chips, delete button).
+
+   Contents
+     0  Tokens                    6  Messages + markdown
+     1  Text + surface            7  Code blocks
+     2  Selection + caret         8  Status + feedback
+     3  Focus                     9  Empty states
+     4  Scrollbars               10  API Library + live preview
+     5  Components               11  Mobile + safe areas
+                                 12  Contrast + forced colours
+   ===================================================================== */
+
+/* ---------- 0. Tokens ------------------------------------------------ */
+:root{
+  /* One radius scale. Everything below snaps to it. */
+  --r-xs:6px;    /* kbd, badges, tags, small icon buttons      */
+  --r-sm:8px;    /* icon buttons, inline chips, list rows      */
+  --r-md:10px;   /* primary buttons, inputs, code, banners     */
+  --r-lg:14px;   /* cards, composer, preview                   */
+  --r-xl:20px;   /* modal panel                                */
+
+  --hairline:rgba(190,198,230,.10);
+  --hairline-strong:rgba(190,198,230,.17);
+  --hl:inset 0 1px 0 rgba(255,255,255,.04);        /* top-edge catch light */
+  --ring:#a896ff;
+  --muted-2:#7d879d;                                /* small-text grey, ≥4.5:1 on every surface */
+  --measure:78ch;                                   /* prose line length; set to none to revert */
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+
+  /* Barely-there dither. Its job is to break up banding in the dark
+     gradients (welcome glow, card washes), not to be seen. */
+  --noise:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n' x='0' y='0' width='100%25' height='100%25'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .66 0 0 0 0 .70 0 0 0 0 .86 .022 0 0 0 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+}
+@media(prefers-contrast:more){:root{--line:rgba(205,212,240,.34);--hairline:rgba(205,212,240,.24);--hairline-strong:rgba(205,212,240,.36)}}
+
+/* ---------- 1. Text rendering + surface ------------------------------ */
+body{
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;
+  text-rendering:optimizeLegibility;-webkit-text-size-adjust:100%;text-size-adjust:100%;font-synthesis:none;
+  background-image:var(--noise);background-size:160px 160px}
+.sidebar{background:var(--noise) 0 0/160px 160px,#0d1017}
+.char-count,.attachment-chip-size{font-variant-numeric:tabular-nums}
+
+/* Top-edge catch light: the single cue that makes flat dark panels read as surfaces. */
+.composer,.suggestion-card,.api-card,.privacy-note,.new-chat,.api-library-button,.attachment-chip,.m-toast,.m-jump{
+  --sh:0 0 0 0 transparent;box-shadow:var(--hl),var(--sh)}
+.composer{--sh:0 12px 45px rgba(0,0,0,.18)}
+.m-toast{--sh:0 14px 40px rgba(0,0,0,.45)}
+.m-jump{--sh:0 8px 28px rgba(0,0,0,.4)}
+.api-explorer-panel{box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 28px 100px rgba(0,0,0,.55)}
+
+/* ---------- 2. Selection + caret ------------------------------------- */
+::selection{background:rgba(150,128,255,.36);color:#fff;text-shadow:none}
+.message-content pre ::selection,.message-content code::selection,.message-content pre::selection{background:rgba(110,139,255,.42)}
+.composer textarea,.api-filter input{caret-color:#b9a9ff}
+
+/* ---------- 3. Focus -------------------------------------------------- */
+/* One ring everywhere: 2px, 2px off the edge, follows the element's radius. */
+:is(button,a,input,select,summary,[tabindex]):focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+/* The composer already lights its whole border on focus-within; a second
+   box around the textarea would be noise. */
+.composer textarea:focus-visible{outline:none}
+.composer:focus-within{
+  border-color:rgba(164,143,255,.6);
+  box-shadow:var(--hl),0 0 0 4px rgba(140,116,255,.10),0 0 36px -10px rgba(140,116,255,.3),0 12px 45px rgba(0,0,0,.2)}
+/* Chat rows: ring the whole row (inset), not the borderless inner button. */
+button.chat-item:focus-visible{outline:none}
+.chat-item:has(> button.chat-item:focus-visible){outline:2px solid var(--ring);outline-offset:-2px}
+/* Modal fields already change border + glow; a transparent outline keeps
+   them visible in forced-colours mode without a doubled ring. */
+.api-explorer .api-filter :is(input,select):focus-visible{
+  outline:2px solid transparent;border-color:var(--ring);box-shadow:0 0 0 3px rgba(168,150,255,.22)}
+
+/* ---------- 4. Scrollbars --------------------------------------------- */
+:is(.conversation-area,.chat-list,.api-explorer-body,.attachment-list,.message-content pre,.message-content table,.composer textarea){
+  scrollbar-width:thin;scrollbar-color:rgba(160,170,210,.2) transparent}
+:is(.conversation-area,.chat-list,.api-explorer-body,.attachment-list,.message-content pre,.message-content table,.composer textarea):hover{
+  scrollbar-color:rgba(160,170,210,.4) transparent}
+@supports not (scrollbar-width:thin){
+  ::-webkit-scrollbar{width:8px;height:8px}
+  ::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(160,170,210,.2);border:2px solid transparent;border-radius:8px;background-clip:content-box}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(160,170,210,.4);background-clip:content-box}
+}
+
+/* ---------- 5. Components -------------------------------------------- */
+/* 5a. Radius consistency */
+.text-button,.attachment-remove,.delete-chat,.api-badge,.api-category-tag{border-radius:var(--r-xs)}
+.icon-button,.attach-button,.api-card-link,.api-card-ask,.api-load-more,.live-preview-mode,
+.live-preview-icon-button,.live-preview-expand,.message-attachment{border-radius:var(--r-sm)}
+.send-button,.new-chat,.api-library-button,.privacy-note,.suggestion-icon,.api-filter :is(input,select),
+.attachment-chip,.error-banner{border-radius:var(--r-md)}
+.suggestion-card,.api-card,.composer{border-radius:var(--r-lg)}
+
+/* 5b. Buttons: disabled + pressed colour states (movement lives in the motion layer) */
+button:disabled{cursor:not-allowed}
+.attach-button:disabled{opacity:.45;background:#161a26}
+.attach-button:disabled:hover{border-color:rgba(169,179,215,.15);color:#b5bdd0}
+.send-button{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),0 4px 14px -5px rgba(121,136,255,.6)}
+.send-button:active:not(:disabled){filter:brightness(.94)}
+.send-button:disabled,.send-button:disabled:hover{box-shadow:none;filter:saturate(.45)}
+.icon-button:active{background:#202537}
+.new-chat kbd{
+  font:600 10px var(--font);padding:2px 6px;border-radius:var(--r-xs);color:#8a93a8;
+  background:rgba(255,255,255,.035);border:1px solid var(--hairline-strong);border-bottom-width:2px}
+
+/* 5c. Composer */
+.composer{border-color:var(--hairline-strong);background:linear-gradient(180deg,#141824,#11141f)}
+.composer textarea::placeholder{color:var(--muted-2)}
+.composer textarea:disabled::placeholder{opacity:.6}
+.composer-bottom{border-top-color:var(--hairline)}
+
+/* 5d. Attachment chips */
+.attachment-chip{border-color:var(--hairline-strong);transition:border-color .16s,background-color .16s}
+.attachment-chip:hover{border-color:rgba(169,145,255,.32);background:#1d2132}
+.attachment-chip img{box-shadow:0 0 0 1px rgba(255,255,255,.09)}
+.attachment-file-icon{
+  overflow:hidden;font-size:9px;letter-spacing:.3px;color:#cfc3ff;
+  background:linear-gradient(145deg,#322a55,#252040);box-shadow:inset 0 1px 0 rgba(255,255,255,.09)}
+.attachment-remove{width:22px;height:22px;transition:background-color .16s,color .16s}
+.attachment-remove:active{background:#432a37}
+.message-attachment{border-color:var(--hairline-strong);box-shadow:var(--hl)}
+.message-attachment b{color:#a99bff;font-weight:600}
+
+/* 5e. Chat list: states, hit area, elegant truncation */
+.chat-item{position:relative;transition:background-color .16s,border-color .16s,color .16s}
+.chat-item.active{
+  background:linear-gradient(90deg,rgba(143,124,255,.15),rgba(143,124,255,.05) 65%,transparent),#171a29;
+  border-color:rgba(166,145,255,.2);box-shadow:var(--hl)}
+.chat-item.active::before{
+  content:"";position:absolute;left:-1px;top:9px;bottom:9px;width:2px;border-radius:2px;
+  background:linear-gradient(#c3aeff,#7a86ff)}
+.chat-item.active .chat-icon{color:#b9abff}
+.chat-item:not(.active):hover .chat-icon{color:#a89af0}
+.chat-title{text-overflow:clip}
+@supports (mask-image:linear-gradient(#000,#000)) or (-webkit-mask-image:linear-gradient(#000,#000)){
+  /* Long titles fade out instead of ending in a hard "…" (full title stays in the tooltip). */
+  .chat-title{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 22px),transparent)}
+}
+.delete-chat{width:24px;height:24px;display:grid;place-items:center;padding:0;font-size:15px;transition:opacity .16s,background-color .16s,color .16s}
+.delete-chat:focus-visible{opacity:1}
+
+/* ---------- 6. Messages + markdown ----------------------------------- */
+.message-avatar{box-shadow:var(--hl)}
+.message.user .message-avatar{box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 4px 12px -4px rgba(120,110,255,.55)}
+.message-heading{letter-spacing:.01em}
+
+/* Comfortable measure for prose only; code, tables and images keep full width. */
+.message-content > :is(p,ul,ol,blockquote,h1,h2,h3,h4),
+.message-content.streaming-text,.message.user .message-content{max-width:var(--measure)}
+.message-content :is(p,li){text-wrap:pretty}
+.message-content > :first-child{margin-top:0}
+
+/* Headings were all 17px; give them a quiet, readable ladder. */
+.message-content :is(h1,h2,h3,h4){font-family:var(--display);font-weight:700;color:#eceefa;text-wrap:balance}
+.message-content h1{font-size:20px;letter-spacing:-.5px}
+.message-content h2{font-size:18px;letter-spacing:-.45px}
+.message-content h3{font-size:15.5px;letter-spacing:-.3px}
+.message-content h4{font-size:13.5px;letter-spacing:0;color:#c9cee0}
+
+.message-content strong{color:#eceefa;font-weight:600}
+.message-content :is(ul,ol) :is(ul,ol){margin:4px 0 2px}
+.message-content li::marker{color:#8c82d8}
+.message-content ol li::marker{font-variant-numeric:tabular-nums;font-weight:600}
+.message-content li:has(> input[type="checkbox"]){list-style:none;margin-left:-20px}
+.message-content input[type="checkbox"]{accent-color:var(--ring);margin:0 7px 0 0;vertical-align:-1px}
+.message-content blockquote{
+  padding:8px 14px;border-left-color:#8877ed;border-radius:0 var(--r-sm) var(--r-sm) 0;
+  background:linear-gradient(90deg,rgba(136,119,237,.08),transparent 75%)}
+.message-content hr{height:1px;border:0;background:linear-gradient(90deg,transparent,var(--hairline-strong),transparent)}
+.message-content a{text-decoration-color:rgba(169,155,255,.4);text-decoration-thickness:1px;transition:color .15s,text-decoration-color .15s}
+.message-content a:hover{color:#c9beff;text-decoration-color:currentColor}
+.message-content mark{background:rgba(255,214,120,.2);color:inherit;padding:0 3px;border-radius:4px}
+.message-content kbd{
+  font:600 .85em var(--font);padding:1px 6px;border-radius:var(--r-xs);color:#c5cad9;
+  background:rgba(255,255,255,.045);border:1px solid var(--hairline-strong);border-bottom-width:2px}
+.message-content img{border-radius:var(--r-md);border-color:var(--hairline-strong);box-shadow:0 8px 28px -10px rgba(0,0,0,.5)}
+
+/* Inline code */
+.message-content code{
+  font:.9em var(--mono);font-variant-ligatures:none;padding:1px 6px;border-radius:var(--r-xs);
+  background:rgba(130,140,200,.12);border-color:var(--hairline);color:#d3cfff;
+  -webkit-box-decoration-break:clone;box-decoration-break:clone}
+
+/* Tables: rounded outer frame, hairline grid, tabular figures, scroll hint. */
+.message-content table{
+  width:max-content;max-width:100%;margin:12px 0 16px;border:1px solid var(--hairline-strong);
+  border-radius:var(--r-md);border-collapse:separate;border-spacing:0;font-size:12px;font-variant-numeric:tabular-nums;
+  overscroll-behavior-x:contain;
+  background:
+    linear-gradient(90deg,var(--bg) 30%,transparent) left center/28px 100% no-repeat local,
+    linear-gradient(270deg,var(--bg) 30%,transparent) right center/28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.45),transparent) left center/10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.45),transparent) right center/10px 100% no-repeat scroll}
+.message-content :is(th,td){border:0;border-right:1px solid var(--hairline);border-bottom:1px solid var(--hairline);padding:8px 12px;vertical-align:top}
+.message-content :is(th,td):last-child{border-right:0}
+.message-content tbody tr:last-child td{border-bottom:0}
+.message-content th{background:rgba(255,255,255,.04);color:#e4e6f3;font-weight:600;white-space:nowrap}
+.message-content tbody tr:nth-child(even) td{background:rgba(255,255,255,.016)}
+
+/* ---------- 7. Code blocks ------------------------------------------- */
+/* craft.js wraps each <pre> in .code-block with a header (language + Copy).
+   Before/without JS the bare <pre> gets the same frame. */
+.message-content :is(.code-block,pre){
+  margin:11px 0 15px;border:1px solid var(--hairline-strong);border-radius:var(--r-md);box-shadow:var(--hl)}
+.message-content .code-block{overflow:hidden;background:#080a0f}
+.code-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:34px;padding:4px 6px 4px 14px;
+  border-bottom:1px solid var(--hairline);background:rgba(255,255,255,.024)}
+.code-lang{font:600 11px var(--font);letter-spacing:.2px;color:#8d96ab;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.code-copy{
+  display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 9px;border:1px solid transparent;border-radius:var(--r-xs);
+  background:transparent;color:#8b94a9;font:500 11px var(--font);white-space:nowrap;
+  transition:background-color .15s,color .15s,border-color .15s}
+.code-copy:hover{background:rgba(255,255,255,.06);color:#e5e1ff}
+.code-copy:active{background:rgba(255,255,255,.1)}
+.code-copy svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.code-block[data-copied] .code-copy{color:#7fdfb9;border-color:rgba(127,223,185,.22);background:rgba(127,223,185,.07)}
+.code-block[data-failed] .code-copy{color:#ffb6c1;border-color:rgba(255,141,160,.25)}
+
+.message-content pre{
+  padding:14px 16px;tab-size:2;overscroll-behavior-x:contain;
+  background:
+    linear-gradient(90deg,#080a0f 30%,transparent) left center/28px 100% no-repeat local,
+    linear-gradient(270deg,#080a0f 30%,transparent) right center/28px 100% no-repeat local,
+    radial-gradient(farthest-side at 0 50%,rgba(0,0,0,.55),transparent) left center/10px 100% no-repeat scroll,
+    radial-gradient(farthest-side at 100% 50%,rgba(0,0,0,.55),transparent) right center/10px 100% no-repeat scroll,
+    #080a0f}
+.message-content .code-block pre{margin:0;border:0;border-radius:0;box-shadow:none}
+.message-content pre code{font-size:12px;line-height:1.7;display:block}
+
+/* ---------- 8. Status + feedback ------------------------------------- */
+/* Typing dots: soft lit spheres instead of flat discs (animation untouched). */
+.typing-dots{padding:6px 0}
+.typing-dots span{width:6px;height:6px;background:radial-gradient(circle at 35% 30%,#d6ccff,#9a8bf5);box-shadow:0 0 8px rgba(154,139,245,.35)}
+/* Streaming caret: a lit bar rather than a flat one. */
+.message-content.streaming-text:not(:has(.typing-dots))::after{border-radius:2px;box-shadow:0 0 10px rgba(143,132,255,.6)}
+
+/* Error banner: icon, tinted surface, hairline. The leading icon is a
+   background so the ghost text used by the exit state stays aligned. */
+.error-banner{
+  padding:11px 14px 11px 41px;color:#ffc3cc;line-height:1.55;text-wrap:pretty;
+  border-color:rgba(255,120,140,.28);
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9fb0' stroke-width='2' stroke-linecap='round'><circle cx='12' cy='12' r='9'/><path d='M12 7.5v5.5M12 16.5h.01'/></svg>") no-repeat 14px 12px/17px 17px,
+    linear-gradient(180deg,rgba(255,120,140,.07),rgba(255,120,140,.02)),#2a1620;
+  box-shadow:var(--hl)}
+
+/* Skeletons: calmer base, softer highlight, matching radii. */
+.skel{border-radius:7px;background:rgba(171,181,218,.055)}
+.skel::after{background:linear-gradient(90deg,transparent,rgba(190,180,255,.07),transparent)}
+.skel-avatar{border-radius:var(--r-md)}
+
+/* Toast: success/error icons get a hairline ring. */
+.m-toast-icon{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--tc) 28%,transparent)}
+
+/* ---------- 9. Empty states ------------------------------------------ */
+.empty-history,.api-empty-state{
+  display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;
+  border:1px dashed var(--hairline-strong);border-radius:var(--r-md);color:var(--muted-2);line-height:1.55}
+.empty-history{margin:6px 2px;padding:22px 14px;font-size:11px}
+.empty-history strong{color:#aab1c3;font-weight:600;font-size:12px}
+.api-empty-state{grid-column:1/-1;padding:52px 16px;font-size:12px;border-radius:var(--r-lg)}
+.empty-history::before,.api-empty-state::before{
+  content:"";width:32px;height:32px;margin-bottom:8px;border-radius:var(--r-md);
+  border:1px solid rgba(169,145,255,.18);box-shadow:var(--hl);
+  background:var(--icon) center/16px 16px no-repeat,rgba(145,111,255,.1)}
+.empty-history{--icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b5a8ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'><path d='M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12Z'/></svg>")}
+.api-empty-state{--icon:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23b5a8ff' stroke-width='1.8' stroke-linecap='round'><circle cx='11' cy='11' r='7'/><path d='m20 20-3.5-3.5'/></svg>")}
+
+/* ---------- 10. API Library + live preview --------------------------- */
+.api-filter :is(input,select){border-color:var(--hairline-strong);box-shadow:inset 0 1px 2px rgba(0,0,0,.25)}
+.api-filter input::placeholder{color:#7a849a}
+.api-filter select{
+  appearance:none;-webkit-appearance:none;padding-right:30px;cursor:pointer;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b94a9' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>") no-repeat right 10px center/14px 14px,#121724}
+.api-filter option{background:#121724;color:#e5e8f3}
+.api-filter input[type="search"]::-webkit-search-cancel-button{
+  -webkit-appearance:none;appearance:none;width:14px;height:14px;margin-left:6px;cursor:pointer;opacity:.7;
+  background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238b94a9' stroke-width='2.4' stroke-linecap='round'><path d='M6 6l12 12M18 6 6 18'/></svg>") center/contain no-repeat}
+.api-filter input[type="search"]::-webkit-search-cancel-button:hover{opacity:1}
+.api-card-description{text-wrap:pretty}
+.api-explorer-footer p,.live-preview-footnote{color:#7b859b}
+
+.live-preview-card{border-color:var(--hairline-strong);box-shadow:var(--hl),0 12px 32px rgba(0,0,0,.2)}
+.live-preview-mode.is-active{box-shadow:var(--hl)}
+.live-preview-window-dots i{opacity:.78}
+.live-preview-address{background:#0b0e16;box-shadow:inset 0 1px 2px rgba(0,0,0,.35)}
+/* A white page inside a dark UI needs an edge, or it glares. */
+.live-preview-viewport iframe{box-shadow:0 0 0 1px rgba(255,255,255,.07),0 10px 28px rgba(0,0,0,.35)}
+.live-preview-viewport[data-device="mobile"]{box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 8px 28px rgba(0,0,0,.28)}
+
+/* ---------- 11. Mobile + safe areas ---------------------------------- */
+@media(max-width:760px){
+  /* viewport-fit=cover is set, so the notch/status bar must be accounted for. */
+  .topbar{height:calc(56px + env(safe-area-inset-top));flex-basis:calc(56px + env(safe-area-inset-top));padding-top:env(safe-area-inset-top)}
+  .conversation-area{padding-left:max(17px,env(safe-area-inset-left));padding-right:max(17px,env(safe-area-inset-right))}
+  .sidebar{padding-left:max(14px,env(safe-area-inset-left))}
+}
+@media(max-width:760px) and (orientation:landscape){
+  .topbar{height:calc(48px + env(safe-area-inset-top));flex-basis:calc(48px + env(safe-area-inset-top))}
+}
+@media(pointer:coarse){
+  /* Bigger hit areas without changing the visual layout. */
+  .icon-button{width:40px;height:40px}
+  .text-button{min-width:36px;min-height:36px}
+  .attachment-remove{width:30px;height:30px}
+  .delete-chat{width:32px;height:32px}
+  .api-card-link,.api-card-ask{min-height:38px}
+  /* <16px fields make iOS Safari zoom the page on focus. */
+  .api-filter :is(input,select){font-size:16px}
+}
+@media(pointer:coarse) and (hover:none){
+  .delete-chat{opacity:.6}                  /* no hover on touch: the delete control must be reachable */
+  .new-chat kbd,.composer-hint{display:none}/* keyboard hints mean nothing without a keyboard */
+}
+
+/* ---------- 12. Contrast + forced colours ---------------------------- */
+/* Small grey text that measured below 4.5:1 on its real background. */
+.composer-hint{color:#7b859b}
+.char-count{color:#7a849a}
+.footer-note{color:#737d93}
+.history-heading{color:#7d879c}
+.brand-copy span{color:#7a849c}
+
+@media(forced-colors:active){
+  :focus-visible{outline:2px solid Highlight}
+  .chat-item.active{border-color:Highlight}
+  .chat-item.active::before{background:Highlight}
+  .code-block,.message-content table,.composer{border-color:CanvasText}
+}

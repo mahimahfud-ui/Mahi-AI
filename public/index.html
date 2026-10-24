@@ -11,11 +11,14 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./motion-b.css">
+  <link rel="stylesheet" href="./craft.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
   <script src="./config.js"></script>
   <script src="./app.js" defer></script>
+  <script src="./motion-b.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -32,7 +35,16 @@
         <span class="api-library-arrow" aria-hidden="true">↗</span>
       </button>
       <div class="history-heading"><span>RECENTS</span><button class="text-button" id="refreshChats" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
-      <nav id="chatList" class="chat-list" aria-label="Recent conversations"></nav>
+      <nav id="chatList" class="chat-list" aria-label="Recent conversations">
+      <!-- Motion Part B: placeholder rows. app.js replaces them when real chats render. -->
+      <div class="chat-skeleton" aria-hidden="true">
+        <div class="skel-row" style="--i:0"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:74%"></span></div>
+        <div class="skel-row" style="--i:1"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:58%"></span></div>
+        <div class="skel-row" style="--i:2"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:82%"></span></div>
+        <div class="skel-row" style="--i:3"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:49%"></span></div>
+        <div class="skel-row" style="--i:4"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:66%"></span></div>
+      </div>
+    </nav>
       <div class="sidebar-bottom">
         <div class="privacy-note"><span class="status-dot"></span><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
         <div class="profile-row"><div class="avatar">M</div><div class="profile-copy"><strong>Mahi AI</strong><small id="sessionLabel">Preparing your workspace…</small></div><span class="online-dot" title="App status"></span></div>

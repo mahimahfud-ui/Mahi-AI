@@ -1,0 +1,381 @@
+/* =====================================================================
+   Mahi AI · Motion System — Part B
+   ---------------------------------------------------------------------
+   Load AFTER styles.css:  <link rel="stylesheet" href="./motion-b.css">
+
+   Principles
+   • Motion answers an action (send, drop, open, dismiss). Nothing loops
+     for decoration except genuine "working" states.
+   • Only opacity / transform are animated on hot paths. The few layout
+     animations (error banner collapse, toast exit) are tiny elements.
+   • Entrances are longer and eased-out; exits are ~35% shorter.
+   • Everything transform-based lives inside `no-preference`; reduced-motion
+     users keep short opacity fades and lose all movement.
+   • will-change is NOT used globally. The only exception is the drawer
+     while a finger is dragging it (.sidebar.is-dragging).
+   ===================================================================== */
+
+/* ---------- 0. Shared motion tokens ---------------------------------- */
+:root{
+  --m-ease-out:    cubic-bezier(.22, 1, .36, 1);     /* entrances, settling   */
+  --m-ease-in:     cubic-bezier(.55, 0, .75, .3);    /* exits                 */
+  --m-ease-inout:  cubic-bezier(.65, 0, .35, 1);     /* loops, sweeps         */
+  --m-ease-spring: cubic-bezier(.34, 1.36, .64, 1);  /* tiny overshoot, rare  */
+  --m-fast: .14s;
+  --m-base: .24s;
+  --m-in:   .34s;   /* standard entrance */
+  --m-out:  .22s;   /* standard exit     */
+  --composer-h: 120px; /* kept in sync by motion-b.js (jump pill position) */
+}
+
+/* ---------- 0b. Base polish ------------------------------------------ */
+html{-webkit-tap-highlight-color:transparent}
+button,a,select,.suggestion-card{touch-action:manipulation}
+.main-panel{position:relative}                       /* anchor for pill + dropzone */
+.conversation-area{scroll-behavior:auto}             /* JS eases scrolling itself; native smooth fights it */
+
+/* Slim, quiet scrollbars */
+.conversation-area,.chat-list,.api-explorer-body,.attachment-list,.message-content pre,.message-content table{
+  scrollbar-width:thin;scrollbar-color:rgba(160,170,210,.22) transparent}
+
+@keyframes m-fade{from{opacity:0}to{opacity:1}}
+@keyframes m-fade-out{from{opacity:1}to{opacity:0}}
+
+/* ---------- 1. Messages: send / receive ------------------------------ */
+/* Your message lands first; the assistant's typing bubble follows 60ms
+   later, so "send → receive" reads as a short conversation rhythm. */
+.message{animation:none}
+.message.user{animation:m-msg-in var(--m-in) var(--m-ease-out) backwards}
+.message.assistant{animation:m-msg-in var(--m-in) var(--m-ease-out) 60ms backwards}
+@keyframes m-msg-in{
+  from{opacity:0;transform:translateY(10px) scale(.985)}
+  to{opacity:1;transform:none}}
+
+/* Reloading a whole conversation: quiet fade, only the last few stagger. */
+.message.is-bulk{animation:m-fade .28s ease-out calc(min(var(--i,0),6) * 28ms) backwards}
+
+.message-avatar{position:relative}
+.message:not(.is-bulk) .message-avatar{animation:m-pop .42s var(--m-ease-spring) 80ms backwards}
+@keyframes m-pop{from{opacity:0;transform:scale(.72)}to{opacity:1;transform:none}}
+
+/* Streaming caret: shows only once text is actually arriving. */
+.message-content.streaming-text:not(:has(.typing-dots))::after{
+  content:"";display:inline-block;width:2px;height:1.05em;margin-left:2px;
+  vertical-align:text-bottom;border-radius:1px;
+  background:linear-gradient(#c3aeff,#7f8cff);
+  animation:m-caret 1.1s ease-in-out infinite}
+@keyframes m-caret{0%,100%{opacity:1}50%{opacity:.15}}
+
+/* When markdown replaces the raw stream, soften the swap. */
+.message.is-settling .message-content{animation:m-settle .34s var(--m-ease-out)}
+@keyframes m-settle{from{opacity:.7}to{opacity:1}}
+.message-content img{animation:m-fade .45s ease-out}
+
+/* Typing: a soft ring ripples off the avatar while the assistant "thinks". */
+.message[data-typing] .message-avatar::after{
+  content:"";position:absolute;inset:-3px;border-radius:13px;
+  border:1px solid rgba(168,150,255,.55);opacity:0;
+  animation:m-think 1.9s var(--m-ease-inout) infinite}
+@keyframes m-think{0%{opacity:0;transform:scale(.94)}35%{opacity:.7}100%{opacity:0;transform:scale(1.2)}}
+
+/* Send button: tactile press, and the icon swaps with a tiny pop. */
+.send-button{transition:opacity var(--m-base) ease,filter .15s ease,transform .18s var(--m-ease-out)}
+.send-button:active:not(:disabled){transform:scale(.92)}
+.send-button svg{animation:m-icon-swap .3s var(--m-ease-spring)}
+@keyframes m-icon-swap{from{opacity:0;transform:scale(.6)}to{opacity:1;transform:none}}
+
+/* Busy: keep the button legible and show a thin working ring. */
+.composer:has(#promptInput:disabled) .send-button:disabled{opacity:.8;position:relative}
+.composer:has(#promptInput:disabled) .send-button::after{
+  content:"";position:absolute;inset:-4px;border-radius:12px;
+  border:1.5px solid transparent;border-top-color:rgba(179,160,255,.9);
+  animation:m-spin .9s linear infinite}
+@keyframes m-spin{to{transform:rotate(360deg)}}
+
+/* ---------- 1b. Intelligent auto-scroll: "Jump to latest" pill -------- */
+.m-jump{
+  position:absolute;left:50%;bottom:calc(var(--composer-h) + 12px);z-index:12;
+  display:inline-flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 12px;
+  border:1px solid rgba(169,145,255,.32);border-radius:999px;
+  background:rgba(22,24,38,.86);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  color:#ddd5ff;font-size:11px;font-weight:600;box-shadow:0 8px 28px rgba(0,0,0,.4);
+  opacity:0;visibility:hidden;pointer-events:none;transform:translate(-50%,0);
+  transition:opacity var(--m-out) ease-in,visibility 0s linear var(--m-out),border-color .18s,background .18s}
+.m-jump.is-visible{
+  opacity:1;visibility:visible;pointer-events:auto;
+  transition:opacity var(--m-in) var(--m-ease-out),transform var(--m-in) var(--m-ease-spring),visibility 0s,border-color .18s,background .18s}
+.m-jump:hover{border-color:rgba(169,145,255,.6);background:rgba(34,32,56,.92)}
+.m-jump svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.m-jump-dot{display:none;width:6px;height:6px;border-radius:50%;background:#a896ff;box-shadow:0 0 0 0 rgba(168,150,255,.5)}
+.m-jump.has-new .m-jump-dot{display:block}
+
+/* ---------- 2. File dropzone ----------------------------------------- */
+.m-dropzone{
+  position:absolute;inset:0;z-index:18;display:grid;place-items:center;pointer-events:none;
+  background:rgba(7,9,14,.58);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;visibility:hidden;
+  transition:opacity var(--m-out) ease-in,visibility 0s linear var(--m-out)}
+.m-dropzone.is-active{
+  opacity:1;visibility:visible;
+  transition:opacity var(--m-base) ease-out,visibility 0s}
+.m-dropzone-frame{
+  position:absolute;inset:14px;border-radius:20px;
+  border:1.5px dashed rgba(176,158,255,.5);
+  background:radial-gradient(ellipse at 50% 42%,rgba(130,104,255,.16),transparent 70%);
+  transition:border-color var(--m-base),background var(--m-base)}
+.m-dropzone-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;padding:0 24px}
+.m-dropzone-icon{
+  width:54px;height:54px;display:grid;place-items:center;margin-bottom:6px;border-radius:16px;
+  border:1px solid rgba(178,158,255,.32);background:linear-gradient(145deg,rgba(150,121,255,.24),rgba(85,121,255,.1));
+  color:#d2c7ff}
+.m-dropzone-icon svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.m-dropzone-card strong{font:700 17px var(--display);letter-spacing:-.4px;color:#f1f0fa}
+.m-dropzone-card span{font-size:11px;color:#9aa3b8}
+.m-dropzone.is-rejected .m-dropzone-frame{border-color:rgba(255,141,160,.6);background:radial-gradient(ellipse at 50% 42%,rgba(255,110,140,.12),transparent 70%)}
+.m-dropzone.is-rejected .m-dropzone-icon{border-color:rgba(255,141,160,.4);color:#ffb6c1;background:rgba(255,110,140,.12)}
+
+/* The composer lights up while files hover anywhere on the page. */
+html[data-m-drag] .composer{border-color:rgba(164,143,255,.6);box-shadow:0 0 0 4px rgba(140,116,255,.1),0 12px 45px rgba(0,0,0,.2)}
+.composer.m-received{animation:m-received .6s var(--m-ease-out)}
+@keyframes m-received{
+  0%{box-shadow:0 0 0 0 rgba(140,116,255,.45),0 12px 45px rgba(0,0,0,.18)}
+  100%{box-shadow:0 0 0 12px rgba(140,116,255,0),0 12px 45px rgba(0,0,0,.18)}}
+
+/* Attachment chips: pop in once, then stay still when siblings change. */
+.attachment-chip{position:relative;overflow:hidden;animation:m-chip-in .34s var(--m-ease-spring) backwards}
+.attachment-chip.is-seen{animation:none}
+.attachment-remove:focus-visible{outline-offset:-2px}
+@keyframes m-chip-in{from{opacity:0;transform:translateY(6px) scale(.92)}to{opacity:1;transform:none}}
+
+/* "Working" sweep across chips while the message uploads and streams.
+   (Supabase exposes no byte progress, so this is indeterminate by design.) */
+.composer:has(#promptInput:disabled) .attachment-chip::after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
+  background:linear-gradient(90deg,transparent,#a896ff,#6e8bff,transparent);
+  transform:translateX(-100%);animation:m-sweep 1.25s var(--m-ease-inout) infinite}
+@keyframes m-sweep{to{transform:translateX(100%)}}
+
+/* ---------- 3. Settings / API Explorer modal ------------------------- */
+/* The element stays rendered while [hidden] so it can transition out.
+   `visibility` flips after the exit finishes, which also removes it from
+   the tab order and the accessibility tree. */
+.api-explorer[hidden]{display:flex!important;visibility:hidden;pointer-events:none;
+  transition:visibility 0s linear var(--m-out)}
+.api-explorer{transition:visibility 0s}
+
+.api-explorer-scrim{opacity:1;transition:opacity var(--m-base) ease-out}
+.api-explorer[hidden] .api-explorer-scrim{opacity:0;transition-duration:var(--m-out);transition-timing-function:ease-in}
+
+.api-explorer-panel{opacity:1;transition:opacity var(--m-base) ease-out}
+.api-explorer[hidden] .api-explorer-panel{opacity:0;transition-duration:var(--m-out);transition-timing-function:ease-in}
+
+.api-explorer-header,.api-explorer-controls,.api-explorer-body,.api-explorer-footer{
+  transition:opacity var(--m-base) ease-out}
+.api-explorer[hidden] :is(.api-explorer-header,.api-explorer-controls,.api-explorer-body,.api-explorer-footer){
+  opacity:0;transition-duration:var(--m-fast)}
+
+/* API list skeleton (shown by JS only while the catalogue loads) */
+.api-skel-grid{display:none;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+.api-skel-grid.is-on{display:grid;animation:m-fade .3s ease-out}
+.api-skel-card{display:flex;flex-direction:column;gap:11px;padding:14px;border:1px solid rgba(175,184,222,.08);border-radius:13px;background:rgba(17,20,30,.6)}
+.api-skel-card .skel{height:10px}
+.api-skel-card .skel.h{height:13px;width:55%}
+.api-skel-card .skel.b{height:22px;width:42%;border-radius:7px;margin-top:4px}
+@media(max-width:1000px){.api-skel-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.api-skel-grid{grid-template-columns:1fr}}
+
+/* ---------- 4. Skeletons --------------------------------------------- */
+.skel{position:relative;display:block;overflow:hidden;border-radius:8px;background:rgba(171,181,218,.07)}
+.skel::after{
+  content:"";position:absolute;inset:0;transform:translateX(-100%);
+  background:linear-gradient(90deg,transparent,rgba(190,180,255,.09),transparent);
+  animation:m-shimmer 1.5s var(--m-ease-inout) infinite}
+@keyframes m-shimmer{to{transform:translateX(100%)}}
+
+/* Sidebar: static markup inside #chatList, replaced by the app's own render. */
+.chat-skeleton{display:flex;flex-direction:column;gap:3px}
+.skel-row{display:flex;align-items:center;gap:10px;height:37px;padding:0 9px;animation:m-fade .4s ease-out backwards;animation-delay:calc(var(--i,0) * 60ms)}
+.skel-dot{width:14px;height:14px;flex:0 0 14px;border-radius:50%}
+.skel-line{height:10px;border-radius:5px}
+
+/* Chat list items: new rows slide in; existing rows never re-animate. */
+.chat-item.is-entering{animation:m-row-in .36s var(--m-ease-out) calc(min(var(--i,0),8) * 40ms) backwards}
+@keyframes m-row-in{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.text-button.is-spinning{animation:m-spin .8s linear infinite}
+
+/* Conversation switch: skeleton bubbles fade in only if loading is slow. */
+.conversation-area.is-switching{overflow:hidden}
+.m-msg-skeleton{
+  position:absolute;left:0;right:0;z-index:5;display:flex;justify-content:center;
+  padding:42px 22px 22px;background:var(--bg);
+  opacity:0;animation:m-fade .2s ease-out .14s forwards}
+.m-msg-skeleton.is-leaving{animation:m-fade-out .18s ease-in forwards}
+.m-msg-skeleton-inner{width:min(800px,100%);display:flex;flex-direction:column;gap:23px}
+.skel-msg{display:flex;gap:13px;align-items:flex-start}
+.skel-avatar{width:30px;height:30px;flex:0 0 30px;border-radius:10px}
+.skel-lines{flex:1;min-width:0;display:flex;flex-direction:column;gap:9px;padding-top:6px}
+.skel-lines .skel{height:11px;border-radius:6px}
+.skel-lines .skel.h{height:9px;width:68px;margin-bottom:3px}
+
+/* ---------- 5. Error banner + toasts --------------------------------- */
+/* The banner is always rendered so it can collapse. JS mirrors its last
+   text into data-ghost so the message stays visible while it slides away. */
+.error-banner{
+  display:block;max-height:320px;overflow:hidden;opacity:1;
+  transition-property:max-height,margin-top,padding,border-width,opacity,transform,visibility;
+  transition-duration:var(--m-base);
+  transition-timing-function:var(--m-ease-out);
+  transition-delay:0s}
+.error-banner:not([hidden]){animation:m-banner-flash .9s ease-out}
+.error-banner[hidden]{
+  display:block!important;visibility:hidden;pointer-events:none;
+  max-height:0;margin-top:0;padding-top:0;padding-bottom:0;border-width:0;opacity:0;
+  transition-duration:var(--m-out);transition-timing-function:ease-in;
+  transition-delay:0s,0s,0s,0s,0s,0s,var(--m-out)}
+.error-banner[hidden]::before{content:attr(data-ghost)}
+@keyframes m-banner-flash{
+  0%{box-shadow:0 0 0 0 rgba(255,141,160,.35)}
+  100%{box-shadow:0 0 0 7px rgba(255,141,160,0)}}
+
+.m-toasts{
+  position:fixed;top:max(14px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:200;
+  display:flex;flex-direction:column;align-items:center;gap:8px;
+  width:min(420px,calc(100vw - 24px));pointer-events:none}
+.m-toast{
+  --tc:#a896ff;--tc-bg:rgba(168,150,255,.16);--tc-border:rgba(175,184,222,.18);
+  position:relative;overflow:hidden;pointer-events:auto;width:100%;
+  display:flex;align-items:flex-start;gap:11px;padding:12px 10px 13px 13px;
+  border:1px solid var(--tc-border);border-radius:13px;
+  background:rgba(19,22,34,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+  box-shadow:0 14px 40px rgba(0,0,0,.45);color:#e6e8f4;font-size:12px;line-height:1.5;
+  animation:m-toast-in .42s var(--m-ease-spring) backwards}
+.m-toast[data-type="success"]{--tc:#68d9a6;--tc-bg:rgba(104,217,166,.15);--tc-border:rgba(104,217,166,.3)}
+.m-toast[data-type="error"]{--tc:#ff8da0;--tc-bg:rgba(255,141,160,.15);--tc-border:rgba(255,141,160,.32)}
+.m-toast-icon{flex:0 0 22px;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:var(--tc-bg);color:var(--tc)}
+.m-toast-icon svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.m-toast-msg{flex:1;min-width:0;padding-top:2px;overflow-wrap:anywhere}
+.m-toast-close{flex:0 0 24px;width:24px;height:24px;display:grid;place-items:center;border:0;border-radius:7px;background:transparent;color:#8b94a9;font-size:16px;line-height:1}
+.m-toast-close:hover{background:rgba(255,255,255,.07);color:#fff}
+.m-toast-bar{position:absolute;left:0;bottom:0;height:2px;width:100%;background:var(--tc);opacity:.55;transform-origin:left;animation:m-toast-bar var(--dur,4200ms) linear forwards}
+.m-toast.is-paused .m-toast-bar{animation-play-state:paused}
+.m-toast.is-leaving{animation:m-toast-out .26s var(--m-ease-in) forwards;pointer-events:none}
+@keyframes m-toast-in{from{opacity:0;transform:translateY(-14px) scale(.96)}to{opacity:1;transform:none}}
+@keyframes m-toast-out{
+  from{opacity:1;max-height:var(--h,80px);transform:none}
+  to{opacity:0;max-height:0;padding-top:0;padding-bottom:0;margin-top:-8px;border-width:0;transform:translateY(-8px) scale(.97)}}
+@keyframes m-toast-bar{to{transform:scaleX(0)}}
+
+/* ---------- 6. Mobile ------------------------------------------------- */
+/* Footer note collapses while the keyboard is up (class set by JS). */
+.footer-note{max-height:40px;overflow:hidden;transition:max-height var(--m-base) var(--m-ease-out),margin var(--m-base) var(--m-ease-out),opacity var(--m-base) ease}
+html[data-keyboard="open"] .footer-note{max-height:0;margin-top:0;opacity:0}
+
+@media(max-width:760px){
+  /* Drawer: gentle expo-out opening, shorter closing. */
+  .sidebar{transition:transform .34s var(--m-ease-out),box-shadow .34s ease;touch-action:pan-y;overscroll-behavior:contain}
+  .sidebar:not(.open){transition-duration:.26s;box-shadow:none}
+  .sidebar.is-dragging{transition:none!important;will-change:transform}   /* only while a finger is down */
+
+  /* Scrim fades instead of popping (the base rule toggles display). */
+  .mobile-scrim{
+    display:block;position:fixed;inset:0;height:var(--app-height,100dvh);z-index:30;
+    background:rgba(0,0,0,.58);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+    opacity:0;visibility:hidden;pointer-events:none;
+    transition:opacity .26s ease-in,visibility 0s linear .26s}
+  .mobile-scrim.show{opacity:1;visibility:visible;pointer-events:auto;transition:opacity .34s var(--m-ease-out),visibility 0s}
+
+  .m-jump{bottom:calc(var(--composer-h) + 8px)}
+  .m-toasts{top:max(10px,env(safe-area-inset-top))}
+}
+
+/* Smooth the discrete height changes visualViewport produces when the
+   virtual keyboard opens/closes (touch devices only). */
+@media(max-width:760px) and (pointer:coarse){
+  .app-shell{transition:height .2s var(--m-ease-out),max-height .2s var(--m-ease-out)}
+}
+
+/* Touch has no hover: stop :hover transforms from sticking after a tap,
+   and give a quick pressed state instead. */
+@media(hover:none){
+  .new-chat:hover,.suggestion-card:hover,.api-library-button:hover,.api-card:hover,.send-button:hover{transform:none}
+  .new-chat:active,.suggestion-card:active,.api-library-button:active,.api-card-ask:active,
+  .api-card-link:active,.attach-button:active,.icon-button:active,.api-load-more:active{
+    transform:scale(.97);transition-duration:.08s}
+}
+
+/* ---------- 7. Consistency pass -------------------------------------- */
+/* One easing family for every existing hover/press transition. */
+.new-chat,.suggestion-card,.api-library-button,.api-card,.attach-button,.icon-button,
+.text-button,.api-card-link,.api-card-ask,.api-load-more,.live-preview-mode,
+.live-preview-icon-button,.live-preview-expand,.chat-item,.delete-chat,.attachment-remove{
+  transition-timing-function:var(--m-ease-out)}
+.new-chat:active,.suggestion-card:active,.api-library-button:active{transform:scale(.985)}
+.attach-button:active,.icon-button:active{transform:scale(.95)}
+
+/* ---------- 8. Movement (only when the user hasn't asked for less) --- */
+@media(prefers-reduced-motion:no-preference){
+  .m-jump{transform:translate(-50%,10px) scale(.96)}
+  .m-jump.is-visible{transform:translate(-50%,0) scale(1)}
+  .m-jump.has-new .m-jump-dot{animation:m-dot 1.8s ease-out infinite}
+  @keyframes m-dot{0%{box-shadow:0 0 0 0 rgba(168,150,255,.55)}100%{box-shadow:0 0 0 7px rgba(168,150,255,0)}}
+
+  .m-dropzone-frame{transform:scale(.985);transition:transform var(--m-in) var(--m-ease-out),border-color var(--m-base),background var(--m-base)}
+  .m-dropzone.is-active .m-dropzone-frame{transform:none}
+  .m-dropzone-icon{transform:translateY(6px);transition:transform var(--m-in) var(--m-ease-spring)}
+  .m-dropzone.is-active .m-dropzone-icon{transform:none}
+
+  .api-explorer-panel{transform:none;transition:opacity var(--m-base) ease-out,transform var(--m-in) var(--m-ease-out)}
+  .api-explorer[hidden] .api-explorer-panel{
+    opacity:0;transform:translateY(14px) scale(.965);
+    transition-duration:var(--m-out);transition-timing-function:var(--m-ease-in)}
+  /* Content settles in just after the panel, in four quick steps. */
+  .api-explorer-header,.api-explorer-controls,.api-explorer-body,.api-explorer-footer{
+    transition:opacity var(--m-base) ease-out,transform var(--m-in) var(--m-ease-out)}
+  .api-explorer[hidden] :is(.api-explorer-header,.api-explorer-controls,.api-explorer-body,.api-explorer-footer){
+    transform:translateY(8px);transition-duration:var(--m-fast)}
+  .api-explorer:not([hidden]) .api-explorer-header{transition-delay:50ms}
+  .api-explorer:not([hidden]) .api-explorer-controls{transition-delay:90ms}
+  .api-explorer:not([hidden]) .api-explorer-body{transition-delay:130ms}
+  .api-explorer:not([hidden]) .api-explorer-footer{transition-delay:170ms}
+
+  .error-banner[hidden]{transform:translateY(-6px)}
+}
+/* Sheet-style modal on phones: slides up instead of scaling. */
+@media(prefers-reduced-motion:no-preference) and (max-width:650px){
+  .api-explorer[hidden] .api-explorer-panel{opacity:1;transform:translateY(100%)}   /* sheet: slide, no scale */
+  .api-explorer[hidden] :is(.api-explorer-header,.api-explorer-controls,.api-explorer-body,.api-explorer-footer){transform:none}
+}
+
+/* ---------- 9. Reduced motion ---------------------------------------- */
+/* styles.css already zeroes every duration. Here we (a) remove all looping
+   and decorative movement and (b) give the key state changes back a short
+   opacity-only fade, which is easier on vestibular sensitivity than a hard
+   cut. No scale, no translate, no parallax, no spinning, no shimmer. */
+@media(prefers-reduced-motion:reduce){
+  .skel::after,.message[data-typing] .message-avatar::after,.attachment-chip::after,
+  .send-button::after,.m-jump-dot,.m-toast-bar{animation:none!important}
+  .message-content.streaming-text:not(:has(.typing-dots))::after{animation:none!important;opacity:.7}
+  .composer:has(#promptInput:disabled) .attachment-chip::after{transform:none;opacity:.5}
+  .composer:has(#promptInput:disabled) .send-button::after{border-top-color:rgba(179,160,255,.5)}
+  .text-button.is-spinning{animation:none!important}
+
+  .message,.message.user,.message.assistant,.message.is-bulk,.chat-item.is-entering,
+  .m-toast,.m-msg-skeleton{animation:m-fade .14s linear backwards!important}
+  .message-avatar,.message-content,.attachment-chip,.send-button svg,.composer.m-received,
+  .error-banner:not([hidden]),.m-toast.is-leaving{animation:none!important}
+  .m-toast.is-leaving{opacity:0}
+  .m-msg-skeleton.is-leaving{animation:m-fade-out .14s linear forwards!important}
+
+  /* Opacity-only transitions for overlays and the mobile drawer. */
+  .api-explorer-scrim,.api-explorer-panel,.api-explorer-header,.api-explorer-controls,.api-explorer-body,
+  .api-explorer-footer,.m-jump,.m-dropzone,.error-banner,.mobile-scrim{transition-duration:.14s!important}
+  .api-explorer-panel{transform:none!important}
+  .m-jump,.m-jump.is-visible{transform:translateX(-50%)!important}
+  .error-banner,.error-banner[hidden]{transition-property:opacity,visibility!important}
+  .error-banner[hidden]{transition-delay:0s,.14s!important}
+}
+@media(prefers-reduced-motion:reduce) and (max-width:760px){
+  .sidebar{opacity:0;visibility:hidden;transform:none!important;transition:opacity .14s linear,visibility 0s linear .14s!important}
+  .sidebar.open{opacity:1;visibility:visible;transition:opacity .14s linear,visibility 0s!important}
+  .app-shell{transition:none!important}
+}
