@@ -1101,10 +1101,16 @@
     ui.fileInput.value = "";
   });
   ui.input.addEventListener("input", updateCounter);
+  // Enter sends on desktop and mobile keyboards; Shift+Enter keeps a line break.
+  // The keyCode checks cover virtual keyboards/browsers with incomplete KeyboardEvent.key support.
   ui.input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+    const isEnter = event.key === "Enter" || event.keyCode === 13 || event.which === 13;
+    const isComposing = event.isComposing || event.keyCode === 229;
+    if (isEnter && !event.shiftKey && !isComposing) {
       event.preventDefault();
-      if (!busy && ui.input.value.trim()) sendMessage(ui.input.value);
+      if (!busy && (ui.input.value.trim() || pendingFiles.length)) {
+        sendMessage(ui.input.value);
+      }
     }
   });
   if (apiUi.open) apiUi.open.addEventListener("click", openApiDirectory);
