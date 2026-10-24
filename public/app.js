@@ -11,8 +11,14 @@
     input: $("promptInput"), send: $("sendButton"), error: $("errorBanner"),
     session: $("sessionLabel"), charCount: $("charCount"),
     fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList"),
-    accountButton: $("accountButton"), accountModal: $("accountModal")
+    accountButton: $("accountButton"), accountModal: $("accountModal"), voiceModeButton: $("voiceModeButton")
   };
+  const voiceUI = {
+    overlay: $("voiceOverlay"), stage: $("voiceStage"), status: $("voiceStatus"), transcript: $("voiceTranscript"),
+    interim: $("voiceInterim"), mic: $("voiceMicButton"), end: $("voiceEndButton"), language: $("voiceLanguage")
+  };
+  let voiceModeActive = false, voicePaused = false, voiceIsListening = false, voiceIsSpeaking = false;
+  let voiceRecognition = null, voiceCurrentUtterance = null, voiceRestartTimer = null;
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let accountMethod = "email", accountMode = "register";
@@ -257,11 +263,251 @@
       });
     }
     body.append(heading, article);
+    if (role !== "user" && !opts.typing) addSpeechActions(node, content);
     node.append(avatar, body);
     ui.messages.appendChild(node);
     scrollToBottom();
     return node;
   }
+  function speechRecognitionConstructor() {
+    return window.SpeechRecognition || window.webkitSpeechRecognition || null;
+  }
+  function setVoiceStatus(message, state) {
+    if (voiceUI.status) voiceUI.status.textContent = message || "";
+    if (voiceUI.stage) voiceUI.stage.dataset.state = state || "idle";
+    if (voiceUI.mic) {
+      voiceUI.mic.setAttribute("aria-label", voiceIsListening ? "Pause listening" : "Start listening");
+      voiceUI.mic.title = voiceIsListening ? "Pause listening" : "Start or resume listening";
+      voiceUI.mic.classList.toggle("is-listening", voiceIsListening);
+    }
+  }
+  function speechTextFromMarkdown(value) {
+    return String(value || "")
+      .replace(/!\\[([^\\]]*)\\]\\(mahi-storage:\\/\\/[^)]+\\)/gi, "$1")
+      .replace(/!\\[([^\\]]*)\\]\\([^)]*\\)/g, "$1")
+      .replace(/\\x60{3}[\\s\\S]*?\\x60{3}/g, "Code is included in the chat.")
+      .replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)/g, "$1")
+      .replace(/https?:\\/\\/\\S+/g, "link")
+      .replace(/\\x60([^\\x60]+)\\x60/g, "$1")
+      .replace(/^\\s{0,3}#{1,6}\\s+/gm, "")
+      .replace(/^\\s*[-*+]\\s+/gm, "")
+      .replace(/^\\s*\\d+\\.\\s+/gm, "")
+      .replace(/[>*_~|]/g, "")
+      .replace(/\\bmahi-storage:\\/\\/[^\\s)]+/gi, "")
+      .replace(/\\n{3,}/g, "\\n\\n")
+      .trim();
+  }
+  function spokenLanguage(text) {
+    if (/[\\u0980-\\u09FF]/.test(text)) return "bn-BD";
+    if (/[\\u0900-\\u097F]/.test(text)) return "hi-IN";
+    if (/[\\u0600-\\u06FF]/.test(text)) return "ur-PK";
+    return "en-US";
+  }
+  function speakText(value, inVoiceMode) {
+    const synth = window.speechSynthesis;
+    const Utterance = window.SpeechSynthesisUtterance;
+    if (!synth || !Utterance) return Promise.resolve(false);
+    const text = speechTextFromMarkdown(value).slice(0, 12000);
+    if (!text) return Promise.resolve(false);
+    try { synth.cancel(); } catch (_) {}
+    return new Promise((resolve) => {
+      const utterance = new Utterance(text);
+      const language = spokenLanguage(text);
+      utterance.lang = language;
+      utterance.rate = 1;
+      utterance.pitch = 1;
+      const voices = typeof synth.getVoices === "function" ? synth.getVoices() : [];
+      const exactVoice = voices.find((voice) => String(voice.lang || "").toLowerCase() === language.toLowerCase());
+      const languageVoice = voices.find((voice) => String(voice.lang || "").toLowerCase().startsWith(language.split("-")[0].toLowerCase()));
+      if (exactVoice || languageVoice) utterance.voice = exactVoice || languageVoice;
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        if (voiceCurrentUtterance === utterance) {
+          voiceCurrentUtterance = null;
+          voiceIsSpeaking = false;
+        }
+        if (inVoiceMode && voiceModeActive && !voicePaused) setVoiceStatus("Ready for your next message", "idle");
+        resolve(true);
+      };
+      utterance.onstart = () => {
+        voiceCurrentUtterance = utterance;
+        voiceIsSpeaking = true;
+        if (inVoiceMode && voiceModeActive) setVoiceStatus("Mahi AI is speaking…", "speaking");
+      };
+      utterance.onend = finish;
+      utterance.onerror = finish;
+      voiceCurrentUtterance = utterance;
+      voiceIsSpeaking = true;
+      if (inVoiceMode && voiceModeActive) setVoiceStatus("Mahi AI is speaking…", "speaking");
+      try { synth.speak(utterance); } catch (_) { finish(); }
+    });
+  }
+  function addSpeechActions(node, content) {
+    if (!node || node.querySelector(".message-actions")) return;
+    const body = node.querySelector(".message-body");
+    if (!body) return;
+    const actions = document.createElement("div");
+    actions.className = "message-actions speech-actions";
+    const button = document.createElement("button");
+    button.className = "message-action speech-action";
+    button.type = "button";
+    button.title = "Read this answer aloud";
+    button.setAttribute("aria-label", "Read Mahi AI's answer aloud");
+    button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 9a5 5 0 0 1 0 6M18.5 6.5a9 9 0 0 1 0 11"/></svg><span>Listen</span>';
+    button.addEventListener("click", () => {
+      if (voiceIsSpeaking) {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
+        voiceIsSpeaking = false;
+        voiceCurrentUtterance = null;
+      } else {
+        void speakText(content, false);
+      }
+    });
+    actions.appendChild(button);
+    body.appendChild(actions);
+  }
+  function startVoiceListening() {
+    if (!voiceModeActive || voicePaused || busy || voiceIsSpeaking || voiceIsListening) return;
+    const Recognition = speechRecognitionConstructor();
+    if (!Recognition) {
+      voicePaused = true;
+      setVoiceStatus("Voice input is not supported in this browser. Please try the latest Chrome or Edge.", "error");
+      return;
+    }
+    let recognition;
+    try { recognition = new Recognition(); } catch (_) {
+      voicePaused = true;
+      setVoiceStatus("Could not start voice input on this device.", "error");
+      return;
+    }
+    voiceRecognition = recognition;
+    recognition.lang = voiceUI.language ? voiceUI.language.value || "bn-BD" : "bn-BD";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    let finalTranscript = "";
+    let submitted = false;
+    let retryDelay = 500;
+    recognition.onstart = () => {
+      voiceIsListening = true;
+      setVoiceStatus("Listening… speak now", "listening");
+      if (voiceUI.transcript && !voiceUI.interim.textContent) voiceUI.transcript.textContent = "I’m listening to you.";
+    };
+    recognition.onresult = (event) => {
+      let interim = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        const transcript = result && result[0] ? String(result[0].transcript || "").trim() : "";
+        if (!transcript) continue;
+        if (result.isFinal) finalTranscript = (finalTranscript + " " + transcript).trim();
+        else interim = (interim + " " + transcript).trim();
+      }
+      if (voiceUI.interim) voiceUI.interim.textContent = interim;
+      if (interim && voiceUI.transcript) voiceUI.transcript.textContent = interim;
+      if (finalTranscript && !submitted) {
+        submitted = true;
+        const finalText = finalTranscript.trim();
+        if (voiceUI.transcript) voiceUI.transcript.textContent = finalText;
+        if (voiceUI.interim) voiceUI.interim.textContent = "";
+        setVoiceStatus("Thinking…", "thinking");
+        try { recognition.stop(); } catch (_) {}
+        void sendMessage(finalText);
+      }
+    };
+    recognition.onerror = (event) => {
+      const error = String(event && event.error || "");
+      if (error === "not-allowed" || error === "service-not-allowed") {
+        voicePaused = true;
+        setVoiceStatus("Microphone permission is blocked. Allow microphone access in your browser, then tap the mic.", "error");
+      } else if (error === "audio-capture") {
+        voicePaused = true;
+        setVoiceStatus("No microphone was found. Connect a microphone and try again.", "error");
+      } else if (error === "network") {
+        retryDelay = 1400;
+        if (voiceUI.transcript) voiceUI.transcript.textContent = "The browser speech service is unavailable right now.";
+      } else if (error === "no-speech") {
+        retryDelay = 700;
+        if (voiceUI.transcript) voiceUI.transcript.textContent = "I didn’t catch that. Try speaking again.";
+      }
+    };
+    recognition.onend = () => {
+      voiceIsListening = false;
+      if (voiceRecognition === recognition) voiceRecognition = null;
+      if (voiceModeActive && !voicePaused && !submitted && !busy && !voiceIsSpeaking) {
+        if (voiceRestartTimer) window.clearTimeout(voiceRestartTimer);
+        voiceRestartTimer = window.setTimeout(() => {
+          voiceRestartTimer = null;
+          startVoiceListening();
+        }, retryDelay);
+      }
+    };
+    try {
+      recognition.start();
+    } catch (_) {
+      voiceRecognition = null;
+      voiceIsListening = false;
+      voicePaused = true;
+      setVoiceStatus("Could not access the microphone. Please try again.", "error");
+    }
+  }
+  function openVoiceMode() {
+    if (!voiceUI.overlay) return;
+    if (!speechRecognitionConstructor()) {
+      setError("Voice input is not supported in this browser. Try the latest Chrome or Edge.");
+      return;
+    }
+    voiceModeActive = true;
+    voicePaused = false;
+    voiceUI.overlay.hidden = false;
+    if (voiceUI.transcript) voiceUI.transcript.textContent = "Tap the microphone and start speaking.";
+    if (voiceUI.interim) voiceUI.interim.textContent = "";
+    setVoiceStatus("Connecting to your microphone…", "idle");
+    closeMobileSidebar();
+    startVoiceListening();
+    if (voiceUI.mic) voiceUI.mic.focus();
+  }
+  function closeVoiceMode() {
+    voiceModeActive = false;
+    voicePaused = true;
+    if (voiceRestartTimer) window.clearTimeout(voiceRestartTimer);
+    voiceRestartTimer = null;
+    if (voiceRecognition) {
+      try { voiceRecognition.onend = null; voiceRecognition.stop(); } catch (_) {}
+      voiceRecognition = null;
+    }
+    voiceIsListening = false;
+    voiceIsSpeaking = false;
+    voiceCurrentUtterance = null;
+    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (_) {}
+    if (voiceUI.overlay) voiceUI.overlay.hidden = true;
+    setVoiceStatus("Voice mode ended", "idle");
+    if (ui.voiceModeButton) ui.voiceModeButton.focus();
+  }
+  function toggleVoiceMicrophone() {
+    if (!voiceModeActive) return;
+    if (voiceIsSpeaking) {
+      try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (_) {}
+      voiceIsSpeaking = false;
+      voiceCurrentUtterance = null;
+      voicePaused = false;
+      startVoiceListening();
+      return;
+    }
+    if (voiceIsListening) {
+      voicePaused = true;
+      if (voiceRecognition) {
+        try { voiceRecognition.stop(); } catch (_) {}
+      }
+      voiceIsListening = false;
+      setVoiceStatus("Listening paused. Tap the mic when you’re ready.", "paused");
+      return;
+    }
+    voicePaused = false;
+    startVoiceListening();
+  }
+
   function formatBytes(value) {
     if (value < 1024) return value + " B";
     if (value < 1024 * 1024) return (value / 1024).toFixed(1) + " KB";
@@ -1107,7 +1353,9 @@
       messageContent.innerHTML = safeMarkdown(resolvedReply);
       renderLivePreview(typing, messageContent, fullText);
       delete typing.dataset.typing;
+      addSpeechActions(typing, fullText);
       currentMessages.push({ role: "assistant", content: fullText });
+      if (voiceModeActive) await speakText(fullText, true);
       pendingFiles = [];
       renderAttachmentList();
       updateCounter();
@@ -1159,7 +1407,14 @@
     } finally {
       setBusy(false);
       ui.input.disabled = false;
-      ui.input.focus();
+      if (voiceModeActive) {
+        if (!voicePaused && !voiceIsSpeaking && !voiceIsListening) {
+          if (voiceRestartTimer) window.clearTimeout(voiceRestartTimer);
+          voiceRestartTimer = window.setTimeout(() => { voiceRestartTimer = null; startVoiceListening(); }, 350);
+        }
+      } else {
+        ui.input.focus();
+      }
     }
   }
   // Public API Library: catalogue metadata comes from the community-maintained public-apis README.
@@ -1442,6 +1697,15 @@
     event.preventDefault();
     sendMessage(ui.input.value);
   });
+  if (ui.voiceModeButton) ui.voiceModeButton.addEventListener("click", openVoiceMode);
+  if (voiceUI.mic) voiceUI.mic.addEventListener("click", toggleVoiceMicrophone);
+  if (voiceUI.end) voiceUI.end.addEventListener("click", closeVoiceMode);
+  document.querySelectorAll("[data-voice-close]").forEach((element) => element.addEventListener("click", closeVoiceMode));
+  if (voiceUI.language) voiceUI.language.addEventListener("change", () => {
+    if (voiceModeActive && voiceIsListening && voiceRecognition) {
+      try { voiceRecognition.stop(); } catch (_) {}
+    }
+  });
   if (ui.accountButton) ui.accountButton.addEventListener("click", openAccountModal);
   if ($("accountForm")) $("accountForm").addEventListener("submit", handleAccountSubmit);
   document.querySelectorAll("[data-account-method]").forEach((button) => {
@@ -1498,7 +1762,7 @@
       event.preventDefault();
       beginNewChat();
     }
-    if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); closeAccountModal(); }
+    if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); closeAccountModal(); if (voiceModeActive) closeVoiceMode(); }
   });
   window.addEventListener("online", () => { if (!busy) setError(""); });
   setupPreferences();
