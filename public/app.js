@@ -19,6 +19,8 @@
   };
   let voiceModeActive = false, voicePaused = false, voiceIsListening = false, voiceIsSpeaking = false;
   let voiceRecognition = null, voiceCurrentUtterance = null, voiceRestartTimer = null;
+  let voiceForceRecorder = false, voiceRecorder = null, voiceMediaStream = null, voiceMediaChunks = [];
+  let voiceRecorderSubmitOnStop = true, voiceRecorderStopTimer = null;
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let accountMethod = "email", accountMode = "register";
@@ -276,9 +278,13 @@
     if (voiceUI.status) voiceUI.status.textContent = message || "";
     if (voiceUI.stage) voiceUI.stage.dataset.state = state || "idle";
     if (voiceUI.mic) {
-      voiceUI.mic.setAttribute("aria-label", voiceIsListening ? "Pause listening" : "Start listening");
-      voiceUI.mic.title = voiceIsListening ? "Pause listening" : "Start or resume listening";
+      const recording = !!(voiceRecorder && voiceRecorder.state === "recording");
+      const label = recording ? "Stop and send recording"
+        : (voiceIsListening ? (voiceRecognition ? "Pause listening" : "Stop and send recording") : "Start listening");
+      voiceUI.mic.setAttribute("aria-label", label);
+      voiceUI.mic.title = label;
       voiceUI.mic.classList.toggle("is-listening", voiceIsListening);
+      voiceUI.mic.classList.toggle("is-recording", recording);
     }
   }
   function speechTextFromMarkdown(value) {
@@ -368,18 +374,126 @@
     actions.appendChild(button);
     body.appendChild(actions);
   }
+  async function startMediaRecording() {
+    if (!voiceModeActive || voicePaused || busy || voiceIsSpeaking || voiceIsListening) return;
+    if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function" ||
+        typeof window.MediaRecorder !== "function") {
+      voicePaused = true;
+      setVoiceStatus("Voice input is unavailable here. Open Mahi AI in the latest Chrome or Edge over HTTPS.", "error");
+      if (voiceUI.transcript) voiceUI.transcript.textContent = "This browser does not support speech recognition or microphone recording.";
+      return;
+    }
+    let stream = null;
+    try {
+      setVoiceStatus("Requesting microphone access…", "idle");
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      });
+      if (!voiceModeActive || voicePaused || busy) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+      const mimeOptions = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+      const mimeType = mimeOptions.find((type) => typeof MediaRecorder.isTypeSupported !== "function" || MediaRecorder.isTypeSupported(type));
+      const recorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+      voiceMediaStream = stream;
+      voiceRecorder = recorder;
+      voiceMediaChunks = [];
+      voiceRecorderSubmitOnStop = true;
+      recorder.ondataavailable = (event) => {
+        if (event.data && event.data.size) voiceMediaChunks.push(event.data);
+      };
+      recorder.onerror = () => {
+        voicePaused = true;
+        voiceIsListening = false;
+        stopVoiceMediaTracks();
+        setVoiceStatus("Microphone recording failed. Tap the mic to try again.", "error");
+      };
+      recorder.onstop = () => {
+        const chunks = voiceMediaChunks.slice();
+        voiceMediaChunks = [];
+        const actualType = recorder.mimeType || (chunks[0] && chunks[0].type) || "audio/webm";
+        const blob = new Blob(chunks, { type: actualType });
+        const shouldSubmit = voiceRecorderSubmitOnStop;
+        if (voiceRecorder === recorder) voiceRecorder = null;
+        voiceIsListening = false;
+        stopVoiceMediaTracks();
+        if (!voiceModeActive) return;
+        if (shouldSubmit && blob.size >= 1200) {
+          setVoiceStatus("Processing your voice message…", "thinking");
+          if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message captured. Mahi AI is listening…";
+          void submitVoiceRecording(blob, actualType);
+        } else {
+          voicePaused = true;
+          setVoiceStatus(blob.size < 1200 ? "No clear audio captured" : "Recording stopped", blob.size < 1200 ? "error" : "paused");
+          if (voiceUI.transcript) voiceUI.transcript.textContent = blob.size < 1200
+            ? "No usable audio was captured. Tap the microphone to record again."
+            : "Recording stopped. Tap the microphone when you’re ready.";
+        }
+      };
+      recorder.start(250);
+      voiceIsListening = true;
+      setVoiceStatus("Recording… tap the mic to send", "listening");
+      if (voiceUI.transcript) voiceUI.transcript.textContent = "Speak naturally, then tap the microphone button to send your voice message.";
+      voiceRecorderStopTimer = window.setTimeout(() => {
+        if (voiceRecorder && voiceRecorder.state === "recording") stopVoiceMediaRecording(true);
+      }, 60000);
+    } catch (error) {
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      voiceMediaStream = null;
+      voiceRecorder = null;
+      voiceIsListening = false;
+      voicePaused = true;
+      const denied = error && (error.name === "NotAllowedError" || error.name === "SecurityError");
+      setVoiceStatus(denied ? "Microphone permission is blocked" : "Could not start microphone recording", "error");
+      if (voiceUI.transcript) voiceUI.transcript.textContent = denied
+        ? "Allow microphone access for this website in the browser address-bar settings, then tap the mic again."
+        : "Check that a microphone is connected and no other app is blocking it.";
+    }
+  }
+  function stopVoiceMediaTracks() {
+    if (voiceRecorderStopTimer) window.clearTimeout(voiceRecorderStopTimer);
+    voiceRecorderStopTimer = null;
+    if (voiceMediaStream) {
+      try { voiceMediaStream.getTracks().forEach((track) => track.stop()); } catch (_) {}
+    }
+    voiceMediaStream = null;
+  }
+  async function submitVoiceRecording(blob, mimeType) {
+    if (!voiceModeActive) return;
+    const extension = /mp4/i.test(mimeType) ? "m4a" : (/ogg/i.test(mimeType) ? "ogg" : "webm");
+    const audioFile = new File([blob], "mahi-voice-message." + extension, { type: mimeType || "audio/webm" });
+    const previousCount = pendingFiles.length;
+    addPendingFiles([audioFile]);
+    if (pendingFiles.length === previousCount) {
+      voicePaused = true;
+      setVoiceStatus("Could not attach the recording", "error");
+      if (voiceUI.transcript) voiceUI.transcript.textContent = "There is no room for another attachment. Remove an attachment in the chat and try again.";
+      return;
+    }
+    const languageName = voiceUI.language && voiceUI.language.selectedOptions[0]
+      ? voiceUI.language.selectedOptions[0].textContent.trim() : "the selected language";
+    const instruction = "Please listen carefully to the attached voice recording. Understand the user's spoken request and answer that request directly, in " +
+      languageName + " when appropriate. Do not merely describe the audio or only transcribe it unless the user asked for transcription. If the recording is unclear, ask one concise clarification.";
+    if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message sent. Waiting for Mahi AI…";
+    voicePaused = false;
+    try {
+      await sendMessage(instruction);
+    } catch (_) {
+      voicePaused = true;
+    }
+  }
   function startVoiceListening() {
     if (!voiceModeActive || voicePaused || busy || voiceIsSpeaking || voiceIsListening) return;
     const Recognition = speechRecognitionConstructor();
-    if (!Recognition) {
-      voicePaused = true;
-      setVoiceStatus("Voice input is not supported in this browser. Please try the latest Chrome or Edge.", "error");
+    if (voiceForceRecorder || !Recognition) {
+      void startMediaRecording();
       return;
     }
     let recognition;
     try { recognition = new Recognition(); } catch (_) {
-      voicePaused = true;
-      setVoiceStatus("Could not start voice input on this device.", "error");
+      voiceForceRecorder = true;
+      void startMediaRecording();
       return;
     }
     voiceRecognition = recognition;
@@ -418,18 +532,22 @@
     };
     recognition.onerror = (event) => {
       const error = String(event && event.error || "");
-      if (error === "not-allowed" || error === "service-not-allowed") {
-        voicePaused = true;
-        setVoiceStatus("Microphone permission is blocked. Allow microphone access in your browser, then tap the mic.", "error");
+      if (error === "not-allowed" || error === "service-not-allowed" || error === "network") {
+        // Browser dictation can fail when its remote speech service is unavailable.
+        // Fall back to direct microphone recording for the multimodal provider.
+        voiceForceRecorder = true;
+        retryDelay = 350;
+        if (voiceUI.transcript) voiceUI.transcript.textContent = "Browser speech recognition is unavailable. Switching to microphone recording…";
       } else if (error === "audio-capture") {
         voicePaused = true;
-        setVoiceStatus("No microphone was found. Connect a microphone and try again.", "error");
-      } else if (error === "network") {
-        retryDelay = 1400;
-        if (voiceUI.transcript) voiceUI.transcript.textContent = "The browser speech service is unavailable right now.";
+        setVoiceStatus("No microphone was found", "error");
       } else if (error === "no-speech") {
         retryDelay = 700;
         if (voiceUI.transcript) voiceUI.transcript.textContent = "I didn’t catch that. Try speaking again.";
+      } else {
+        voiceForceRecorder = true;
+        retryDelay = 350;
+        if (voiceUI.transcript) voiceUI.transcript.textContent = "Switching to microphone recording…";
       }
     };
     recognition.onend = () => {
@@ -448,20 +566,20 @@
     } catch (_) {
       voiceRecognition = null;
       voiceIsListening = false;
-      voicePaused = true;
-      setVoiceStatus("Could not access the microphone. Please try again.", "error");
+      voiceForceRecorder = true;
+      void startMediaRecording();
     }
   }
+
   function openVoiceMode() {
     if (!voiceUI.overlay) return;
-    if (!speechRecognitionConstructor()) {
-      setError("Voice input is not supported in this browser. Try the latest Chrome or Edge.");
-      return;
-    }
     voiceModeActive = true;
     voicePaused = false;
+    voiceForceRecorder = !speechRecognitionConstructor();
     voiceUI.overlay.hidden = false;
-    if (voiceUI.transcript) voiceUI.transcript.textContent = "Tap the microphone and start speaking.";
+    if (voiceUI.transcript) voiceUI.transcript.textContent = voiceForceRecorder
+      ? "Speak, then tap the mic to send your voice message."
+      : "Tap the microphone and start speaking.";
     if (voiceUI.interim) voiceUI.interim.textContent = "";
     setVoiceStatus("Connecting to your microphone…", "idle");
     closeMobileSidebar();
@@ -473,10 +591,18 @@
     voicePaused = true;
     if (voiceRestartTimer) window.clearTimeout(voiceRestartTimer);
     voiceRestartTimer = null;
+    if (voiceRecorderStopTimer) window.clearTimeout(voiceRecorderStopTimer);
+    voiceRecorderStopTimer = null;
     if (voiceRecognition) {
       try { voiceRecognition.onend = null; voiceRecognition.stop(); } catch (_) {}
       voiceRecognition = null;
     }
+    if (voiceRecorder && voiceRecorder.state !== "inactive") {
+      try { voiceRecorder.onstop = null; voiceRecorder.stop(); } catch (_) {}
+    }
+    voiceRecorder = null;
+    voiceMediaChunks = [];
+    stopVoiceMediaTracks();
     voiceIsListening = false;
     voiceIsSpeaking = false;
     voiceCurrentUtterance = null;
@@ -495,17 +621,31 @@
       startVoiceListening();
       return;
     }
-    if (voiceIsListening) {
+    if (voiceRecorder && voiceRecorder.state === "recording") {
+      stopVoiceMediaRecording(true);
+      return;
+    }
+    if (voiceIsListening && voiceRecognition) {
       voicePaused = true;
-      if (voiceRecognition) {
-        try { voiceRecognition.stop(); } catch (_) {}
-      }
+      try { voiceRecognition.stop(); } catch (_) {}
       voiceIsListening = false;
       setVoiceStatus("Listening paused. Tap the mic when you’re ready.", "paused");
       return;
     }
     voicePaused = false;
     startVoiceListening();
+  }
+  function stopVoiceMediaRecording(submit) {
+    if (!voiceRecorder || voiceRecorder.state === "inactive") return;
+    voiceRecorderSubmitOnStop = submit === true;
+    if (voiceRecorderStopTimer) window.clearTimeout(voiceRecorderStopTimer);
+    voiceRecorderStopTimer = null;
+    setVoiceStatus(submit ? "Processing your recording…" : "Recording stopped", submit ? "thinking" : "paused");
+    try { voiceRecorder.requestData(); } catch (_) {}
+    try { voiceRecorder.stop(); } catch (_) {
+      voicePaused = true;
+      setVoiceStatus("Could not finish the audio recording. Please try again.", "error");
+    }
   }
 
   function formatBytes(value) {
