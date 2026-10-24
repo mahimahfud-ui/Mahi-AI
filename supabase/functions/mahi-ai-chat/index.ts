@@ -1814,10 +1814,12 @@ Deno.serve(async (req: Request) => {
   }
 
   const inputChars = contextualMessages.reduce((sum, message) => sum + message.content.length, 0);
-  await updateUsage(usageId, {
+  void updateUsage(usageId, {
     task_type: task,
     input_chars: inputChars,
     attachment_count: attachments.length
+  }).catch((error) => {
+    console.warn("Mahi AI initial usage update failed", error instanceof Error ? error.message.slice(0, 120) : "Unknown error");
   });
   logStructured("info", "request_started", {
     request_id: requestId,
