@@ -529,32 +529,6 @@
           setError("Could not share automatically. Copy the answer and share it manually.");
         }
       });
-      if (!temporaryChatMode && item.created_at) {
-        let storedVote = "";
-        const feedbackKey = "mahicloud:feedback:" + (conversationId || "conversation") + ":" + (item.id || item.created_at);
-        try { storedVote = localStorage.getItem(feedbackKey) || ""; } catch (_) {}
-        const addVote = (label, vote, title) => {
-          const button = addButton(label, title, () => {
-            const next = storedVote === vote ? "" : vote;
-            storedVote = next;
-            try {
-              if (next) localStorage.setItem(feedbackKey, next);
-              else localStorage.removeItem(feedbackKey);
-            } catch (_) {
-              setError("Feedback could not be saved on this device.");
-            }
-            up.classList.toggle("is-complete", next === "up");
-            down.classList.toggle("is-complete", next === "down");
-            up.setAttribute("aria-pressed", String(next === "up"));
-            down.setAttribute("aria-pressed", String(next === "down"));
-          });
-          button.setAttribute("aria-pressed", String(storedVote === vote));
-          if (storedVote === vote) button.classList.add("is-complete");
-          return button;
-        };
-        const up = addVote("👍", "up", "Mark this answer as helpful");
-        const down = addVote("👎", "down", "Mark this answer as not helpful");
-      }
     }
     if (role === "assistant" && !temporaryChatMode && !branchSeedMessages && item.created_at) {
       addButton("Branch", "Continue this conversation in a separate chat", () => beginBranchFromMessage(index));

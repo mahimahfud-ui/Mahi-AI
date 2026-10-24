@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./theme.css?v=20261024v3">
+  <link rel="stylesheet" href="./theme.css?v=20261024v4">
   <link rel="stylesheet" href="./motion.css">
   <link rel="stylesheet" href="./craft.css">
   <link rel="stylesheet" href="./motion-b.css">
@@ -88,8 +88,8 @@
         </div>
       </section>
       <div class="sidebar-bottom">
-        <div class="privacy-note"><span class="status-dot"></span><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
-        <div class="profile-row"><div class="avatar" id="profileAvatar">Y</div><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div><span class="online-dot" title="App status"></span></div>
+        <div class="privacy-note"><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
+        <div class="profile-row"><div class="avatar" id="profileAvatar">Y</div><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
       </div>
     </aside>
 
@@ -102,7 +102,7 @@
           <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
           <button class="temporary-chat-button" id="temporaryChatButton" type="button" aria-pressed="false" title="Start a temporary chat that is not saved to chat history or long-term memory">◌ <span>Temporary</span></button>
           <button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button>
-          <span class="secure-label"><span class="status-dot"></span>Ready to help</span>
+          <span class="secure-label">Ready to help</span>
         </div>
       </header>
 
@@ -132,7 +132,7 @@
           <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message MahiCloud…" autocomplete="off" enterkeyhint="send"></textarea>
           <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="stop-button" id="stopButton" type="button" hidden aria-label="Stop generating" title="Stop generating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg><span>Stop</span></button><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
         </form>
-        <p class="footer-note">Attach up to 5 files, 15 MB each. Some file types may need text or PDF conversion. MahiCloud can make mistakes.</p>
+        <p class="footer-note">MahiCloud can make mistakes.</p>
       </footer>
     </main>
   </div>
