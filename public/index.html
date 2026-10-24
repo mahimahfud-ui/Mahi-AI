@@ -117,7 +117,7 @@
           <input id="fileInput" type="file" multiple hidden>
           <div id="attachmentList" class="attachment-list" hidden aria-label="Selected attachments"></div>
           <label for="promptInput" class="sr-only">Message Mahi AI</label>
-          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message Mahi AI…" autocomplete="off"></textarea>
+          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message Mahi AI…" autocomplete="off" enterkeyhint="send"></textarea>
           <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
         </form>
         <p class="footer-note">Attach up to 5 files, 15 MB each. Some file types may need text or PDF conversion. Mahi AI can make mistakes.</p>
