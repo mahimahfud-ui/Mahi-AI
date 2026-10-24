@@ -1564,28 +1564,40 @@
   }
   function renderConversationList() {
     ui.chatList.replaceChildren();
-    if (!conversations.length) {
+    const query = ui.chatSearch ? ui.chatSearch.value.trim().toLocaleLowerCase() : "";
+    const visible = conversations.filter((conversation) => String(conversation.title || "New chat").toLocaleLowerCase().includes(query));
+    if (!visible.length) {
       const empty = document.createElement("div");
       empty.className = "empty-history";
-      empty.textContent = "Your conversations will appear here.";
+      empty.textContent = query ? "No conversations match this search." : "Your conversations will appear here.";
       ui.chatList.appendChild(empty);
       return;
     }
-    conversations.forEach((conversation) => {
+    visible.forEach((conversation) => {
+      const title = conversation.title || "New chat";
       const row = document.createElement("div");
       row.className = "chat-item" + (conversation.id === conversationId ? " active" : "");
       const open = document.createElement("button");
       open.className = "chat-item";
       open.style.cssText = "padding:0;border:0;min-width:0;flex:1;background:transparent;color:inherit";
       open.innerHTML = '<span class="chat-icon">◌</span><span class="chat-title"></span>';
-      open.querySelector(".chat-title").textContent = conversation.title || "New chat";
-      open.title = conversation.title || "New chat";
+      open.querySelector(".chat-title").textContent = title;
+      open.title = title;
+      open.setAttribute("aria-label", "Open " + title);
       open.addEventListener("click", () => loadConversation(conversation.id));
+      const rename = document.createElement("button");
+      rename.className = "rename-chat";
+      rename.type = "button";
+      rename.textContent = "✎";
+      rename.title = "Rename conversation";
+      rename.setAttribute("aria-label", "Rename " + title);
+      rename.addEventListener("click", (event) => { event.stopPropagation(); void renameConversation(conversation); });
       const del = document.createElement("button");
       del.className = "delete-chat";
+      del.type = "button";
       del.textContent = "×";
       del.title = "Delete conversation";
-      del.setAttribute("aria-label", "Delete " + (conversation.title || "conversation"));
+      del.setAttribute("aria-label", "Delete " + title);
       del.addEventListener("click", async (event) => {
         event.stopPropagation();
         if (!confirm("Delete this conversation? This cannot be undone.")) return;
@@ -1594,10 +1606,12 @@
         if (conversationId === conversation.id) {
           conversationId = null;
           showWelcome(true);
+          pendingEdit = null;
+          if (ui.draftNotice) ui.draftNotice.hidden = true;
         }
         await refreshConversations();
       });
-      row.append(open, del);
+      row.append(open, rename, del);
       ui.chatList.appendChild(row);
     });
   }
@@ -1609,15 +1623,17 @@
         .select("id,title").eq("id", id).single();
       if (error) throw error;
       const { data, error: messageError } = await client.from("mahi_ai_messages")
-        .select("role,content,created_at").eq("conversation_id", id)
+        .select("id,role,content,created_at").eq("conversation_id", id)
         .order("created_at", { ascending: true }).limit(200);
       if (messageError) throw messageError;
       conversationId = rows.id;
-      currentMessages = (data || []).map((m) => ({ role: m.role, content: m.content }));
+      pendingEdit = null;
+      if (ui.draftNotice) ui.draftNotice.hidden = true;
+      currentMessages = (data || []).map((m) => ({ id: m.id, role: m.role, content: m.content, created_at: m.created_at }));
       ui.messages.replaceChildren();
       ui.welcome.hidden = true;
       ui.messages.hidden = false;
-      currentMessages.forEach((m, index) => addMessage(m.role, m.content, { userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
+      currentMessages.forEach((m, index) => addMessage(m.role, m.content, { messageIndex: index, userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
       renderConversationList();
       closeMobileSidebar();
     } catch (error) {
@@ -1628,6 +1644,10 @@
   function beginNewChat() {
     if (busy) return;
     conversationId = null;
+    pendingEdit = null;
+    if (ui.draftNotice) ui.draftNotice.hidden = true;
+    ui.input.value = "";
+    updateCounter();
     showWelcome(true);
     setError("");
     renderConversationList();
@@ -1797,7 +1817,7 @@
         ui.messages.replaceChildren();
         ui.welcome.hidden = true;
         ui.messages.hidden = false;
-        currentMessages.forEach((m, index) => addMessage(m.role, m.content, { userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
+        currentMessages.forEach((m, index) => addMessage(m.role, m.content, { messageIndex: index, userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
       }
     } finally {
       setBusy(false);
