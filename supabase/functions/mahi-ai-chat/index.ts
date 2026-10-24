@@ -854,7 +854,7 @@ function shouldPreferVenice(prompt: string): boolean {
 
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = ""): string[] {
   let preferred: string[];
-  if (isPornRelatedPrompt(prompt) && !hasInlineAttachments) {
+  if (    preferred = ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];) {
     // FULL UNLOCK: Venice first (rank 0) but nothing is locked to it any more.
     preferred = ["    preferred = ["    preferred = ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];, "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (hasInlineAttachments) {
