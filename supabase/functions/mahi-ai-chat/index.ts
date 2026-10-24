@@ -465,8 +465,49 @@ type ChatMessage = { role: "user" | "assistant"; content: string };
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
-  try { return await fetch(url, { ...init, signal: controller.signal }); }
-  finally { clearTimeout(timer); }
+  const clearTimer = () => clearTimeout(timer);
+
+  try {
+    const response = await fetch(url, { ...init, signal: controller.signal });
+    if (!response.body) {
+      clearTimer();
+      return response;
+    }
+
+    // Keep the deadline active until the response body is consumed. Clearing it
+    // immediately after headers arrive leaves response.json()/text() unbounded.
+    const reader = response.body.getReader();
+    const body = new ReadableStream<Uint8Array>({
+      async pull(streamController) {
+        try {
+          const part = await reader.read();
+          if (part.done) {
+            clearTimer();
+            streamController.close();
+          } else {
+            streamController.enqueue(part.value);
+          }
+        } catch (error) {
+          clearTimer();
+          streamController.error(error);
+        }
+      },
+      async cancel(reason) {
+        clearTimer();
+        controller.abort();
+        try { await reader.cancel(reason); } catch (_) {}
+      }
+    });
+
+    return new Response(body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers
+    });
+  } catch (error) {
+    clearTimer();
+    throw error;
+  }
 }
 async function readProviderError(response: Response): Promise<string> {
   try {
