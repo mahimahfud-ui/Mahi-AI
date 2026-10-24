@@ -27,7 +27,7 @@ function send(res, status, body, type) {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
     "X-Frame-Options": "DENY",
-    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
     "Cache-Control": "no-store"
   });
   res.end(body);
@@ -69,7 +69,7 @@ const server = http.createServer((req, res) => {
       "X-Content-Type-Options": "nosniff",
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Frame-Options": "DENY",
-      "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+      "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
       // Files have stable names rather than content hashes, so revalidate code on
       // every navigation and avoid serving stale frontend/backend configuration.
       "Cache-Control": /\.(?:html?|js|css|json)$/i.test(pathname) ? "no-cache" : "public, max-age=3600"
