@@ -15,5 +15,5 @@ test("Venice AI is configured as an OpenAI-compatible chat fallback", () => {
 });
 
 test("Venice is skipped for inline media that needs native provider support", () => {
-  assert.match(edge, /hasInlineAttachments && name === "venice"/);
+  assert.match(edge, /hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)/);
 });
