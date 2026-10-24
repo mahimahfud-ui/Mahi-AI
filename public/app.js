@@ -5,6 +5,12 @@
   const OFFICIAL_LOGO_URL = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   const THEME_STORAGE_KEY = "mahi-ai-theme";
   const DISPLAY_NAME_STORAGE_KEY = "mahi-ai-display-name";
+  const CHAT_PREFERENCES_STORAGE_KEY = "mahi-ai-chat-preferences";
+  const DEFAULT_CHAT_PREFERENCES = Object.freeze({
+    enterToSend: true, autoScroll: true, density: "comfortable", fontSize: "default",
+    responseStyle: "default", customInstructions: "", autoReadAloud: false
+  });
+  let chatPreferences = { ...DEFAULT_CHAT_PREFERENCES };
   const ui = {
     sidebar: $("sidebar"), scrim: $("mobileScrim"), chatList: $("chatList"),
     welcome: $("welcome"), messages: $("messages"), form: $("chatForm"),
@@ -301,7 +307,7 @@
     if (!opts.typing) addMessageControls(node, role, content, opts.messageIndex);
     node.append(avatar, body);
     ui.messages.appendChild(node);
-    scrollToBottom();
+    scrollToBottom(role === "user");
     return node;
   }
   function speechRecognitionConstructor() {
@@ -1194,9 +1200,15 @@
     return result;
   }
 
-  function scrollToBottom() {
+  function scrollToBottom(force) {
+    const area = $("conversationArea");
+    if (!area) return;
+    const distanceFromBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+    if (!force && !chatPreferences.autoScroll && distanceFromBottom > 140) return;
     requestAnimationFrame(() => {
-      const area = $("conversationArea");
+      // If the user scrolled away while the frame was waiting, respect that choice.
+      const currentDistance = area.scrollHeight - area.scrollTop - area.clientHeight;
+      if (!force && !chatPreferences.autoScroll && currentDistance > 140) return;
       area.scrollTop = area.scrollHeight;
     });
   }
@@ -1264,9 +1276,110 @@
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute("content", value === "light" ? "#f7f8fc" : "#090b10");
   }
+  function normalizeChatPreferences(value) {
+    const input = value && typeof value === "object" ? value : {};
+    const responseStyles = ["default", "friendly", "concise", "detailed", "professional"];
+    return {
+      enterToSend: input.enterToSend !== false,
+      autoScroll: input.autoScroll !== false,
+      density: input.density === "compact" ? "compact" : "comfortable",
+      fontSize: ["small", "default", "large"].includes(input.fontSize) ? input.fontSize : "default",
+      responseStyle: responseStyles.includes(input.responseStyle) ? input.responseStyle : "default",
+      customInstructions: typeof input.customInstructions === "string"
+        ? input.customInstructions.replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g, "").slice(0, 3000)
+        : "",
+      autoReadAloud: input.autoReadAloud === true
+    };
+  }
+  function persistChatPreferences() {
+    writePreference(CHAT_PREFERENCES_STORAGE_KEY, JSON.stringify(chatPreferences));
+  }
+  function applyChatPreferences(value, persist) {
+    chatPreferences = normalizeChatPreferences(value);
+    const root = document.documentElement;
+    root.dataset.chatDensity = chatPreferences.density;
+    root.dataset.chatFontSize = chatPreferences.fontSize;
+    const syncSwitch = (id, checked) => {
+      const button = $(id);
+      if (button) button.setAttribute("aria-checked", String(checked));
+    };
+    syncSwitch("enterToSendToggle", chatPreferences.enterToSend);
+    syncSwitch("autoScrollToggle", chatPreferences.autoScroll);
+    syncSwitch("autoReadAloudToggle", chatPreferences.autoReadAloud);
+    [["chatDensitySelect", chatPreferences.density], ["chatFontSizeSelect", chatPreferences.fontSize],
+      ["responseStyleSelect", chatPreferences.responseStyle], ["customInstructionsInput", chatPreferences.customInstructions]]
+      .forEach(([id, val]) => { const field = $(id); if (field && field.value !== val) field.value = val; });
+    if (persist !== false) persistChatPreferences();
+  }
+  function setupSidebarResize() {
+    const handle = $("sidebarResizeHandle");
+    if (!handle || !ui.sidebar) return;
+    const root = document.documentElement;
+    const minWidth = 220;
+    const maxWidth = () => Math.max(minWidth, Math.min(440, Math.floor(window.innerWidth * 0.42)));
+    const clamp = (value) => Math.min(maxWidth(), Math.max(minWidth, Math.round(value)));
+    const setWidth = (value, persist) => {
+      const width = clamp(value);
+      root.style.setProperty("--sidebar-width", width + "px");
+      handle.setAttribute("aria-valuenow", String(width));
+      handle.setAttribute("aria-valuemax", String(maxWidth()));
+      if (persist) writePreference("mahi-ai-sidebar-width", String(width));
+    };
+    const savedWidth = Number(readPreference("mahi-ai-sidebar-width"));
+    if (Number.isFinite(savedWidth) && savedWidth >= minWidth) setWidth(savedWidth, false);
+    else setWidth(260, false);
+    let pointerStartX = 0, widthStart = 260, dragging = false;
+    handle.addEventListener("pointerdown", (event) => {
+      if (window.matchMedia("(max-width: 760px)").matches || document.querySelector(".app-shell.sidebar-collapsed")) return;
+      if (event.button !== 0) return;
+      dragging = true;
+      pointerStartX = event.clientX;
+      widthStart = ui.sidebar.getBoundingClientRect().width;
+      handle.classList.add("is-dragging");
+      document.body.classList.add("is-resizing-sidebar");
+      handle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    handle.addEventListener("pointermove", (event) => {
+      if (!dragging) return;
+      setWidth(widthStart + event.clientX - pointerStartX, false);
+    });
+    const stop = (event) => {
+      if (!dragging) return;
+      dragging = false;
+      handle.classList.remove("is-dragging");
+      document.body.classList.remove("is-resizing-sidebar");
+      if (event && handle.hasPointerCapture && handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+      const match = getComputedStyle(root).getPropertyValue("--sidebar-width").match(/[0-9.]+/);
+      setWidth(match ? Number(match[0]) : widthStart, true);
+    };
+    handle.addEventListener("pointerup", stop);
+    handle.addEventListener("pointercancel", stop);
+    handle.addEventListener("lostpointercapture", () => { if (dragging) stop(); });
+    handle.addEventListener("keydown", (event) => {
+      if (window.matchMedia("(max-width: 760px)").matches) return;
+      const current = ui.sidebar.getBoundingClientRect().width;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        event.preventDefault();
+        setWidth(current + (event.key === "ArrowRight" ? 16 : -16), true);
+      } else if (event.key === "Home") {
+        event.preventDefault();
+        setWidth(minWidth, true);
+      } else if (event.key === "End") {
+        event.preventDefault();
+        setWidth(maxWidth(), true);
+      }
+    });
+    window.addEventListener("resize", () => setWidth(ui.sidebar.getBoundingClientRect().width, false), { passive: true });
+  }
   function setupPreferences() {
     const sidebarButton = $("openSidebar");
     if (sidebarButton) sidebarButton.setAttribute("aria-expanded", String(!window.matchMedia("(max-width: 760px)").matches));
+    setupSidebarResize();
+    const storedPreferences = readPreference(CHAT_PREFERENCES_STORAGE_KEY);
+    let parsedPreferences = {};
+    try { parsedPreferences = storedPreferences ? JSON.parse(storedPreferences) : {}; } catch (_) {}
+    applyChatPreferences(parsedPreferences, false);
     const settingsButton = $("toggleSettings");
     const settingsPanel = $("settingsPanel");
     if (settingsButton && settingsPanel) {
@@ -1286,6 +1399,39 @@
       applyDisplayName($("displayNameInput") ? $("displayNameInput").value : "You", true);
       const status = $("nameSaveStatus");
       if (status) status.textContent = "Saved on this device.";
+    });
+    const customForm = $("customInstructionsForm");
+    if (customForm) customForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      chatPreferences.customInstructions = $("customInstructionsInput") ? $("customInstructionsInput").value.trim().slice(0, 3000) : "";
+      persistChatPreferences();
+      const status = $("customInstructionsStatus");
+      if (status) status.textContent = "Saved on this device. Applies to new replies.";
+    });
+    const updatePreference = (key, value) => {
+      chatPreferences = normalizeChatPreferences({ ...chatPreferences, [key]: value });
+      applyChatPreferences(chatPreferences, true);
+    };
+    [["enterToSendToggle", "enterToSend"], ["autoScrollToggle", "autoScroll"], ["autoReadAloudToggle", "autoReadAloud"]]
+      .forEach(([id, key]) => {
+        const toggle = $(id);
+        if (toggle) toggle.addEventListener("click", () => updatePreference(key, toggle.getAttribute("aria-checked") !== "true"));
+      });
+    [["chatDensitySelect", "density"], ["chatFontSizeSelect", "fontSize"], ["responseStyleSelect", "responseStyle"]]
+      .forEach(([id, key]) => {
+        const field = $(id);
+        if (field) field.addEventListener("change", () => updatePreference(key, field.value));
+      });
+    const exportMarkdown = $("settingsExportMarkdown");
+    if (exportMarkdown) exportMarkdown.addEventListener("click", () => exportConversation("md"));
+    const exportJson = $("settingsExportJson");
+    if (exportJson) exportJson.addEventListener("click", () => exportConversation("json"));
+    const resetButton = $("resetChatPreferences");
+    if (resetButton) resetButton.addEventListener("click", () => {
+      if (!window.confirm("Reset chat preferences on this device? Your conversations, display name, and theme will not be deleted.")) return;
+      applyChatPreferences({ ...DEFAULT_CHAT_PREFERENCES }, true);
+      const status = $("customInstructionsStatus");
+      if (status) status.textContent = "Chat preferences reset.";
     });
     applyTheme(readPreference(THEME_STORAGE_KEY) === "light" ? "light" : "dark", false);
     applyDisplayName(readPreference(DISPLAY_NAME_STORAGE_KEY) || "You", false);
@@ -1816,6 +1962,8 @@
           conversation_id: temporaryChatMode ? null : conversationId,
           temporary_chat: temporaryChatMode,
           branch_context: branchRequest,
+          custom_instructions: chatPreferences.customInstructions,
+          response_style: chatPreferences.responseStyle,
           ...(editRequest ? {
             edit_from_created_at: editRequest.createdAt,
             edit_from_content: editRequest.content
@@ -1908,6 +2056,7 @@
       pendingEdit = null;
       if (ui.draftNotice) ui.draftNotice.hidden = true;
       if (voiceModeActive) await speakText(fullText, true, detectedVoiceLanguage);
+      else if (chatPreferences.autoReadAloud) void speakText(fullText, false, detectedVoiceLanguage);
       pendingFiles = [];
       renderAttachmentList();
       updateCounter();
@@ -2314,16 +2463,16 @@
     ui.fileInput.value = "";
   });
   ui.input.addEventListener("input", updateCounter);
-  // Enter sends on desktop and mobile keyboards; Shift+Enter keeps a line break.
-  // The keyCode checks cover virtual keyboards/browsers with incomplete KeyboardEvent.key support.
+  // Enter sends when enabled. Otherwise Ctrl/Command+Enter sends and plain Enter adds a line.
+  // Shift+Enter always adds a line; composition/IME input is never intercepted.
   ui.input.addEventListener("keydown", (event) => {
     const isEnter = event.key === "Enter" || event.keyCode === 13 || event.which === 13;
     const isComposing = event.isComposing || event.keyCode === 229;
-    if (isEnter && !event.shiftKey && !isComposing) {
+    const sendShortcut = event.ctrlKey || event.metaKey;
+    const shouldSend = chatPreferences.enterToSend ? !event.shiftKey && !sendShortcut ? true : sendShortcut && !event.shiftKey : sendShortcut && !event.shiftKey;
+    if (isEnter && shouldSend && !isComposing) {
       event.preventDefault();
-      if (!busy && (ui.input.value.trim() || pendingFiles.length)) {
-        sendMessage(ui.input.value);
-      }
+      if (!busy && (ui.input.value.trim() || pendingFiles.length)) sendMessage(ui.input.value);
     }
   });
   if (apiUi.open) apiUi.open.addEventListener("click", openApiDirectory);
