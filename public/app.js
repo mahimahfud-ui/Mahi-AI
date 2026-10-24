@@ -1035,7 +1035,7 @@
   let commandPalettePriorFocus = null;
   let commandActiveIndex = 0;
   const COMMANDS = [
-    { id: "new-chat", label: "Start a new chat", description: "Open a fresh conversation", icon: "＋", keywords: "new fresh clear", shortcut: "Ctrl ⇧ N" },
+    { id: "new-chat", label: "Start a new chat", description: "Open a fresh conversation", icon: "＋", keywords: "new fresh clear", shortcut: "Alt ⇧ N" },
     { id: "search-chats", label: "Search conversations", description: "Find a chat by its title", icon: "⌕", keywords: "find search history recent" },
     { id: "focus-composer", label: "Focus message box", description: "Jump straight to the composer", icon: "✎", keywords: "write prompt message input" },
     { id: "refresh-chats", label: "Refresh recents", description: "Reload conversation history", icon: "↻", keywords: "reload sync update" },
