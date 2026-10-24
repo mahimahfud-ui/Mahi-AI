@@ -2116,14 +2116,26 @@ function shouldRequireIndependentReview(task: string, prompt: string): boolean {
   return /\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(prompt);
 }
 
+function shouldFailClosedWhenReviewUnavailable(prompt: string): boolean {
+  // For medical, legal, financial, emergency, self-harm, and weapon-related requests,
+  // keep the existing fail-closed policy when independent verification is unavailable.
+  return /\\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(String(prompt || ""));
+}
+
 async function independentlyReviewAnswer(
   available: string[], originalPrompt: string, contextText: string, draft: string, task: string,
   reviewBudgetMs = 9000, candidateProviderCanInspectInlineAudio = false
-): Promise<{ answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" }> {
+): Promise<{ answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" | "unverified" }> {
   const reviewers = available.filter((name) =>
     providerIsConfigured(name, task) && !providerIsCoolingDown(name)
   ).slice(0, 3);
-  if (!reviewers.length || draft.length > 30000 || reviewBudgetMs < 1200) {
+  if (draft.length > 30000) {
+    return { answer: "", reviewer: null, verdict: "retry" };
+  }
+  if (!reviewers.length || reviewBudgetMs < 1200) {
+    if (!shouldFailClosedWhenReviewUnavailable(originalPrompt)) {
+      return { answer: draft, reviewer: null, verdict: "unverified" };
+    }
     return { answer: "", reviewer: null, verdict: "retry" };
   }
   const reviewSystem = qualityReviewSystem();
@@ -2140,6 +2152,7 @@ async function independentlyReviewAnswer(
   ].filter(Boolean).join("\n\n---\n\n");
   const perReviewerTimeoutMs = Math.max(1200, Math.min(4500, Math.floor(reviewBudgetMs / reviewers.length)));
   let lastReviewer: string | null = null;
+  let receivedValidVerdict = false;
   for (const reviewer of reviewers) {
     lastReviewer = reviewer;
     try {
@@ -2147,6 +2160,7 @@ async function independentlyReviewAnswer(
       rememberProviderSuccess(reviewer);
       const parsed = parseReviewedAnswer(result.text);
       if (!parsed) continue;
+      receivedValidVerdict = true;
       if (parsed.verdict === "retry") {
         // One reviewer rejecting a draft is not the end of validation. Try the
         // next independent checker before rejecting this candidate entirely.
@@ -2163,6 +2177,12 @@ async function independentlyReviewAnswer(
       rememberProviderFailure(reviewer, reason);
       console.warn("MahiCloud answer-check provider failed; trying another:", reviewer, reason.slice(0, 120));
     }
+  }
+  // A reviewer outage/timeout is not evidence that the candidate itself is wrong.
+  // Keep rejecting when a reviewer explicitly returned retry; otherwise, use the
+  // candidate as unverified for ordinary requests but fail closed for high-impact topics.
+  if (!receivedValidVerdict && !shouldFailClosedWhenReviewUnavailable(originalPrompt)) {
+    return { answer: draft, reviewer: null, verdict: "unverified" };
   }
   return { answer: "", reviewer: lastReviewer, verdict: "retry" };
 }
@@ -2291,7 +2311,7 @@ async function streamChatResponse(
               0,
               Math.min(6000, totalProviderBudgetMs - (Date.now() - startedAt) - 3000)
             );
-            const review: { answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" } =
+            const review: { answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" | "unverified" } =
               requiresReview
                 ? await independentlyReviewAnswer(
                     available.filter((name) => name !== provider),
