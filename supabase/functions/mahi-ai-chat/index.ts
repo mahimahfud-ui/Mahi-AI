@@ -415,7 +415,7 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   // using recent in-isolate latency and reliability. Opted-in paid fallback providers
   // carry an extra cost penalty so telemetry cannot casually make them the first route.
   const candidates = healthy.length ? healthy : configured;
-  const preferredRank = new Map(preferred.map((name, index) => [name, index]));
+  const preferredRank = new Map<string, number>(preferred.map((name, index) => [name, index] as const));
   const score = (name: string): number => {
     const rank = preferredRank.get(name) ?? 99;
     const stats = providerHealth.get(name);
