@@ -19,7 +19,7 @@ test("copy/download and isolated browser execution support HTML, CSS, JavaScript
   assert.match(codeBlocks, /makeButton\("Copy"/);
   assert.match(codeBlocks, /makeButton\("Download"/);
   assert.match(codeBlocks, /const RUNNABLE = new Set/);
-  for (const lang of ["html", "css", "js", "svg", "python"]) {
+  for (const lang of ["html", "css", "js", "svg", "py", "python"]) {
     assert.ok(codeBlocks.includes('"' + lang + '"'), "missing runnable language " + lang);
   }
   assert.match(codeBlocks, /setAttribute\("sandbox", "allow-scripts"\)/);
@@ -27,6 +27,9 @@ test("copy/download and isolated browser execution support HTML, CSS, JavaScript
   assert.match(codeBlocks, /Allow web resources/);
   assert.match(codeBlocks, /loadPyodide/);
   assert.match(codeBlocks, /new MutationObserver/);
+  assert.match(codeBlocks, /findProjectFiles/);
+  assert.match(codeBlocks, /buildProjectDocument/);
+  assert.ok(codeBlocks.includes("Run project"), "missing multi-file project runner");
 });
 
 test("playground includes viewport presets, editable source, runtime console, and expand mode", () => {
