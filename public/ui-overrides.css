@@ -1,0 +1,31 @@
+/* Final cascade corrections: this file loads after the motion and craft layers. */
+html[data-theme="light"] .message-content :is(h1,h2,h3,h4),
+html[data-theme="light"] .message-content strong,
+html[data-theme="light"] .message-heading { color: #202838; }
+html[data-theme="light"] .message-content blockquote { color: #4f5a70; }
+html[data-theme="light"] .message-content kbd { color: #374151; background: #edf0f6; border-color: rgba(31,41,59,.16); }
+html[data-theme="light"] .api-explorer-panel { background: #f7f8fc; border-color: rgba(31,41,59,.14); }
+html[data-theme="light"] .api-explorer-header,
+html[data-theme="light"] .api-explorer-controls,
+html[data-theme="light"] .api-explorer-footer { background: #fbfcfe; border-color: rgba(31,41,59,.12); }
+html[data-theme="light"] .api-explorer-header h2,
+html[data-theme="light"] .api-card h3 { color: #202838; }
+html[data-theme="light"] .api-explorer-header p,
+html[data-theme="light"] .api-explorer-kicker,
+html[data-theme="light"] .api-explorer-status,
+html[data-theme="light"] .api-card-description,
+html[data-theme="light"] .api-explorer-footer p { color: #667085; }
+html[data-theme="light"] .api-filter input,
+html[data-theme="light"] .api-filter select { background: #fff; color: #202838; border-color: rgba(31,41,59,.16); }
+html[data-theme="light"] .api-card { background: #fff; border-color: rgba(31,41,59,.13); box-shadow: 0 4px 16px rgba(31,41,59,.045); }
+html[data-theme="light"] .api-category-tag,
+html[data-theme="light"] .api-badge { color: #505b70; background: #f2f3f9; border-color: rgba(31,41,59,.1); }
+html[data-theme="light"] .api-badge.good { color: #16744e; background: #e8f8ef; border-color: #c7ead8; }
+html[data-theme="light"] .api-card-ask,
+html[data-theme="light"] .api-card-link,
+html[data-theme="light"] .api-load-more { color: #5140a6; background: #eeeaff; border-color: rgba(105,84,203,.22); }
+html[data-theme="light"] .error-banner:not([hidden]) { color: #9f2538; background: #fff0f2; border-color: #f3c3cb; }
+@media (max-width: 760px) {
+  .sidebar { overscroll-behavior-y: contain; }
+  .topbar .topbar-title .small-mark { object-fit: cover; object-position: center; }
+}
