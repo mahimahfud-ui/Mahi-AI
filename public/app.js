@@ -419,7 +419,7 @@
           extractedText = await extractDocumentText(file);
         } catch (error) {
           // Any file type remains attachable even when its optional text extractor is unavailable.
-          console.warn("Mahi AI could not extract document text:", file.name, error);
+          // Extraction is best-effort; the original file can still be uploaded.
           extractedText = "";
         }
         throwIfAborted(signal);
