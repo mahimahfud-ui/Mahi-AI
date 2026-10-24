@@ -485,19 +485,27 @@
   function closeMobileSidebar() {
     ui.sidebar.classList.remove("open");
     ui.scrim.classList.remove("show");
+    const button = $("openSidebar");
+    if (button && window.matchMedia("(max-width: 760px)").matches) button.setAttribute("aria-expanded", "false");
   }
   function openMobileSidebar() {
     ui.sidebar.classList.add("open");
     ui.scrim.classList.add("show");
+    const button = $("openSidebar");
+    if (button) button.setAttribute("aria-expanded", "true");
   }
   function toggleSidebar() {
+    const button = $("openSidebar");
     if (window.matchMedia("(max-width: 760px)").matches) {
       if (ui.sidebar.classList.contains("open")) closeMobileSidebar();
       else openMobileSidebar();
       return;
     }
     const shell = document.querySelector(".app-shell");
-    if (shell) shell.classList.toggle("sidebar-collapsed");
+    if (shell) {
+      const collapsed = shell.classList.toggle("sidebar-collapsed");
+      if (button) button.setAttribute("aria-expanded", String(!collapsed));
+    }
   }
   function readPreference(key) {
     try { return window.localStorage.getItem(key); } catch (_) { return null; }
@@ -531,6 +539,8 @@
     if (metaTheme) metaTheme.setAttribute("content", value === "light" ? "#f7f8fc" : "#090b10");
   }
   function setupPreferences() {
+    const sidebarButton = $("openSidebar");
+    if (sidebarButton) sidebarButton.setAttribute("aria-expanded", String(!window.matchMedia("(max-width: 760px)").matches));
     const settingsButton = $("toggleSettings");
     const settingsPanel = $("settingsPanel");
     if (settingsButton && settingsPanel) {
