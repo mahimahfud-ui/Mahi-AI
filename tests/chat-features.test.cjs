@@ -25,11 +25,14 @@ test("chat UI wires search, export, temporary chat, stopping, and branching", ()
   assert.match(app, /navigator\.share/);
 });
 
-test("saved answer feedback is device-local and message actions are available", () => {
-  assert.match(app, /mahicloud:feedback:/);
-  assert.match(app, /Mark this answer as helpful/);
-  assert.match(app, /Mark this answer as not helpful/);
+test("message actions provide copy, share, and read-aloud without obsolete rating controls", () => {
+  assert.match(app, /Copy this message/);
+  assert.match(app, /Share this answer/);
+  assert.match(app, /Read MahiCloud's answer aloud/);
   assert.match(app, /function addMessageControls/);
+  assert.doesNotMatch(app, /mahicloud:feedback:/i);
+  assert.doesNotMatch(app, /Mark this answer as helpful/);
+  assert.doesNotMatch(app, /Mark this answer as not helpful/);
 });
 
 test("temporary chats skip history and long-term memory, and branches preserve context", () => {
