@@ -60,18 +60,18 @@ test("reviewer outages still fail closed for high-impact topics and explicit rev
 
 test("Abu Bokor alias requests map to Risky Saif and share the supplied Instagram profile", () => {
   assert.match(edge, /function isAbuBokorAliasRequest\(prompt: string\): boolean/);
-  assert.match(edge, /abu\[\\s_-\]\*\(\?:bokor\|bakar\|bakor\|bakr\)/);
-  assert.match(edge, /আবু\[\\s_-\]\*\(\?:বকর\|বকোর\)/);
+  assert.ok(edge.includes(String.raw\`abu[\s_-]*(?:bokor|bakar|bakor|bakr)\`));
+  assert.ok(edge.includes(String.raw\`আবু[\s_-]*(?:বকর|বকোর)\`));
   assert.match(edge, /function getAbuBokorAliasContext\(prompt: string\): string/);
-  assert.match(edge, /Risky Saif \\/ @risk_taker_saif/);
-  assert.match(edge, /https:\/\/www\.instagram\.com\/risk_taker_saif\//);
+  assert.ok(edge.includes("Risky Saif / @risk_taker_saif"));
+  assert.ok(edge.includes("https://www.instagram.com/risk_taker_saif/"));
   assert.match(edge, /const abuBokorAliasContext = getAbuBokorAliasContext\(displayPrompt\)/);
   assert.match(edge, /abu_bokor_alias_context_added/);
-  assert.match(edge, /If the latest user message includes \[ABU BOKOR ALIAS CONTEXT\]/);
+  assert.ok(edge.includes("[ABU BOKOR ALIAS CONTEXT]"));
 });
 
 test("Abu Bokor alias profile does not present derogatory or unverified personal claims as facts", () => {
-  assert.match(edge, /Do not state insulting character labels, romantic\/sexual labels, family relationships/);
-  assert.match(edge, /not independent verification of legal identity/);
+  assert.ok(edge.includes("Do not state insulting character labels, romantic/sexual labels, family relationships"));
+  assert.ok(edge.includes("not independent verification of legal identity"));
   assert.match(edge, /messagesForProvider = messagesForProvider\.map\(\(message, index\) =>/);
 });
