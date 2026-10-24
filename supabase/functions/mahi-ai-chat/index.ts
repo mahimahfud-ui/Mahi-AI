@@ -1930,7 +1930,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         headerTimer = setTimeout(() => {
           controller.abort();
           reject(new Error("Provider connection timeout"));
-        }, Math.min(8000, timeoutMs));
+        }, Math.min(5000, timeoutMs));
       })
     ]);
     if (headerTimer) clearTimeout(headerTimer);
@@ -1938,7 +1938,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       await readProviderError(response);
       // The Cloudflare route is optional: retry direct so a gateway issue does not break chat.
       const fallbackController = new AbortController();
-      const fallbackTimer = setTimeout(() => fallbackController.abort(), Math.min(8000, timeoutMs));
+      const fallbackTimer = setTimeout(() => fallbackController.abort(), Math.min(5000, timeoutMs));
       try {
         let fallbackHeaderTimer: ReturnType<typeof setTimeout> | undefined;
         response = await Promise.race([
@@ -1947,7 +1947,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
             fallbackHeaderTimer = setTimeout(() => {
               fallbackController.abort();
               reject(new Error("Provider connection timeout"));
-            }, Math.min(8000, timeoutMs));
+            }, Math.min(5000, timeoutMs));
           })
         ]);
         if (fallbackHeaderTimer) clearTimeout(fallbackHeaderTimer);
@@ -2358,6 +2358,7 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
 }
 
 function shouldRequireIndependentReview(task: string, prompt: string): boolean {
+  if (flagEnabled("FAST_MODE") && ["coding", "reasoning"].includes(task)) return false;
   if (["coding", "reasoning", "web_research", "code_execution"].includes(task)) return true;
   if (isAdultSensitivePrompt(prompt) || shouldPreferVenice(prompt)) return true;
   return /\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(prompt);
@@ -2894,6 +2895,9 @@ Deno.serve(async (req: Request) => {
     : shouldUseWebSearch(displayPrompt) || shouldUseUrlContext(displayPrompt) ? "web_research"
     : shouldUseCodeExecution(displayPrompt) ? "code_execution"
     : classifyTask(displayPrompt);
+  const publicApiPromise: Promise<string> = attachments.length === 0
+    ? fetchPublicApiContext(displayPrompt, task).catch(() => "")
+    : Promise.resolve("");
   let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
   if ((replacementRequested && (temporaryChat || !conversationId || !editFromContent || !Number.isFinite(Date.parse(editFromCreatedAt))))) {
     await updateUsage(usageId, { success: false, error_code: "invalid_message_replacement" });
@@ -3009,7 +3013,10 @@ Deno.serve(async (req: Request) => {
     });
   }
   if (attachments.length === 0) {
-    const publicApiContext = await fetchPublicApiContext(displayPrompt, task);
+    const publicApiContext = await Promise.race([
+      publicApiPromise,
+      new Promise<string>((resolve) => setTimeout(() => resolve(""), 1500))
+    ]);
     if (publicApiContext) {
       messagesForProvider = contextualMessages.map((message, index) =>
         index === contextualMessages.length - 1 && message.role === "user"

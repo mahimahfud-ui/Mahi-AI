@@ -1988,6 +1988,15 @@
       const messageContent = typing.querySelector(".message-content");
       messageContent.classList.add("streaming-text");
 
+      let paintQueued = false;
+      const paintStream = () => {
+        paintQueued = false;
+        messageContent.textContent = fullText.indexOf("[[MAHI_LANG") === -1
+          ? fullText
+          : fullText.replace(/\s*\[\[MAHI_LANG:[\s\S]*$/i, "");
+        scrollToBottom();
+      };
+      const scheduleStreamPaint = () => { if (!paintQueued) { paintQueued = true; requestAnimationFrame(paintStream); } };
       const handleStreamEvent = (block) => {
         const payloadLines = block.split("\n")
           .filter((line) => line.startsWith("data:"))
@@ -2003,8 +2012,7 @@
         } else if (payload.type === "delta" && typeof payload.text === "string") {
           if (!fullText) messageContent.textContent = "";
           fullText += payload.text;
-          messageContent.textContent = fullText.replace(/\s*\[\[MAHI_LANG:[\s\S]*$/i, "");
-          scrollToBottom();
+          scheduleStreamPaint();
         } else if (payload.type === "done") {
           if (payload.conversation_id) conversationId = payload.conversation_id;
           completed = true;
