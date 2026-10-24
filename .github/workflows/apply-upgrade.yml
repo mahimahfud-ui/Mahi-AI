@@ -1,0 +1,25 @@
+name: apply-upgrade
+# Runs only on the upgrade branch. Applies tools/apply_upgrade.py, syntax-checks, commits the result.
+on:
+  push:
+    branches: [claude/upgrade-engine]
+    paths: ["tools/**", ".github/workflows/apply-upgrade.yml"]
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/apply_upgrade.py
+      - name: Syntax check
+        run: |
+          npx --yes esbuild supabase/functions/mahi-ai-chat/index.ts --log-level=error --outfile=/tmp/chk.js
+          node --check public/app.js
+          node --check public/claude-features.js
+      - name: Commit
+        run: |
+          git config user.name "mahi-upgrade-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add supabase public
+          git diff --cached --quiet && echo "nothing to commit" || (git commit -m "Apply engine + UI upgrade" && git push)
