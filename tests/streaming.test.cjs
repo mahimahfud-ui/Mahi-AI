@@ -9,15 +9,16 @@ const edge = fs.readFileSync(
 );
 
 test("chat shows Thinking before session setup and ignores backend status text", () => {
-  const sendStart = app.indexOf("async function sendMessage(text) {");
+  const sendStart = app.indexOf("async function sendMessage(text, options) {");
   const sendEnd = app.indexOf("\n  // Public API Library", sendStart);
   const send = app.slice(sendStart, sendEnd);
   assert.ok(sendStart >= 0 && sendEnd > sendStart, "sendMessage must exist");
-  const thinkingIndex = send.indexOf('addMessage("assistant", "", { typing: true })');
+  const thinkingIndex = send.indexOf('addMessage("assistant", "", { typing: true, messageIndex: currentMessages.length })');
   const sessionIndex = send.indexOf("if (!session) await ensureSession()");
   assert.ok(thinkingIndex >= 0 && sessionIndex > thinkingIndex,
     "Thinking should render before session initialization");
-  assert.match(app, /class="thinking-label">Thinking/);
+  assert.match(app, /heading\.className = "thinking-label"/);
+  assert.match(app, /heading\.textContent = "Thinking"/);
   assert.doesNotMatch(app, /payload\.type === "status" && typeof payload\.message/);
   assert.match(app, /payload\.type === "reset"/);
 });
@@ -57,7 +58,7 @@ test("simple low-risk chats skip the second model call while high-impact request
 });
 
 test("a delivered reply survives a conversation-history refresh error", () => {
-  const sendStart = app.indexOf("async function sendMessage(text) {");
+  const sendStart = app.indexOf("async function sendMessage(text, options) {");
   const sendEnd = app.indexOf("\n  // Public API Library", sendStart);
   const send = app.slice(sendStart, sendEnd);
   assert.match(send, /let responseCompleted = false;/);
@@ -71,7 +72,7 @@ test("coding uses a fast provider first and fallback attempts are bounded", () =
   const reasoningStart = edge.indexOf('} else if (task === "reasoning") {', codingStart);
   const coding = edge.slice(codingStart, reasoningStart);
   assert.ok(coding.includes('preferred = ["groq", "gemini", "openrouter"'));
-  assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 22000 : index === 0 ? 12000 : 7500;"));
+  assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 15000 : 12000;"));
   assert.ok(edge.includes(").slice(0, 3);"), "review retries up to three alternate providers");
   assert.ok(edge.includes("perReviewerTimeoutMs, reviewSystem"));
 });
