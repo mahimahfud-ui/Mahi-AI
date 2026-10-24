@@ -2119,7 +2119,7 @@ function shouldRequireIndependentReview(task: string, prompt: string): boolean {
 function shouldFailClosedWhenReviewUnavailable(prompt: string): boolean {
   // For medical, legal, financial, emergency, self-harm, and weapon-related requests,
   // keep the existing fail-closed policy when independent verification is unavailable.
-  return /\\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(String(prompt || ""));
+  return /\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(String(prompt || ""));
 }
 
 async function independentlyReviewAnswer(
