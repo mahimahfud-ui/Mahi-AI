@@ -11,6 +11,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Reject incomplete upgrade pack
+        run: |
+          test -s tools/backend_block.ts || (echo "::error::Missing full tools/backend_block.ts; upload the complete upgrade pack first." && exit 1)
+          test -s public/claude-features.js || (echo "::error::Missing full public/claude-features.js; upload the complete upgrade pack first." && exit 1)
+          if grep -q "app.js partial - use full apply_upgrade from pack" tools/apply_upgrade.py; then
+            echo "::error::tools/apply_upgrade.py is a known partial placeholder. Replace it with the full ZIP version before applying."
+            exit 1
+          fi
+          if grep -q "Placeholder - full CSS from pack" public/claude-ui.css; then
+            echo "::error::public/claude-ui.css is a placeholder. Replace it with the full ZIP version before applying."
+            exit 1
+          fi
       - run: python3 tools/apply_upgrade.py
       - name: Syntax check
         run: |
