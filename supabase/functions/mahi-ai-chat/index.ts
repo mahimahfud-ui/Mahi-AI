@@ -454,7 +454,9 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     // Gemini has native Google Search, URL Context, and code-execution tool support.
     preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "coding") {
-    preferred = ["openrouter", "groq", "gemini", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    // Groq has been the fastest healthy coding route in production logs; put it first
+    // so a stalled OpenRouter request cannot delay ordinary first responses by 30 seconds.
+    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "reasoning") {
     preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "creative") {
@@ -1841,10 +1843,11 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
 async function independentlyReviewAnswer(
   available: string[], originalPrompt: string, contextText: string, draft: string, task: string
 ): Promise<{ answer: string; reviewer: string | null }> {
-  // Review only with another eligible non-paid provider; retry alternatives if one is unhealthy.
+  // Review at most one answer using a short deadline. This must not add a second long
+  // provider cascade to the user's reply path.
   const reviewers = available.filter((name) =>
     name !== "openai" && name !== "anthropic" && providerIsConfigured(name) && !providerIsCoolingDown(name)
-  );
+  ).slice(0, 1);
   if (!reviewers.length || draft.length > 30000) return { answer: draft, reviewer: null };
   const reviewSystem = qualityReviewSystem();
   const reviewMessage = [
@@ -1855,7 +1858,7 @@ async function independentlyReviewAnswer(
   ].join("\n\n---\n\n");
   for (const reviewer of reviewers) {
     try {
-      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem);
+      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 4500, reviewSystem);
       rememberProviderSuccess(reviewer);
       const parsed = parseReviewedAnswer(result.text);
       if (!parsed || !parsed.answer.trim()) continue;
@@ -1920,7 +1923,9 @@ async function streamChatResponse(
             break;
           }
           const providersLeft = available.length - index;
-          const providerBudget = Math.max(7000, Math.min(30000, Math.floor(remaining / providersLeft)));
+          const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution";
+          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 14000 : 9000;
+          const providerBudget = Math.max(6000, Math.min(maxAttemptMs, Math.floor(remaining / providersLeft)));
           const provider = available[index];
           const providerStartedAt = Date.now();
           sseEvent(controller, encoder, {
@@ -2016,8 +2021,8 @@ async function streamChatResponse(
         const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
         const contextText = messages[messages.length - 1]?.content || originalPrompt;
         const reviewProviders = available.filter((name) => name !== chosen!.provider && name !== "openai" && name !== "anthropic");
-        if (!cancelled && reviewProviders.length && task !== "web_research" && task !== "code_execution" &&
-            !hasInlineAttachments && chosen.text.length <= 30000) {
+        if (!cancelled && reviewProviders.length && (task === "reasoning" || task === "coding") &&
+            !hasInlineAttachments && chosen.text.length >= 250 && chosen.text.length <= 30000) {
           sseEvent(controller, encoder, { type: "status", message: "Checking the answer for accuracy and completeness…" });
           const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task);
           finalAnswer = review.answer;
