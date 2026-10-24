@@ -40,6 +40,18 @@
     if (t) { t.title = "Settings & preferences"; t.setAttribute("aria-label", "Settings & preferences"); }
   }
 
-  const init = () => { socialToBrand(); toolMenu(); settingsToProfile(); };
+  function settingsPopover() {            // close Settings on outside click / Esc
+    const t = $("#toggleSettings"), p = $("#settingsPanel");
+    if (!t || !p) return;
+    const close = () => { if (!p.hidden) { p.hidden = true; t.setAttribute("aria-expanded", "false"); } };
+    document.addEventListener("pointerdown", (e) => { if (!p.hidden && !p.contains(e.target) && !t.contains(e.target)) close(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+  }
+
+  function fixButtons() {                 // buttons outside forms default to type=button (no accidental submits)
+    document.querySelectorAll("button:not([type])").forEach((b) => { if (!b.closest("form")) b.type = "button"; });
+  }
+
+  const init = () => { socialToBrand(); toolMenu(); settingsToProfile(); settingsPopover(); fixButtons(); };
   document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", init) : init();
 })();
