@@ -24,7 +24,7 @@ test("chat shows Thinking before session setup and ignores backend status text",
 
 test("Edge Function verifies provider answers before streaming the accepted answer", () => {
   const start = edge.indexOf("async function streamChatResponse(");
-  const end = edge.indexOf("\\nDeno.serve", start);
+  const end = edge.indexOf("\nDeno.serve", start);
   const stream = edge.slice(start, end);
   assert.ok(start >= 0 && end > start, "streamChatResponse must exist");
   const loop = stream.indexOf("while (!cancelled)");
