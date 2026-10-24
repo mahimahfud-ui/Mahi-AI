@@ -910,7 +910,11 @@ function openRouterModel(task: string): string {
 
 function providerRuntimeGuidance(provider: string, task: string): string {
   const routes: Record<string, { label: string; model: string; qualification?: string }> = {
-    gemini: { label: "Google Gemini", model: envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite" },
+    gemini: {
+      label: "Google Gemini",
+      model: envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite",
+      qualification: "If the configured model is rate-limited or unavailable, this response may be retried with gemini-3.8-flash or gemini-3.6-flash. The runtime does not currently record which Gemini model succeeded, so do not claim the configured model was definitely the exact model used."
+    },
     groq: { label: "Groq", model: envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b" },
     openrouter: {
       label: "OpenRouter",
