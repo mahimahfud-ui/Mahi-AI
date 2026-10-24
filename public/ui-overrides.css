@@ -29,3 +29,29 @@ html[data-theme="light"] .error-banner:not([hidden]) { color: #9f2538; backgroun
   .sidebar { overscroll-behavior-y: contain; }
   .topbar .topbar-title .small-mark { object-fit: cover; object-position: center; }
 }
+
+
+/* Keep the official logo visually separated from both light and dark themes. */
+.brand-row .brand-logo {
+  display: block;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  object-fit: cover;
+  object-position: center;
+  border: 2px solid #f8fafc;
+  border-radius: 11px;
+  background: #080a10;
+  box-shadow:
+    0 0 0 2px #171b29,
+    0 0 0 3px rgba(255,255,255,.38),
+    0 6px 17px rgba(0,0,0,.28);
+  filter: none;
+}
+html[data-theme="light"] .brand-row .brand-logo {
+  border-color: #ffffff;
+  box-shadow:
+    0 0 0 2px #20283a,
+    0 0 0 3px rgba(255,255,255,.95),
+    0 6px 15px rgba(24,34,55,.19);
+}
