@@ -1656,23 +1656,43 @@
   }
   async function sendMessage(text, options) {
     const sendOptions = options || {};
-    if (busy || (!text.trim() && !pendingFiles.length)) return;
+    const editRequest = sendOptions.replacement || pendingEdit;
+    const rollbackMessages = editRequest
+      ? (sendOptions.previousMessages || pendingEdit?.previousMessages || currentMessages.slice())
+      : null;
+    const typedText = String(text == null ? "" : text);
+    if (busy || (!typedText.trim() && !pendingFiles.length)) return;
+    if (editRequest && pendingFiles.length) {
+      setError("Remove selected attachments before editing or regenerating a saved message.");
+      return;
+    }
+    if (editRequest && (!editRequest.createdAt || !editRequest.content || !Number.isInteger(editRequest.index))) {
+      setError("This message cannot be replaced. Refresh the chat and try again.");
+      return;
+    }
     setError("");
     const selectedFiles = pendingFiles.slice();
-    const userText = text.trim() || (selectedFiles.length === 1
+    const userText = typedText.trim() || (selectedFiles.length === 1
       ? "Please analyze the attached file."
       : "Please analyze the attached files.");
+    if (editRequest) {
+      currentMessages = rollbackMessages.slice(0, editRequest.index);
+      renderCurrentMessages();
+      pendingEdit = null;
+      if (ui.draftNotice) ui.draftNotice.hidden = true;
+    }
     ui.input.value = "";
     ui.input.style.height = "auto";
     updateCounter();
     showWelcome(false);
     currentMessages.push({ role: "user", content: userText });
-    addMessage("user", sendOptions.displayText || userText, { files: selectedFiles });
-    const typing = addMessage("assistant", "", { typing: true });
+    addMessage("user", sendOptions.displayText || userText, { files: selectedFiles, messageIndex: currentMessages.length - 1 });
+    const typing = addMessage("assistant", "", { typing: true, messageIndex: currentMessages.length });
     setBusy(true);
+    activeRequestController = new AbortController();
     let uploadedAttachments = [];
     let responseCompleted = false;
-    let fullText = "";
+    let fullText = ""; 
     try {
       if (!session) await ensureSession();
       uploadedAttachments = await uploadPendingAttachments(selectedFiles);
@@ -1682,13 +1702,19 @@
       if (!accessToken) throw new Error("MahiCloud: Your guest session expired. Reload the page and try again.");
       const response = await fetch(cfg.supabaseUrl + "/functions/v1/mahi-ai-chat", {
         method: "POST",
+        signal: activeRequestController.signal,
         headers: {
           "Content-Type": "application/json",
           "apikey": cfg.supabasePublishableKey,
           "Authorization": "Bearer " + accessToken
         },
         body: JSON.stringify({
-          conversation_id: conversationId,
+          conversation_id: temporaryChatMode ? null : conversationId,
+          temporary_chat: temporaryChatMode,
+          ...(editRequest ? {
+            edit_from_created_at: editRequest.createdAt,
+            edit_from_content: editRequest.content
+          } : {}),
           messages: currentMessages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content })),
           attachments: uploadedAttachments
         })
@@ -1770,16 +1796,31 @@
       delete typing.dataset.typing;
       addSpeechActions(typing, fullText);
       currentMessages.push({ role: "assistant", content: fullText });
+      typing.dataset.messageIndex = String(currentMessages.length - 1);
+      addMessageControls(typing, "assistant", fullText, currentMessages.length - 1);
+      pendingEdit = null;
+      if (ui.draftNotice) ui.draftNotice.hidden = true;
       if (voiceModeActive) await speakText(fullText, true, detectedVoiceLanguage);
       pendingFiles = [];
       renderAttachmentList();
       updateCounter();
-      try {
-        await refreshConversations();
-      } catch (historyError) {
-        // A delivered answer must not be rolled back just because history refresh failed.
-        console.warn("MahiCloud reply delivered; conversation history refresh failed:",
-          historyError instanceof Error ? historyError.message.slice(0, 160) : "Unknown error");
+      if (temporaryChatMode) {
+        if (uploadedAttachments.length) {
+          try {
+            await client.storage.from("mahi-ai-attachments").remove(uploadedAttachments.map((item) => item.path));
+          } catch (cleanupError) {
+            console.warn("Temporary chat attachment cleanup failed:", cleanupError instanceof Error ? cleanupError.message.slice(0, 120) : "Unknown error");
+          }
+        }
+      } else {
+        try {
+          await refreshConversations();
+          await refreshMessageMetadata();
+        } catch (historyError) {
+          // A delivered answer must not be rolled back just because history refresh failed.
+          console.warn("MahiCloud reply delivered; conversation history refresh failed:",
+            historyError instanceof Error ? historyError.message.slice(0, 160) : "Unknown error");
+        }
       }
     } catch (error) {
       if (responseCompleted) {
@@ -1794,6 +1835,10 @@
         if (currentMessages[currentMessages.length - 1]?.role !== "assistant") {
           currentMessages.push({ role: "assistant", content: fullText });
         }
+        typing.dataset.messageIndex = String(currentMessages.length - 1);
+        addMessageControls(typing, "assistant", fullText, currentMessages.length - 1);
+        pendingEdit = null;
+        if (ui.draftNotice) ui.draftNotice.hidden = true;
         pendingFiles = [];
         renderAttachmentList();
         updateCounter();
@@ -1802,24 +1847,31 @@
         return;
       }
       typing.remove();
-      currentMessages.pop();
       if (uploadedAttachments.length) {
         try { await client.storage.from("mahi-ai-attachments").remove(uploadedAttachments.map((item) => item.path)); } catch (_) {}
       }
-      setError(error instanceof Error && error.message.startsWith("MahiCloud: ")
-        ? error.message.slice(9) : plainError(error));
+      if (rollbackMessages) {
+        currentMessages = rollbackMessages.slice();
+        pendingEdit = editRequest;
+        if (ui.draftNotice) ui.draftNotice.hidden = false;
+        renderCurrentMessages();
+      } else {
+        currentMessages.pop();
+        if (!currentMessages.length) {
+          showWelcome(true);
+        } else {
+          renderCurrentMessages();
+        }
+      }
+      setError(error && error.name === "AbortError"
+        ? "Generation stopped. Your draft is available to retry."
+        : (error instanceof Error && error.message.startsWith("MahiCloud: ")
+          ? error.message.slice(9) : plainError(error)));
       // Keep the draft and selected files available so the user can retry.
       ui.input.value = userText;
       updateCounter();
-      if (!currentMessages.length) {
-        showWelcome(true);
-      } else {
-        ui.messages.replaceChildren();
-        ui.welcome.hidden = true;
-        ui.messages.hidden = false;
-        currentMessages.forEach((m, index) => addMessage(m.role, m.content, { messageIndex: index, userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
-      }
     } finally {
+      activeRequestController = null;
       setBusy(false);
       ui.input.disabled = false;
       if (voiceModeActive) {
