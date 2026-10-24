@@ -3,7 +3,7 @@
   const cfg = window.MAHI_AI_CONFIG;
   const $ = (id) => document.getElementById(id);
   const ui = {
-    sidebar: $("sidebar"), scrim: $("mobileScrim"), chatList: $("chatList"),
+    sidebar: $("sidebar"), scrim: $("mobileScrim"), chatList: $("chatList"), conversationSearch: $("conversationSearch"),
     welcome: $("welcome"), messages: $("messages"), form: $("chatForm"),
     input: $("promptInput"), send: $("sendButton"), error: $("errorBanner"),
     session: $("sessionLabel"), charCount: $("charCount"),
@@ -77,18 +77,18 @@
     } else {
       if (!/<!doctype\s+html/i.test(doc)) doc = "<!doctype html>\n" + doc;
       if (!/<head\b/i.test(doc)) {
-        doc = doc.replace(/<html\b[^>]*>/i, '  function addMessage(role, content, options) {<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
+        doc = doc.replace(/<html\b[^>]*>/i, (htmlTag) => htmlTag + '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
       } else {
-        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {<meta charset="utf-8">');
-        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {<meta name="viewport" content="width=device-width, initial-scale=1">');
+        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + '<meta charset="utf-8">');
+        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + '<meta name="viewport" content="width=device-width, initial-scale=1">');
       }
     }
     const styles = (cssBlocks || []).filter(Boolean);
     if (styles.length) {
       const styleText = '<style>\n' + styles.join('\n\n').replace(/<\/style/gi, '<\\/style') + '\n</style>';
       if (/<\/head>/i.test(doc)) doc = doc.replace(/<\/head>/i, styleText + '</head>');
-      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {' + styleText);
-      else doc = doc.replace(/<html\b[^>]*>/i, '  function addMessage(role, content, options) {<head>' + styleText + '</head>');
+      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + styleText);
+      else doc = doc.replace(/<html\b[^>]*>/i, (htmlTag) => htmlTag + '<head>' + styleText + '</head>');
     }
     const scripts = (jsBlocks || []).filter(Boolean);
     if (scripts.length) {
@@ -171,6 +171,86 @@
     loadPreview();
   }
 
+
+  function suggestedFollowUps(userPrompt, answer) {
+    const source = (String(userPrompt || "") + "\n" + String(answer || "")).toLowerCase();
+    const codeFence = String.fromCharCode(96).repeat(3);
+    if (source.includes(codeFence) || /\b(code|function|javascript|typescript|python|sql|debug|stack trace|api|html|css|react|test suite)\b/.test(source)) {
+      return [
+        { label: "Add tests", prompt: "Add practical tests and edge cases for the solution above." },
+        { label: "Explain the approach", prompt: "Explain the approach behind the solution above, including important trade-offs." }
+      ];
+    }
+    if (/\b(email|essay|draft|rewrite|proposal|cover letter|blog post|copywriting|tone|message to)\b/.test(source)) {
+      return [
+        { label: "Try another tone", prompt: "Create an alternative version of the previous writing with a different, appropriate tone." },
+        { label: "Make it concise", prompt: "Make the previous writing more concise while keeping the important meaning." }
+      ];
+    }
+    if (/\b(explain|learn|concept|why|how does|what is|teach|understand|example)\b/.test(source)) {
+      return [
+        { label: "Show an example", prompt: "Give me one concrete, real-world example that makes the previous explanation easier to understand." },
+        { label: "Check my understanding", prompt: "Ask me three short questions to check my understanding of the previous explanation, one at a time." }
+      ];
+    }
+    return [
+      { label: "Make a step-by-step plan", prompt: "Turn the previous answer into a practical step-by-step plan, ordered by priority." },
+      { label: "What comes next?", prompt: "Based on the previous answer, what is the most useful next step and why?" }
+    ];
+  }
+
+  function renderAssistantActions(messageNode, body, content, userPrompt) {
+    if (!messageNode || !body || messageNode.dataset.actionsRendered === "true" || !String(content || "").trim()) return;
+    const toolbar = document.createElement("div");
+    toolbar.className = "message-actions";
+    toolbar.setAttribute("aria-label", "Answer actions");
+    const source = String(content || "").toLowerCase();
+    const codeLike = /\b(code|function|javascript|typescript|python|sql|debug|stack trace|api|html|css|react|test suite)\b/.test(source) ||
+      source.includes(String.fromCharCode(96).repeat(3));
+    const actions = [
+      codeLike
+        ? { label: "Fix code", prompt: "Review the code in your previous answer for bugs, syntax errors, edge cases, and compatibility issues. Provide a corrected complete version and briefly explain the important fixes. Do not claim to have run it unless you actually did." }
+        : { label: "Improve", prompt: "Improve your previous answer. Make it clearer, more precise, and better organized. Preserve its meaning, correct issues you notice, and avoid unsupported claims." },
+      { label: "Explain", prompt: "Explain your previous answer in simpler language, step by step, and include a concrete example." },
+      { label: "Summarize", prompt: "Summarize your previous answer into the essential points, using concise bullets when useful." },
+      { label: "Continue", prompt: "Continue from where your previous answer ended. Avoid repeating content already covered." }
+    ];
+    const runAction = (prompt) => {
+      if (busy) return;
+      if (ui.input.value.trim() || pendingFiles.length) {
+        setError("Send your current draft or remove its attachments before running an answer action.");
+        return;
+      }
+      setError("");
+      sendMessage(prompt);
+    };
+    actions.forEach((action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "message-action";
+      button.textContent = action.label;
+      button.setAttribute("aria-label", action.label + " the previous answer");
+      button.addEventListener("click", () => runAction(action.prompt));
+      toolbar.appendChild(button);
+    });
+    body.appendChild(toolbar);
+
+    const followUps = suggestedFollowUps(userPrompt, content);
+    const followUpRow = document.createElement("div");
+    followUpRow.className = "message-actions message-followups";
+    followUpRow.setAttribute("aria-label", "Suggested follow-ups");
+    followUps.forEach((suggestion) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "message-action message-followup";
+      button.textContent = suggestion.label;
+      button.addEventListener("click", () => runAction(suggestion.prompt));
+      followUpRow.appendChild(button);
+    });
+    body.appendChild(followUpRow);
+    messageNode.dataset.actionsRendered = "true";
+  }
+
   function addMessage(role, content, options) {
     const opts = options || {};
     const empty = $("welcome");
@@ -215,11 +295,13 @@
         if (article.isConnected) {
           article.innerHTML = safeMarkdown(resolved);
           renderLivePreview(node, article, content);
+          if (role === "assistant" && !opts.typing) renderAssistantActions(node, body, content, opts.userPrompt || "");
         }
       }).catch(() => {
         if (article.isConnected) {
           article.innerHTML = safeMarkdown(content.replace(/!\[Generated image\]\(mahi-storage:\/\/[^)]+\)/g, "[Generated image is stored in this chat.]"));
           renderLivePreview(node, article, content);
+          if (role === "assistant" && !opts.typing) renderAssistantActions(node, body, content, opts.userPrompt || "");
         }
       });
     }
@@ -487,14 +569,18 @@
   }
   function renderConversationList() {
     ui.chatList.replaceChildren();
-    if (!conversations.length) {
+    const query = String(ui.conversationSearch?.value || "").trim().toLowerCase();
+    const visibleConversations = conversations.filter((conversation) =>
+      String(conversation.title || "New chat").toLowerCase().includes(query)
+    );
+    if (!visibleConversations.length) {
       const empty = document.createElement("div");
       empty.className = "empty-history";
-      empty.textContent = "Your conversations will appear here.";
+      empty.textContent = query ? "No chat titles match your search." : "Your conversations will appear here.";
       ui.chatList.appendChild(empty);
       return;
     }
-    conversations.forEach((conversation) => {
+    visibleConversations.forEach((conversation) => {
       const row = document.createElement("div");
       row.className = "chat-item" + (conversation.id === conversationId ? " active" : "");
       const open = document.createElement("button");
@@ -658,6 +744,7 @@
       messageContent.innerHTML = safeMarkdown(resolvedReply);
       renderLivePreview(typing, messageContent, fullText);
       delete typing.dataset.typing;
+      renderAssistantActions(typing, typing.querySelector(".message-body"), fullText, userText);
       currentMessages.push({ role: "assistant", content: fullText });
       pendingFiles = [];
       renderAttachmentList();
@@ -937,6 +1024,122 @@
     ui.input.style.height = "auto";
     ui.input.style.height = Math.min(ui.input.scrollHeight, 180) + "px";
   }
+
+  const commandUi = {
+    overlay: $("commandPalette"),
+    search: $("commandSearch"),
+    items: $("commandItems"),
+    close: $("closeCommandPalette"),
+    visibleCommands: []
+  };
+  let commandPalettePriorFocus = null;
+  let commandActiveIndex = 0;
+  const COMMANDS = [
+    { id: "new-chat", label: "Start a new chat", description: "Open a fresh conversation", icon: "＋", keywords: "new fresh clear", shortcut: "Alt ⇧ N" },
+    { id: "search-chats", label: "Search conversations", description: "Find a chat by its title", icon: "⌕", keywords: "find search history recent" },
+    { id: "focus-composer", label: "Focus message box", description: "Jump straight to the composer", icon: "✎", keywords: "write prompt message input" },
+    { id: "refresh-chats", label: "Refresh recents", description: "Reload conversation history", icon: "↻", keywords: "reload sync update" },
+    { id: "api-library", label: "Open Public API Library", description: "Browse APIs for your next project", icon: "⌘", keywords: "developer tools directory" }
+  ];
+
+  function setCommandActiveIndex(index) {
+    const count = commandUi.visibleCommands.length;
+    if (!count) return;
+    commandActiveIndex = (index + count) % count;
+    commandUi.items.querySelectorAll(".command-item").forEach((item, itemIndex) => {
+      const active = itemIndex === commandActiveIndex;
+      item.classList.toggle("is-active", active);
+      item.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    const activeItem = commandUi.items.querySelectorAll(".command-item")[commandActiveIndex];
+    if (activeItem) activeItem.scrollIntoView({ block: "nearest" });
+  }
+
+  function renderCommandItems() {
+    if (!commandUi.items || !commandUi.search) return;
+    const query = commandUi.search.value.trim().toLowerCase();
+    commandUi.visibleCommands = COMMANDS.filter((command) =>
+      [command.label, command.description, command.keywords].join(" ").toLowerCase().includes(query)
+    );
+    commandActiveIndex = 0;
+    commandUi.items.replaceChildren();
+    if (!commandUi.visibleCommands.length) {
+      const empty = document.createElement("div");
+      empty.className = "command-empty";
+      empty.textContent = "No commands found. Try a different search.";
+      commandUi.items.appendChild(empty);
+      return;
+    }
+    commandUi.visibleCommands.forEach((command, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "command-item" + (index === 0 ? " is-active" : "");
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", index === 0 ? "true" : "false");
+      const icon = document.createElement("span");
+      icon.className = "command-item-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = command.icon;
+      const copy = document.createElement("span");
+      copy.className = "command-item-copy";
+      const title = document.createElement("strong");
+      title.textContent = command.label;
+      const description = document.createElement("small");
+      description.textContent = command.description;
+      copy.append(title, description);
+      button.append(icon, copy);
+      if (command.shortcut) {
+        const shortcut = document.createElement("kbd");
+        shortcut.textContent = command.shortcut;
+        button.appendChild(shortcut);
+      }
+      button.addEventListener("mouseenter", () => setCommandActiveIndex(index));
+      button.addEventListener("click", () => runCommand(command.id));
+      commandUi.items.appendChild(button);
+    });
+  }
+
+  function openCommandPalette() {
+    if (!commandUi.overlay) return;
+    commandPalettePriorFocus = document.activeElement;
+    closeMobileSidebar();
+    commandUi.overlay.hidden = false;
+    commandUi.search.value = "";
+    renderCommandItems();
+    window.requestAnimationFrame(() => commandUi.search.focus());
+  }
+
+  function closeCommandPalette(restoreFocus = true) {
+    if (!commandUi.overlay || commandUi.overlay.hidden) return;
+    commandUi.overlay.hidden = true;
+    if (restoreFocus && commandPalettePriorFocus && typeof commandPalettePriorFocus.focus === "function") {
+      commandPalettePriorFocus.focus();
+    }
+  }
+
+  function runCommand(id) {
+    closeCommandPalette(false);
+    switch (id) {
+      case "new-chat":
+        beginNewChat();
+        break;
+      case "search-chats":
+        if (ui.conversationSearch) ui.conversationSearch.focus();
+        break;
+      case "focus-composer":
+        ui.input.focus();
+        break;
+      case "refresh-chats":
+        refreshConversations().catch((error) => setError(plainError(error)));
+        break;
+      case "api-library":
+        openApiDirectory();
+        break;
+      default:
+        break;
+    }
+  }
+
   async function boot() {
     if (!cfg || !cfg.supabaseUrl || !cfg.supabasePublishableKey ||
         !window.supabase || !window.supabase.createClient) {
@@ -970,6 +1173,10 @@
     ui.fileInput.value = "";
   });
   ui.input.addEventListener("input", updateCounter);
+  if (ui.conversationSearch) ui.conversationSearch.addEventListener("input", renderConversationList);
+  if (commandUi.search) commandUi.search.addEventListener("input", renderCommandItems);
+  if (commandUi.close) commandUi.close.addEventListener("click", () => closeCommandPalette());
+  if (commandUi.overlay) commandUi.overlay.querySelectorAll("[data-command-close]").forEach((el) => el.addEventListener("click", () => closeCommandPalette()));
   ui.input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
@@ -997,9 +1204,44 @@
     });
   });
   document.addEventListener("keydown", (event) => {
+    if (commandUi.overlay && !commandUi.overlay.hidden) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCommandPalette();
+        return;
+      }
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setCommandActiveIndex(commandActiveIndex + 1);
+        return;
+      }
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setCommandActiveIndex(commandActiveIndex - 1);
+        return;
+      }
+      if (event.key === "Enter") {
+        event.preventDefault();
+        const command = commandUi.visibleCommands[commandActiveIndex];
+        if (command) runCommand(command.id);
+        return;
+      }
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        closeCommandPalette();
+        return;
+      }
+      return;
+    }
     if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
+      openCommandPalette();
+      return;
+    }
+    if (event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "n") {
+      event.preventDefault();
       beginNewChat();
+      return;
     }
     if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); }
   });

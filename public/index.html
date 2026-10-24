@@ -25,13 +25,14 @@
         <div class="brand-copy"><strong>Mahi AI</strong><span>YOUR EVERYDAY ASSISTANT</span></div>
         <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu">×</button>
       </div>
-      <button class="new-chat" id="newChat"><span class="plus">＋</span><span>New chat</span><kbd>Ctrl K</kbd></button>
+      <button class="new-chat" id="newChat"><span class="plus">＋</span><span>New chat</span><kbd>Alt ⇧ N</kbd></button>
       <button class="api-library-button" id="openApiExplorer" type="button" aria-haspopup="dialog" aria-controls="apiExplorer">
         <span class="api-library-icon" aria-hidden="true">⌘</span>
         <span>Public API Library</span>
         <span class="api-library-arrow" aria-hidden="true">↗</span>
       </button>
       <div class="history-heading"><span>RECENTS</span><button class="text-button" id="refreshChats" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
+      <label class="history-search"><span aria-hidden="true">⌕</span><input id="conversationSearch" type="search" placeholder="Search chat titles…" autocomplete="off" aria-label="Search conversations"></label>
       <nav id="chatList" class="chat-list" aria-label="Recent conversations"></nav>
       <div class="sidebar-bottom">
         <div class="privacy-note"><span class="status-dot"></span><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
@@ -76,6 +77,29 @@
     </main>
   </div>
   <div class="mobile-scrim" id="mobileScrim"></div>
+  <div class="command-palette" id="commandPalette" hidden>
+    <div class="command-palette-backdrop" data-command-close></div>
+    <section class="command-palette-panel" role="dialog" aria-modal="true" aria-labelledby="commandPaletteTitle" aria-describedby="commandPaletteHelp">
+      <header class="command-palette-header">
+        <div class="command-palette-heading">
+          <span class="command-palette-mark" aria-hidden="true">⌘</span>
+          <div><h2 id="commandPaletteTitle">Command palette</h2><p>Jump anywhere in Mahi AI</p></div>
+        </div>
+        <button class="icon-button command-palette-close" id="closeCommandPalette" type="button" aria-label="Close command palette" title="Close">×</button>
+      </header>
+      <label class="command-search">
+        <span aria-hidden="true">⌕</span>
+        <input id="commandSearch" type="search" placeholder="Search commands…" autocomplete="off" aria-label="Search commands">
+        <kbd>ESC</kbd>
+      </label>
+      <div class="command-items" id="commandItems" role="listbox" aria-label="Commands"></div>
+      <footer class="command-palette-footer" id="commandPaletteHelp">
+        <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+        <span><kbd>↵</kbd> Run command</span>
+        <span><kbd>Esc</kbd> Close</span>
+      </footer>
+    </section>
+  </div>
   <div class="api-explorer" id="apiExplorer" hidden>
     <div class="api-explorer-scrim" data-api-close></div>
     <section class="api-explorer-panel" role="dialog" aria-modal="true" aria-labelledby="apiExplorerTitle" aria-describedby="apiExplorerDescription">
