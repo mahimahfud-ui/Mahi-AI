@@ -29,9 +29,7 @@
   const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (_) {} };
 
   /* ---------- 3. APPLY ---------- */
-  const lum = (hex) => (c => .2126 * c(n >> 16 & 255) + .7152 * c(n >> 8 & 255) + .0722 * c(n & 255))(
-    (v) => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }
-  );
+  const lum = (hex) => { const n = parseInt(hex.slice(1), 16), f = (c) => { c /= 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }; return .2126 * f(n >> 16 & 255) + .7152 * f(n >> 8 & 255) + .0722 * f(n & 255); };
   let prevMode;
   const resolve = (s) => s.id === "custom" && s.custom ? { ...s.custom, name: "Custom", mode: lum(s.custom.bg) > .4 ? "light" : "dark" } : THEMES.find((t) => t.id === s.id);
 
