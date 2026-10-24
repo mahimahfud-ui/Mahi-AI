@@ -2435,13 +2435,44 @@ async function independentlyReviewAnswer(
   return { answer: "", reviewer: lastReviewer, verdict: "retry" };
 }
 
-function allProvidersFailedMessage(prompt: string): string {
+function allProvidersFailedMessage(prompt: string, failures: string[] = []): string {
   const source = String(prompt || "");
+  const failureText = failures.join(" ").toLowerCase();
+  const hasQuotaLimit = /\b429\b|rate.?limit|quota|tokens? per day|too many requests/.test(failureText);
+  const hasInsufficientCredits = /\b402\b|insufficient.{0,50}(?:balance|credits?)|(?:balance|credits?).{0,50}insufficient|no credits remaining|billing limit/.test(failureText);
+  const hasCredentialProblem = /\b401\b|\b403\b|invalid api key|unauthorized|forbidden|permission denied/.test(failureText);
   const banglish = /\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbo|parbe|hobe|nai|lagbe|kibhabe|keno|bujhte|bolo|dao|daw|ache|hoy|hocche|chai|jante chai)\b/i.test(source);
-  if (/[\u0980-\u09FF]/.test(source) || banglish) {
-    return "দুঃখিত, প্রশ্নটির নির্ভরযোগ্য উত্তর তৈরি ও যাচাই করতে পারিনি। অনুমান করে ভুল তথ্য দেওয়ার বদলে থামছি। প্রশ্নটি একটু অন্যভাবে লিখে আবার চেষ্টা করো।";
+  const isBangla = /[\u0980-\u09FF]/.test(source) || banglish;
+
+  // Never tell the user to rephrase when the logged failure is provider quota or billing.
+  if (isBangla && hasQuotaLimit && hasInsufficientCredits) {
+    return "তোমার প্রশ্ন বা coding task-এ সমস্যা নেই, আর Friendly setting-ও কারণ নয়। বর্তমানে AI provider-গুলোর quota/rate limit শেষ এবং কিছু provider-এর credits/balance নেই। Prompt বদলালে ঠিক হবে না—provider quota reset হওয়া/credits যোগ হওয়া পর্যন্ত অপেক্ষা করো অথবা অন্য একটি working provider API key যোগ করো।";
   }
-  return "Sorry, I couldn't produce and verify a reliable answer after trying the available AI models. I don't want to guess and risk misleading you. Please rephrase the question or try again.";
+  if (isBangla && hasQuotaLimit) {
+    return "তোমার প্রশ্নটি reject করা হয়নি। বর্তমানে configured AI provider-গুলোর quota/rate limit শেষ। Prompt বদলালে এটি ঠিক হবে না—quota reset হওয়া পর্যন্ত অপেক্ষা করো অথবা অন্য একটি working provider API key যোগ করো।";
+  }
+  if (isBangla && hasInsufficientCredits) {
+    return "তোমার প্রশ্নটি reject করা হয়নি। AI provider-এর credits/balance অপর্যাপ্ত। ওই provider-এ credits/billing ঠিক করো অথবা অন্য একটি working provider API key যোগ করো।";
+  }
+  if (isBangla && hasCredentialProblem) {
+    return "AI provider-এর API key, permission বা model access-এ সমস্যা হয়েছে। Supabase Edge Function Secrets ও provider account access যাচাই করো।";
+  }
+  if (isBangla) {
+    return "তোমার task reject করা হয়নি—এই মুহূর্তে configured AI provider-গুলো উত্তর দিতে পারেনি। Provider access, model availability ও Supabase function logs পরীক্ষা করে আবার চেষ্টা করো।";
+  }
+  if (hasQuotaLimit && hasInsufficientCredits) {
+    return "Your prompt or coding task was not rejected, and response style is not the cause. The configured AI providers are out of quota/rate limit and some have insufficient credits/balance. Rephrasing will not fix this. Wait for quota reset, restore provider credits, or add another working provider API key.";
+  }
+  if (hasQuotaLimit) {
+    return "Your task was not rejected. The configured AI providers have reached their quota or rate limits. Rephrasing will not fix this. Wait for quota reset or add another working provider API key.";
+  }
+  if (hasInsufficientCredits) {
+    return "Your task was not rejected. An AI provider has insufficient credits/balance. Restore its billing balance or add another working provider API key.";
+  }
+  if (hasCredentialProblem) {
+    return "An AI provider could not authenticate or lacks permission/model access. Check the provider API key and access settings in Supabase Edge Function Secrets.";
+  }
+  return "Your task was not rejected. The configured AI providers could not complete this request. Check provider credentials, model availability, quotas, billing, and Supabase function logs before retrying.";
 }
 
 async function streamChatResponse(
@@ -2688,7 +2719,7 @@ async function streamChatResponse(
           console.error("All MahiCloud providers failed:", failures.join(" | ").slice(0, 1400));
           sseEvent(controller, encoder, {
             type: "error",
-            message: allProvidersFailedMessage(displayUserText)
+            message: allProvidersFailedMessage(displayUserText, failures)
           });
           return;
         }
