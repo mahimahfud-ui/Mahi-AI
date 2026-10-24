@@ -1,0 +1,624 @@
+/* ==========================================================================
+   Mahi AI — Core Motion System (Part A)
+   --------------------------------------------------------------------------
+   Load AFTER styles.css:  <link rel="stylesheet" href="./motion.css">
+
+   Principles
+   • One orchestrated moment (page load), then motion only answers user
+     actions: open, send, press, focus. No ambient decoration.
+   • Compositor-friendly: animate opacity / transform / translate / scale only.
+     Glows are pseudo-elements whose OPACITY changes, never animated blur radii
+     or large box-shadows.
+   • Entrance animations use `backwards` fill so they never lock `transform`
+     after finishing — existing :hover transforms in styles.css keep working.
+   • The `translate` and `scale` individual properties are used for press and
+     hover feedback so they COMPOSE with the `transform: translateY(-1px)`
+     hover lifts already in styles.css instead of fighting them.
+   • Hover effects are gated behind (hover:hover) to avoid sticky hover on touch.
+   • prefers-reduced-motion: shifts, scales, stagger and all loops are removed.
+
+   Sections
+     1. Tokens              5. Typing / streaming
+     2. Keyframes           6. Buttons, inputs, focus, glow
+     3. Page-load entrance  7. Overlay + error entrances
+     4. Sidebar + scrim     8. Reduced motion
+        Messages (4b)
+   ========================================================================== */
+
+
+/* ==========================================================================
+   1. TOKENS
+   ========================================================================== */
+:root {
+  /* Durations */
+  --mo-dur-instant: 90ms;
+  --mo-dur-fast: 150ms;      /* hover, press, colour changes        */
+  --mo-dur-base: 240ms;      /* focus, small reveals                */
+  --mo-dur-moderate: 360ms;  /* messages, scrim, sidebar close      */
+  --mo-dur-slow: 520ms;      /* sidebar open, modals, page sections */
+  --mo-dur-enter: 760ms;     /* hero moment on first load           */
+  --mo-dur-spring: 560ms;    /* needed for spring curves to settle  */
+
+  /* Easing */
+  --mo-ease-standard: cubic-bezier(.2, 0, 0, 1);      /* confident decelerate   */
+  --mo-ease-out: cubic-bezier(.16, 1, .3, 1);          /* soft expo-out settle   */
+  --mo-ease-in: cubic-bezier(.55, 0, 1, .45);          /* exits                  */
+  --mo-ease-in-out: cubic-bezier(.65, 0, .35, 1);      /* loops, closes          */
+  --mo-spring: cubic-bezier(.34, 1.45, .64, 1);        /* fallback: one overshoot */
+
+  /* Distances / scale */
+  --mo-shift-sm: 6px;
+  --mo-shift-md: 12px;
+  --mo-shift-lg: 20px;
+  --mo-scale-from: .985;
+
+  /* Rhythm */
+  --mo-stagger: 55ms;
+
+  /* Glow colours — derived from --accent #a896ff and --accent2 #6e8bff */
+  --mo-accent-rgb: 168, 150, 255;
+  --mo-accent2-rgb: 110, 139, 255;
+}
+
+/* True spring (damped, ~8% overshoot). Browsers without linear() keep the
+   cubic-bezier fallback above. */
+@supports (transition-timing-function: linear(0, 1)) {
+  :root {
+    --mo-spring: linear(0, .087, .281, .504, .709, .871, .983, 1.049, 1.079, 1.083, 1.072, 1.055, 1.036, 1.02, 1.008, .999, .995, .993, .993, .994, .996, .997, .999, 1, 1, 1);
+  }
+}
+
+
+/* ==========================================================================
+   2. KEYFRAMES  (all end in the element's natural state)
+   ========================================================================== */
+@keyframes mo-fade-in { from { opacity: 0; } }
+
+@keyframes mo-rise {
+  from { opacity: 0; transform: translate3d(0, var(--mo-rise-from, var(--mo-shift-md)), 0); }
+}
+
+@keyframes mo-focus-in {            /* hero headline only: resolves out of a soft blur */
+  from { opacity: 0; filter: blur(10px); transform: translate3d(0, var(--mo-shift-sm), 0); }
+}
+
+@keyframes mo-bloom {
+  from { opacity: 0; transform: scale(.82); }
+}
+
+@keyframes mo-message-in {
+  from { opacity: 0; transform: translate3d(0, 10px, 0) scale(var(--mo-scale-from)); }
+}
+
+@keyframes mo-pop {
+  from { opacity: 0; transform: scale(.7); }
+}
+
+@keyframes mo-panel-in {
+  from { opacity: 0; transform: translate3d(0, var(--mo-shift-lg), 0) scale(.97); }
+}
+
+@keyframes mo-dot {
+  0%, 62%, 100% { transform: translate3d(0, 0, 0) scale(.82); opacity: .4; }
+  30%           { transform: translate3d(0, -4px, 0) scale(1); opacity: 1; }
+}
+
+@keyframes mo-caret {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .25; }
+}
+
+@keyframes mo-ring {
+  0%   { opacity: 0;  transform: scale(.94); }
+  35%  { opacity: .8; }
+  100% { opacity: 0;  transform: scale(1.22); }
+}
+
+@keyframes mo-settle { from { opacity: .55; } }
+
+
+/* ==========================================================================
+   3. PAGE-LOAD ENTRANCE
+   One sequence: shell fades → sidebar items → hero → cards → composer.
+   `html:not(.mo-ready)` = first load; motion.js adds `.mo-ready` after it
+   completes so "New chat" later replays a shorter version of the hero.
+   ========================================================================== */
+
+/* Shell */
+.topbar {
+  animation: mo-fade-in var(--mo-dur-slow) var(--mo-ease-standard) 80ms backwards;
+}
+.composer-wrap {
+  --mo-rise-from: var(--mo-shift-md);
+  animation: mo-rise var(--mo-dur-slow) var(--mo-ease-out) 420ms backwards;
+}
+
+/* Sidebar — desktop only. On mobile it is an off-canvas drawer (section 4)
+   and an entrance transform here would flash it on screen. */
+@media (min-width: 761px) {
+  .sidebar {
+    animation: mo-fade-in var(--mo-dur-slow) var(--mo-ease-standard) backwards;
+  }
+  .sidebar > * {
+    --mo-rise-from: var(--mo-shift-sm);
+    animation: mo-rise var(--mo-dur-moderate) var(--mo-ease-out) backwards;
+    animation-delay: calc(120ms + var(--mo-k, 0) * 50ms);
+  }
+  .sidebar > :nth-child(2) { --mo-k: 1; }
+  .sidebar > :nth-child(3) { --mo-k: 2; }
+  .sidebar > :nth-child(4) { --mo-k: 3; }
+  .sidebar > :nth-child(5) { --mo-k: 4; }
+  .sidebar > :nth-child(6) { --mo-k: 5; }
+}
+
+/* Hero — first load */
+html:not(.mo-ready) .welcome-glow {
+  animation: mo-bloom 1.3s var(--mo-ease-out) 100ms backwards;
+}
+html:not(.mo-ready) .welcome .eyebrow {
+  --mo-rise-from: var(--mo-shift-sm);
+  animation: mo-rise var(--mo-dur-slow) var(--mo-ease-out) 160ms backwards;
+}
+html:not(.mo-ready) .welcome h1 {
+  animation: mo-focus-in var(--mo-dur-enter) var(--mo-ease-out) 230ms backwards;
+}
+html:not(.mo-ready) .welcome-copy {
+  --mo-rise-from: var(--mo-shift-sm);
+  animation: mo-rise var(--mo-dur-slow) var(--mo-ease-out) 350ms backwards;
+}
+html:not(.mo-ready) .suggestion-card {
+  animation: mo-rise var(--mo-dur-slow) var(--mo-ease-out) backwards;
+  animation-delay: calc(450ms + var(--mo-k, 0) * 70ms);
+}
+
+/* Hero — replay when "New chat" un-hides it later (quicker, no blur) */
+.mo-ready .welcome-glow {
+  animation: mo-bloom var(--mo-dur-slow) var(--mo-ease-out) backwards;
+}
+.mo-ready .welcome .eyebrow,
+.mo-ready .welcome h1,
+.mo-ready .welcome-copy,
+.mo-ready .suggestion-card {
+  --mo-rise-from: var(--mo-shift-sm);
+  animation: mo-rise var(--mo-dur-moderate) var(--mo-ease-out) backwards;
+  animation-delay: calc(var(--mo-k, 0) * 40ms);
+}
+.mo-ready .welcome h1 { --mo-k: 1; }
+.mo-ready .welcome-copy { --mo-k: 2; }
+
+.suggestion-card:nth-child(1) { --mo-k: 3; }
+.suggestion-card:nth-child(2) { --mo-k: 4; }
+.suggestion-card:nth-child(3) { --mo-k: 5; }
+.suggestion-card:nth-child(4) { --mo-k: 6; }
+
+/* Conversation list — first population only (motion.js adds .mo-enter once) */
+.chat-list > .mo-enter {
+  --mo-rise-from: var(--mo-shift-sm);
+  animation: mo-rise var(--mo-dur-moderate) var(--mo-ease-out) backwards;
+  animation-delay: calc(260ms + var(--mo-i, 0) * 35ms);
+}
+
+
+/* ==========================================================================
+   4. SIDEBAR (mobile drawer) + SCRIM
+   Open  = long ease-out so it glides in and settles.
+   Close = shorter ease-in-out so it never feels laggy.
+   The transition used is the one on the DESTINATION state, so the open and
+   close curves differ simply by being declared on `.sidebar.open` vs `.sidebar`.
+   ========================================================================== */
+@media (max-width: 760px) {
+  .sidebar {
+    transform: translateX(-104%);
+    visibility: hidden;               /* closed drawer leaves the tab order */
+    box-shadow: none;                 /* edge shadow moved to ::after, below */
+    will-change: transform;
+    transition:
+      transform var(--mo-dur-moderate) var(--mo-ease-in-out),
+      visibility 0s linear var(--mo-dur-moderate);
+  }
+  .sidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+    transition:
+      transform var(--mo-dur-slow) var(--mo-ease-out),
+      visibility 0s;
+  }
+
+  /* Soft edge shadow: fades with the drawer instead of leaking on the left
+     edge while closed. */
+  .sidebar::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: 56px;
+    background: linear-gradient(90deg, rgba(0, 0, 0, .34), transparent);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--mo-dur-moderate) var(--mo-ease-standard);
+  }
+  .sidebar.open::after { opacity: 1; }
+
+  /* Drawer contents settle in after the panel has started moving. */
+  .sidebar > * {
+    opacity: 0;
+    translate: -10px 0;
+    transition:
+      opacity var(--mo-dur-fast) var(--mo-ease-in),
+      translate var(--mo-dur-fast) var(--mo-ease-in);
+  }
+  .sidebar.open > * {
+    opacity: 1;
+    translate: 0 0;
+    transition:
+      opacity var(--mo-dur-moderate) var(--mo-ease-out) calc(110ms + var(--mo-k, 0) * 45ms),
+      translate var(--mo-dur-slow) var(--mo-ease-out) calc(110ms + var(--mo-k, 0) * 45ms);
+  }
+  .sidebar > :nth-child(1) { --mo-k: 0; }
+  .sidebar > :nth-child(2) { --mo-k: 1; }
+  .sidebar > :nth-child(3) { --mo-k: 2; }
+  .sidebar > :nth-child(4) { --mo-k: 3; }
+  .sidebar > :nth-child(5) { --mo-k: 4; }
+  .sidebar > :nth-child(6) { --mo-k: 5; }
+
+  /* Scrim is always in the DOM here so opacity can transition; styles.css only
+     shows it via display:none → block, which cannot animate. The blur radius is
+     static (animating backdrop-filter is expensive) — it fades in with opacity. */
+  .mobile-scrim,
+  .mobile-scrim.show {
+    display: block;
+    position: fixed;
+    inset: 0;
+    height: var(--app-height, 100dvh);
+    z-index: 30;
+    background: rgba(4, 6, 12, .62);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+  }
+  .mobile-scrim {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition:
+      opacity var(--mo-dur-moderate) var(--mo-ease-standard),
+      visibility 0s linear var(--mo-dur-moderate);
+  }
+  .mobile-scrim.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transition: opacity var(--mo-dur-slow) var(--mo-ease-standard), visibility 0s;
+  }
+}
+
+
+/* ==========================================================================
+   4b. MESSAGES
+   Wrapper rises + settles; avatar springs in; heading and body fade a beat
+   later so the bubble reads as "arriving" in layers.
+   --mo-i is set by motion.js ONLY when several messages are inserted at once
+   (opening a conversation, or user + "thinking" on send) → natural stagger.
+   A lone new message has no delay.
+   ========================================================================== */
+.message {
+  --mo-delay: calc(var(--mo-i, 0) * var(--mo-stagger));
+  animation: mo-message-in var(--mo-dur-moderate) var(--mo-ease-out) var(--mo-delay) backwards;
+}
+.message-avatar {
+  animation: mo-pop var(--mo-dur-spring) var(--mo-spring) calc(var(--mo-delay) + 40ms) backwards;
+}
+.message-heading {
+  animation: mo-fade-in var(--mo-dur-moderate) var(--mo-ease-standard) calc(var(--mo-delay) + 70ms) backwards;
+}
+.message-content {
+  animation: mo-fade-in var(--mo-dur-moderate) var(--mo-ease-standard) calc(var(--mo-delay) + 110ms) backwards;
+}
+
+/* Older messages in a long history are off-screen; don't animate them. */
+.message[data-mo="skip"],
+.message[data-mo="skip"] :is(.message-avatar, .message-heading, .message-content) {
+  animation: none;
+}
+
+/* Streaming → final markdown swap: a short settle so the reflow isn't a snap. */
+.message-content.mo-settle {
+  animation: mo-settle var(--mo-dur-base) var(--mo-ease-out);
+}
+
+/* Live preview card (generated pages) shares the same arrival. */
+.live-preview-card {
+  --mo-rise-from: var(--mo-shift-md);
+  animation: mo-rise var(--mo-dur-moderate) var(--mo-ease-out) backwards;
+}
+
+/* "Mahi is working": a soft ring breathes around the avatar while the typing
+   node exists (`data-typing` is removed by app.js when the reply is complete). */
+.message[data-typing] .message-avatar {
+  position: relative;
+}
+.message[data-typing] .message-avatar::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 13px;
+  border: 1px solid rgba(var(--mo-accent-rgb), .55);
+  pointer-events: none;
+  animation: mo-ring 1.9s var(--mo-ease-out) infinite;
+}
+
+
+/* ==========================================================================
+   5. TYPING INDICATOR + STREAMING TEXT
+   ========================================================================== */
+.typing-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+  padding: 8px 2px 6px;
+}
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #cdbfff, #8da2ff);
+  box-shadow: 0 0 10px rgba(var(--mo-accent-rgb), .45);
+  animation: mo-dot 1.25s var(--mo-ease-in-out) infinite;
+  will-change: transform, opacity;
+}
+.typing-dots span:nth-child(2) { animation-delay: .16s; }
+.typing-dots span:nth-child(3) { animation-delay: .32s; }
+
+/* Soft caret while text streams. Hidden while the dots are still showing.
+   (:has() is baseline 2023; older browsers simply get no caret.) */
+@supports selector(:has(*)) {
+  .message-content.streaming-text:not(:has(.typing-dots))::after {
+    content: "";
+    display: inline-block;
+    width: 7px;
+    height: 1.05em;
+    margin-left: 3px;
+    vertical-align: text-bottom;
+    border-radius: 3px;
+    background: linear-gradient(180deg, #cdbfff, #7f94ff);
+    box-shadow: 0 0 12px rgba(var(--mo-accent-rgb), .55);
+    animation: mo-caret 1.05s var(--mo-ease-in-out) infinite;
+  }
+
+  /* app.js sets scrollTop on every token. With scroll-behavior:smooth each
+     token restarts a smooth-scroll and the view "chases" the text. Snap while
+     streaming; keep smooth the rest of the time. */
+  .conversation-area:has(.streaming-text) {
+    scroll-behavior: auto;
+  }
+}
+
+
+/* ==========================================================================
+   6. BUTTONS, INPUTS, FOCUS, GLOW
+   ========================================================================== */
+
+/* 6a. Shared transition recipe — explicit properties, never `all`. */
+.new-chat, .api-library-button, .attach-button, .icon-button, .text-button,
+.suggestion-card, .suggestion-icon, .suggestion-arrow, .message-action,
+.delete-chat, .attachment-remove, .chat-item,
+.api-card, .api-card-link, .api-card-ask, .api-load-more,
+.live-preview-mode, .live-preview-icon-button, .live-preview-expand {
+  transition-property: background-color, border-color, color, box-shadow, opacity, transform, translate, scale;
+  transition-duration: var(--mo-dur-fast);
+  transition-timing-function: var(--mo-ease-out);
+}
+
+/* 6b. New chat — tint is a pseudo-element so it can fade (the base
+   background is a gradient, which can't be interpolated). */
+.new-chat {
+  position: relative;
+  isolation: isolate;
+}
+.new-chat::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(143, 124, 255, .2);
+  opacity: 0;
+  transition: opacity var(--mo-dur-base) var(--mo-ease-out);
+}
+.new-chat .plus {
+  display: inline-block;
+  transition: transform var(--mo-dur-base) var(--mo-spring);
+}
+
+/* 6c. Send button — springs in when it becomes available, glows when ready,
+   and shows a working ring while a reply is in flight. */
+.send-button {
+  position: relative;
+  transition:
+    opacity var(--mo-dur-base) var(--mo-ease-out),
+    scale var(--mo-dur-spring) var(--mo-spring),
+    transform var(--mo-dur-fast) var(--mo-ease-out),
+    filter var(--mo-dur-fast) var(--mo-ease-out),
+    box-shadow var(--mo-dur-base) var(--mo-ease-out);
+}
+.send-button:disabled { scale: .9; }
+
+/* Busy: app.js disables the textarea for the whole request, so we can read the
+   state from CSS without any JS. */
+.composer:has(#promptInput:disabled) .send-button {
+  opacity: .8;
+  scale: 1;
+}
+.composer:has(#promptInput:disabled) .send-button::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--mo-accent-rgb), .6);
+  pointer-events: none;
+  animation: mo-ring 1.6s var(--mo-ease-out) infinite;
+}
+.composer:has(#promptInput:disabled) {
+  border-color: rgba(var(--mo-accent-rgb), .3);
+}
+
+/* 6d. Composer focus: calm bloom behind the field. The glow is a blurred
+   pseudo-element; only its opacity/scale animate (compositor-only). */
+.composer {
+  position: relative;
+  transition:
+    border-color var(--mo-dur-base) var(--mo-ease-out),
+    box-shadow var(--mo-dur-slow) var(--mo-ease-out);
+}
+.composer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: linear-gradient(120deg, rgba(var(--mo-accent-rgb), .7), rgba(var(--mo-accent2-rgb), .55));
+  filter: blur(24px);
+  opacity: 0;
+  scale: .97;
+  pointer-events: none;
+  transition:
+    opacity var(--mo-dur-slow) var(--mo-ease-out),
+    scale var(--mo-dur-slow) var(--mo-ease-out);
+}
+.composer:focus-within::before {
+  opacity: .17;
+  scale: 1;
+}
+.composer textarea {
+  caret-color: #bcaeff;
+}
+.composer textarea::placeholder {
+  transition: opacity var(--mo-dur-base) var(--mo-ease-out);
+}
+.composer textarea:focus::placeholder {
+  opacity: .5;
+}
+
+/* 6e. API library fields */
+.api-filter input,
+.api-filter select {
+  transition:
+    border-color var(--mo-dur-base) var(--mo-ease-out),
+    box-shadow var(--mo-dur-base) var(--mo-ease-out),
+    background-color var(--mo-dur-base) var(--mo-ease-out);
+}
+.api-filter input:focus,
+.api-filter select:focus {
+  background-color: #151a29;
+}
+
+/* 6f. Press feedback (all pointer types). Uses `scale`, which composes with the
+   translateY hover lifts already in styles.css. */
+.new-chat:active,
+.api-library-button:active,
+.attach-button:active,
+.api-card-link:active,
+.api-card-ask:active,
+.api-load-more:active,
+.live-preview-mode:active,
+.live-preview-expand:active { scale: .975; }
+
+.suggestion-card:active { scale: .985; }
+.icon-button:active,
+.text-button:active,
+.live-preview-icon-button:active,
+.attachment-remove:active { scale: .9; }
+.send-button:not(:disabled):active { scale: .9; }
+
+/* 6g. Hover feedback — pointer devices only. */
+@media (hover: hover) {
+  .new-chat:hover::before { opacity: 1; }
+  .new-chat:hover {
+    /* keep the gradient (styles.css swaps it for a flat colour, which snaps) */
+    background: var(--mo-newchat-bg, linear-gradient(100deg, rgba(135, 111, 255, .15), rgba(90, 117, 255, .07)));
+    box-shadow: 0 10px 28px -14px rgba(var(--mo-accent-rgb), .6);
+  }
+  .new-chat:hover .plus { transform: rotate(90deg); }
+
+  .api-library-button:hover {
+    box-shadow: 0 10px 26px -16px rgba(var(--mo-accent-rgb), .5);
+  }
+
+  .suggestion-card:hover {
+    box-shadow: 0 16px 36px -20px rgba(var(--mo-accent-rgb), .55);
+  }
+  .suggestion-card:hover .suggestion-icon { scale: 1.07; }
+
+  .send-button:not(:disabled):hover {
+    box-shadow: 0 8px 22px -6px rgba(var(--mo-accent-rgb), .62);
+  }
+
+  .attach-button:hover svg { rotate: -14deg; }
+  .attach-button svg { transition: rotate var(--mo-dur-base) var(--mo-spring); }
+
+  .delete-chat:hover { scale: 1.1; }
+
+  .api-card:hover {
+    box-shadow: 0 16px 36px -22px rgba(var(--mo-accent-rgb), .5);
+  }
+  .api-card-ask:hover {
+    box-shadow: 0 8px 20px -12px rgba(var(--mo-accent-rgb), .6);
+  }
+}
+
+/* ==========================================================================
+   7. OVERLAY + ERROR ENTRANCES
+   `hidden` → visible restarts CSS animations automatically. (Exit animation
+   would need a JS-managed closing state — intentionally left for Part B.)
+   ========================================================================== */
+.api-explorer:not([hidden]) .api-explorer-scrim {
+  animation: mo-fade-in var(--mo-dur-moderate) var(--mo-ease-standard) backwards;
+}
+.api-explorer:not([hidden]) .api-explorer-panel {
+  animation: mo-panel-in var(--mo-dur-slow) var(--mo-ease-out) backwards;
+}
+
+.error-banner:not([hidden]) {
+  --mo-rise-from: var(--mo-shift-sm);
+  animation: mo-rise var(--mo-dur-moderate) var(--mo-ease-out) backwards;
+}
+
+
+/* ==========================================================================
+   8. REDUCED MOTION
+   styles.css already collapses every duration to ~0 under this query. This
+   block removes the motion itself so nothing depends on that blanket rule:
+   no travel, no scale, no stagger, no infinite loops.
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --mo-shift-sm: 0px;
+    --mo-shift-md: 0px;
+    --mo-shift-lg: 0px;
+    --mo-scale-from: 1;
+    --mo-stagger: 0ms;
+  }
+
+  /* Loops → static */
+  .typing-dots span { animation: none; opacity: .75; transform: none; will-change: auto; }
+  .message[data-typing] .message-avatar::after { animation: none; opacity: .5; }
+  .composer:has(#promptInput:disabled) .send-button::after { animation: none; opacity: .5; }
+  .message-content.streaming-text:not(:has(.typing-dots))::after { animation: none; }
+
+  /* No spring / travel / blur on entrances */
+  .welcome h1 { filter: none !important; }
+  .message-avatar { animation: none; }
+
+  /* Press/hover micro-motion off; colour feedback stays */
+  .new-chat:hover .plus,
+  .suggestion-card:hover .suggestion-icon,
+  .attach-button:hover svg,
+  .delete-chat:hover { transform: none; rotate: none; scale: none; }
+  .new-chat:active, .api-library-button:active, .attach-button:active,
+  .suggestion-card:active, .icon-button:active, .text-button:active,
+  .send-button:active { scale: none; }
+  .send-button:disabled { scale: none; }
+
+  .conversation-area { scroll-behavior: auto !important; }
+}
