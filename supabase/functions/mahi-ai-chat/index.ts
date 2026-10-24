@@ -447,7 +447,7 @@ function providerIsCoolingDown(name: string): boolean {
 }
 
 function shouldPreferShannon(prompt: string): boolean {
-  return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a)?|sexually explicit|explicit sexual content|adult erotic fiction|sex story|sexual fantasy|masturbat(?:ion|e)?|fetish(?:es)?)\b|(?:পর্ন|অশ্লীল|হেনতাই|যৌন উত্তেজক|প্রাপ্তবয়স্কদের যৌন কনটেন্ট|প্রাপ্তবয়স্কদের যৌন কনটেন্ট)/iu.test(prompt);
+  return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a)?|sex(?:ual)?(?:ly)? explicit|explicit sexual content|adult erotic fiction|sex(?:ual)? scene(?:s)?|sex story|sexual fantasy|masturbat(?:ion|e)?|fetish(?:es)?)\b|(?:পর্ন|অশ্লীল|হেনতাই|যৌন উত্তেজক|প্রাপ্তবয়স্কদের যৌন কনটেন্ট|প্রাপ্তবয়স্কদের যৌন কনটেন্ট)/iu.test(prompt);
 }
 
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = ""): string[] {
