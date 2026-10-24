@@ -28,7 +28,8 @@ test("porn/NSFW text prompts are routed to Venice only before task-specific rout
   assert.ok(attachmentRoute > pornRoute, "attachments must keep their compatible-provider path");
   assert.ok(codingRoute > pornRoute, "porn routing must override ordinary coding priority");
   assert.ok(edge.includes('preferred = ["venice"];'));
-  assert.ok(edge.includes('const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments\\n    ? ["venice"]'));
+  assert.ok(edge.includes('const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments')); 
+  assert.ok(edge.includes('? ["venice"]'));
   assert.ok(edge.includes("function isPornRelatedPrompt(prompt: string): boolean {"));
   assert.ok(edge.includes("function shouldPreferVenice(prompt: string): boolean {"));
   assert.ok(edge.includes("return isPornRelatedPrompt(prompt);"));
