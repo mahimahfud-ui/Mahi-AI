@@ -1,3 +1,9 @@
+-- Cover both foreign keys on mahi_ai_messages and the common user history lookup.
+CREATE INDEX IF NOT EXISTS mahi_ai_messages_conversation_user_created_idx
+  ON public.mahi_ai_messages (conversation_id, user_id, created_at);
+CREATE INDEX IF NOT EXISTS mahi_ai_messages_user_created_idx
+  ON public.mahi_ai_messages (user_id, created_at DESC);
+
 -- Atomic per-guest request reservations for Mahi AI.
 -- The Edge Function calls this with the service_role key; clients cannot call it directly.
 CREATE OR REPLACE FUNCTION public.mahi_ai_reserve_request(
