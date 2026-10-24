@@ -570,7 +570,7 @@ const PUBLIC_API_ALLOWED_HOSTS = new Set([
   "date.nager.at",
   "en.wikipedia.org",
   "openlibrary.org",
-  "www.atlasapi.space"
+  "raw.githubusercontent.com"
 ]);
 
 async function publicApiJson(url: string, cacheMs = 60_000): Promise<any> {
@@ -830,28 +830,86 @@ async function getPublicBookResults(prompt: string): Promise<string> {
 
 async function getPublicApiCatalogue(prompt: string): Promise<string> {
   const topic = apiCatalogueTopic(prompt);
-  const params: Record<string, string> = { type: "api", auth: "No authentication", limit: "5", sort: "mixed" };
-  if (topic) params.q = topic;
-  const url = "https://www.atlasapi.space/api/v1/catalog?" + new URLSearchParams(params).toString();
-  const data = await publicApiJson(url, 15 * 60_000);
-  const entries = Array.isArray(data?.entries) ? data.entries.slice(0, 5).map((entry: any) => ({
-    name: entry.name,
-    category: entry.category,
-    description: entry.tagline || entry.description,
-    authentication: entry.auth,
-    free_tier_note: entry.freeTier,
-    base_url: entry.baseUrl,
-    documentation: entry.docsUrl,
-    source_registry: entry.githubUrl
-  })) : [];
-  if (!entries.length) return "";
-  return publicApiBlock("API Atlas public API catalogue (no-auth candidates)", {
-    search_topic: topic || "general public APIs",
-    results: entries,
-    caution: "This is a directory entry, not a live health check. Confirm each API's current limits, terms, response schema, and pricing in its official docs before depending on it."
+  const url = "https://raw.githubusercontent.com/public-apis/public-apis/master/README.md";
+  const cached = publicApiCache.get(url);
+  let markdown = cached && cached.expiresAt > Date.now() && typeof cached.value === "string"
+    ? cached.value : "";
+  if (!markdown) {
+    const parsedUrl = new URL(url);
+    if (parsedUrl.protocol !== "https:" || !PUBLIC_API_ALLOWED_HOSTS.has(parsedUrl.hostname)) {
+      throw new Error("Public API catalogue host is not allowed");
+    }
+    const response = await fetchWithTimeout(url, {
+      headers: { "Accept": "text/plain" }
+    }, 6500);
+    if (!response.ok) throw new Error("Public API catalogue returned HTTP " + response.status);
+    markdown = await response.text();
+    if (markdown.length > 3_000_000) throw new Error("Public API catalogue is too large");
+    publicApiCache.set(url, { expiresAt: Date.now() + 15 * 60_000, value: markdown });
+  }
+
+  const lines = markdown.split(/\r?\n/);
+  const entries: Array<{
+    name: string; url: string; category: string; description: string;
+    auth: string; https: string; cors: string; score: number;
+  }> = [];
+  let inIndex = false;
+  let category = "";
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+    if (/^##\s+Index\s*$/i.test(line)) {
+      inIndex = true;
+      continue;
+    }
+    if (inIndex && /^##\s+/.test(line)) break;
+    if (!inIndex) continue;
+    const heading = line.match(/^###\s+(.+?)\s*$/);
+    if (heading) {
+      category = heading[1].replace(/[*_~]/g, "").trim();
+      continue;
+    }
+    if (!line.startsWith("|") || /^\|\s*API\s*\|/i.test(line) || /^[|:\-\s]+$/.test(line)) continue;
+    const cells = line.split("|").slice(1, -1).map((cell) => cell.trim());
+    if (cells.length < 5) continue;
+    const link = cells[0].match(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/);
+    if (!link) continue;
+    const name = link[1].replace(/[*_~]/g, "").trim();
+    const endpoint = link[2].trim();
+    const description = cells[1].replace(/<[^>]+>/g, " ").replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/[*_~]/g, "").replace(/\s+/g, " ").trim().slice(0, 240);
+    const authLabel = cells[2].replace(/[*_~]/g, "").trim();
+    const httpsLabel = cells[3].replace(/[*_~]/g, "").trim();
+    const corsLabel = cells[4].replace(/[*_~]/g, "").trim();
+    if (!/^(no|none|n\/a)$/i.test(authLabel) || !/^yes$/i.test(httpsLabel)) continue;
+    const searchText = (name + " " + description + " " + category).toLowerCase();
+    const words = topic.toLowerCase().split(/\s+/).filter((word) => word.length > 2);
+    const score = words.reduce((total, word) => total + (searchText.includes(word) ? 1 : 0), 0);
+    entries.push({ name, url: endpoint, category: category || "Other", description, auth: authLabel, https: httpsLabel, cors: corsLabel, score });
+  }
+
+  const matches = entries
+    .filter((entry) => !topic || entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .slice(0, 8)
+    .map((entry) => ({
+      name: entry.name,
+      category: entry.category,
+      description: entry.description,
+      authentication: "No authentication listed in the community library",
+      https: entry.https,
+      cors: entry.cors,
+      homepage_or_api_url: entry.url
+    }));
+  if (!matches.length) return "";
+
+  return publicApiBlock("Mahi AI Public API Library (public-apis community README)", {
+    search_topic: topic || "general",
+    filter: "No authentication + HTTPS marked yes in the same Public API Library used by the app",
+    results: matches,
+    caution: "These are community-maintained catalogue entries, not verified API responses or live health checks. The API URLs are provided for discovery only; the assistant must not invent endpoint schemas or claim it has called them unless a specific supported adapter supplied data."
   }, [
-    { label: "API Atlas catalogue query", url },
-    { label: "API Atlas API reference and caveats", url: "https://www.atlasapi.space/how-to/" }
+    { label: "Same community catalogue as the in-app Public API Library", url },
+    { label: "Public API Library source repository", url: "https://github.com/public-apis/public-apis" }
   ]);
 }
 
