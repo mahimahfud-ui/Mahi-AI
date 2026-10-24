@@ -1818,7 +1818,12 @@ async function refreshProviderHealth(): Promise<void> {
         });
       }
       const until = Number(row.cooldown_until_ms) || 0;
-      if (until > Date.now() && until > (providerCooldownUntil.get(name) ?? 0)) providerCooldownUntil.set(name, until);
+      // Older deployments persisted 30-minute auth/model cooldowns. Clamp legacy
+      // cooldown rows so newly corrected secrets/models are not blocked for ages.
+      const boundedUntil = Math.min(until, Date.now() + 90_000);
+      if (boundedUntil > Date.now() && boundedUntil > (providerCooldownUntil.get(name) ?? 0)) {
+        providerCooldownUntil.set(name, boundedUntil);
+      }
     }
   } catch (_) {
     // Health sharing is best-effort and must never affect a chat request.
