@@ -495,6 +495,29 @@ async function saveChatTurn(userId: string, conversationId: string, userContent:
   });
 }
 
+async function saveBranchHistory(userId: string, conversationId: string, history: ChatMessage[]): Promise<void> {
+  const safeHistory = history
+    .filter((message) => message && (message.role === "user" || message.role === "assistant") &&
+      typeof message.content === "string" && message.content.trim())
+    .slice(-35);
+  if (!safeHistory.length) return;
+  // A fresh, ordered timeline avoids timestamp ties between several rows inserted in one request.
+  const baseTime = Date.now() - safeHistory.length * 1000;
+  const rows = safeHistory.map((message, index) => ({
+    conversation_id: conversationId,
+    user_id: userId,
+    role: message.role,
+    content: message.content.trim().slice(0, 30000),
+    created_at: new Date(baseTime + index * 1000).toISOString()
+  }));
+  const saved = await rest("mahi_ai_messages", {
+    method: "POST",
+    headers: { Prefer: "return=minimal" },
+    body: JSON.stringify(rows)
+  });
+  if (!saved.ok) throw new Error("Could not save the context for this branched conversation");
+}
+
 // Turn replacement is restricted to a verified message inside the user's own conversation.
 // The API call is only made after a replacement response has been generated successfully.
 async function replaceChatTurnFromTimestamp(
@@ -2215,7 +2238,7 @@ async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
-  editFromCreatedAt = "", editFromContent = ""
+  editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = []
 ): Promise<Response> {
   return eventStreamResponse((controller, encoder, registerCancellation) => {
     let cancelled = false;
@@ -2252,6 +2275,7 @@ async function streamImageGenerationResponse(
           if (editFromCreatedAt) {
             await replaceChatTurnFromTimestamp(userId, conversationId, editFromCreatedAt, editFromContent, displayUserText, reply);
           } else {
+            if (branchHistory.length) await saveBranchHistory(userId, conversationId, branchHistory);
             await saveChatTurn(userId, conversationId, displayUserText, reply);
           }
         }
@@ -2428,12 +2452,12 @@ async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
-  editFromCreatedAt = "", editFromContent = ""
+  editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = []
 ): Promise<Response> {
   if (task === "image_generation") {
     return streamImageGenerationResponse(
       userId, messages, initialConversationId, usageId, attachments, displayUserText, responseCors,
-      requestId, requestStartedAt, inputChars, persistConversation, editFromCreatedAt, editFromContent
+      requestId, requestStartedAt, inputChars, persistConversation, editFromCreatedAt, editFromContent, branchHistory
     );
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
@@ -2665,6 +2689,7 @@ async function streamChatResponse(
           if (editFromCreatedAt) {
             await replaceChatTurnFromTimestamp(userId, conversationId, editFromCreatedAt, editFromContent, displayUserText, finalAnswer);
           } else {
+            if (branchHistory.length) await saveBranchHistory(userId, conversationId, branchHistory);
             await saveChatTurn(userId, conversationId, displayUserText, finalAnswer);
           }
         }
@@ -2761,6 +2786,7 @@ Deno.serve(async (req: Request) => {
     return json(400, { error: "Invalid request." }, responseCors);
   }
   const temporaryChat = input?.temporary_chat === true;
+  const branchContext = input?.branch_context === true;
   const editFromCreatedAt = typeof input?.edit_from_created_at === "string" ? input.edit_from_created_at.slice(0, 80) : "";
   const editFromContent = typeof input?.edit_from_content === "string" ? input.edit_from_content.slice(0, 60000) : "";
   const replacementRequested = !!editFromCreatedAt;
@@ -2832,6 +2858,10 @@ Deno.serve(async (req: Request) => {
   if ((replacementRequested && (temporaryChat || !conversationId || !editFromContent || !Number.isFinite(Date.parse(editFromCreatedAt))))) {
     await updateUsage(usageId, { success: false, error_code: "invalid_message_replacement" });
     return json(400, { error: "That edit or regeneration request is no longer valid. Refresh the conversation and try again." }, responseCors);
+  }
+  if (branchContext && (temporaryChat || !!conversationId || replacementRequested || messages.length < 2)) {
+    await updateUsage(usageId, { success: false, error_code: "invalid_conversation_branch" });
+    return json(400, { error: "This branch request is no longer valid. Refresh the conversation and try again." }, responseCors);
   }
   if (temporaryChat && conversationId) {
     return json(400, { error: "Temporary chats cannot modify a saved conversation." }, responseCors);
@@ -2965,6 +2995,7 @@ Deno.serve(async (req: Request) => {
   }
   return await streamChatResponse(
     user.id, messagesForProvider, task, conversationId, usageId, attachments, displayUserText,
-    responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent
+    responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent,
+    branchContext ? messages.slice(0, -1) : []
   );
 });
