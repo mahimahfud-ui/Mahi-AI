@@ -354,3 +354,11 @@ html[data-theme="light"] .message-attachment, html[data-theme="light"] .attachme
 
 /* Let compact devices scroll the drawer when expanded settings exceed the viewport. */
 .sidebar { overflow-y: auto; overscroll-behavior: contain; transition: margin-left .24s ease, transform .24s ease, opacity .18s ease; }
+
+
+/* Center the welcome headline and supporting copy without changing card layouts. */
+.welcome{text-align:center}
+.welcome .eyebrow{justify-content:center}
+.welcome h1{text-align:center}
+.welcome .welcome-copy{margin:20px auto 27px;text-align:center}
+.welcome .welcome-glow{left:50%;transform:translateX(-50%)}
