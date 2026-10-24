@@ -1258,9 +1258,26 @@ function eventStreamResponse(
 
 async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
-  attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>
+  attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
+  requestId: string, requestStartedAt: number, inputChars: number
 ): Promise<Response> {
-  return eventStreamResponse((controller, encoder) => {
+  return eventStreamResponse((controller, encoder, registerCancellation) => {
+    let cancelled = false;
+    registerCancellation(() => {
+      cancelled = true;
+      void updateUsage(usageId, {
+        success: false,
+        error_code: "client_cancelled",
+        duration_ms: Date.now() - requestStartedAt,
+        input_chars: inputChars,
+        attachment_count: attachments.length
+      });
+      logStructured("info", "request_cancelled", {
+        request_id: requestId,
+        task_type: "image_generation",
+        duration_ms: Date.now() - requestStartedAt
+      });
+    });
     (async () => {
       let conversationId = initialConversationId;
       try {
@@ -1272,14 +1289,50 @@ async function streamImageGenerationResponse(
         const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
+        if (cancelled) return;
         await saveChatTurn(userId, conversationId, displayUserText, reply);
-        await updateUsage(usageId, { success: true, provider: result.provider, task_type: "image_generation", error_code: null });
+        await updateUsage(usageId, {
+          success: true,
+          provider: result.provider,
+          task_type: "image_generation",
+          error_code: null,
+          duration_ms: Date.now() - requestStartedAt,
+          input_chars: inputChars,
+          output_chars: reply.length,
+          attachment_count: attachments.length
+        });
+        logStructured("info", "request_completed", {
+          request_id: requestId,
+          task_type: "image_generation",
+          provider: result.provider,
+          duration_ms: Date.now() - requestStartedAt,
+          input_chars: inputChars,
+          output_chars: reply.length,
+          attachment_count: attachments.length
+        });
         sseEvent(controller, encoder, { type: "delta", text: reply });
         sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
       } catch (error) {
+        if (cancelled) return;
         const reason = error instanceof Error ? error.message : String(error);
+        logStructured("error", "request_failed", {
+          request_id: requestId,
+          task_type: "image_generation",
+          error_code: "image_generation_failed",
+          error_name: error instanceof Error ? error.name : "UnknownError",
+          duration_ms: Date.now() - requestStartedAt
+        });
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
-        await updateUsage(usageId, { success: false, provider: "gemini-grok-openai-image", task_type: "image_generation", error_code: "image_generation_failed" });
+        await updateUsage(usageId, {
+          success: false,
+          provider: "gemini-grok-openai-image",
+          task_type: "image_generation",
+          error_code: "image_generation_failed",
+          duration_ms: Date.now() - requestStartedAt,
+          input_chars: inputChars,
+          output_chars: 0,
+          attachment_count: attachments.length
+        });
         const hasGeminiKey = configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
         const lowerReason = reason.toLowerCase();
         let userMessage: string;
@@ -1353,10 +1406,14 @@ async function independentlyReviewAnswer(
 }
 async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
-  attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>
+  attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
+  requestId: string, requestStartedAt: number, inputChars: number
 ): Promise<Response> {
   if (task === "image_generation") {
-    return streamImageGenerationResponse(userId, messages, initialConversationId, usageId, attachments, displayUserText, responseCors);
+    return streamImageGenerationResponse(
+      userId, messages, initialConversationId, usageId, attachments, displayUserText, responseCors,
+      requestId, requestStartedAt, inputChars
+    );
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
@@ -1367,6 +1424,18 @@ async function streamChatResponse(
     registerCancellation(() => {
       cancelled = true;
       try { activeCandidate?.cleanup(); } catch (_) {}
+      void updateUsage(usageId, {
+        success: false,
+        error_code: "client_cancelled",
+        duration_ms: Date.now() - requestStartedAt,
+        input_chars: inputChars,
+        attachment_count: attachments.length
+      });
+      logStructured("info", "request_cancelled", {
+        request_id: requestId,
+        task_type: task,
+        duration_ms: Date.now() - requestStartedAt
+      });
     });
     (async () => {
       let conversationId = initialConversationId;
@@ -1417,6 +1486,12 @@ async function streamChatResponse(
             chosen = { provider, text: completeText.trim() };
             rememberProviderSuccess(provider);
             recordProviderOutcome(provider, true, Date.now() - providerStartedAt);
+            logStructured("info", "provider_attempt_succeeded", {
+              request_id: requestId,
+              task_type: task,
+              provider,
+              duration_ms: Date.now() - providerStartedAt
+            });
             break;
           } catch (error) {
             if (candidate) candidate.cleanup();
@@ -1424,6 +1499,13 @@ async function streamChatResponse(
             if (cancelled) return;
             const reason = error instanceof Error ? error.message : String(error);
             recordProviderOutcome(provider, false, Date.now() - providerStartedAt);
+            logStructured("warn", "provider_attempt_failed", {
+              request_id: requestId,
+              task_type: task,
+              provider,
+              duration_ms: Date.now() - providerStartedAt,
+              error_name: error instanceof Error ? error.name : "UnknownError"
+            });
             failures.push(provider + ":" + reason.slice(0, 100));
             rememberProviderFailure(provider, reason);
             if (reason !== "Not configured") console.warn("Mahi AI full-response provider attempt failed:", provider, reason.slice(0, 180));
@@ -1431,7 +1513,21 @@ async function streamChatResponse(
         }
         if (cancelled) return;
         if (!chosen) {
-          await updateUsage(usageId, { success: false, error_code: "all_providers_failed" });
+          const durationMs = Date.now() - requestStartedAt;
+          await updateUsage(usageId, {
+            success: false,
+            error_code: "all_providers_failed",
+            duration_ms: durationMs,
+            input_chars: inputChars,
+            output_chars: 0,
+            attachment_count: attachments.length
+          });
+          logStructured("error", "all_providers_failed", {
+            request_id: requestId,
+            task_type: task,
+            attempt_count: failures.length,
+            duration_ms: durationMs
+          });
           console.error("All Mahi AI providers failed:", failures.join(" | ").slice(0, 1400));
           sseEvent(controller, encoder, {
             type: "error",
@@ -1456,7 +1552,27 @@ async function streamChatResponse(
           userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
         );
         await saveChatTurn(userId, conversationId, displayUserText, finalAnswer);
-        await updateUsage(usageId, { success: true, provider: reviewer ? chosen.provider + "+review:" + reviewer : chosen.provider, task_type: task, error_code: null });
+        const durationMs = Date.now() - requestStartedAt;
+        await updateUsage(usageId, {
+          success: true,
+          provider: reviewer ? chosen.provider + "+review:" + reviewer : chosen.provider,
+          task_type: task,
+          error_code: null,
+          duration_ms: durationMs,
+          input_chars: inputChars,
+          output_chars: finalAnswer.length,
+          attachment_count: attachments.length
+        });
+        logStructured("info", "request_completed", {
+          request_id: requestId,
+          task_type: task,
+          provider: chosen.provider,
+          reviewer_used: !!reviewer,
+          duration_ms: durationMs,
+          input_chars: inputChars,
+          output_chars: finalAnswer.length,
+          attachment_count: attachments.length
+        });
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
         for (let offset = 0; offset < finalAnswer.length; offset += 700) {
           sseEvent(controller, encoder, { type: "delta", text: finalAnswer.slice(offset, offset + 700) });
@@ -1466,7 +1582,22 @@ async function streamChatResponse(
         if (cancelled) return;
         const reason = error instanceof Error ? error.message : String(error);
         console.error("Mahi AI response handling failed:", reason.slice(0, 200));
-        await updateUsage(usageId, { success: false, error_code: "response_save_failed" });
+        const durationMs = Date.now() - requestStartedAt;
+        await updateUsage(usageId, {
+          success: false,
+          error_code: "response_save_failed",
+          duration_ms: durationMs,
+          input_chars: inputChars,
+          output_chars: 0,
+          attachment_count: attachments.length
+        });
+        logStructured("error", "request_failed", {
+          request_id: requestId,
+          task_type: task,
+          error_code: "response_save_failed",
+          error_name: error instanceof Error ? error.name : "UnknownError",
+          duration_ms: durationMs
+        });
         sseEvent(controller, encoder, {
           type: "error",
           message: "Mahi AI could not finish or save the response. Please try again."
