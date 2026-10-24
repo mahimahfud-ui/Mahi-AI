@@ -225,18 +225,19 @@ async function setMemoryEnabled(userId: string, enabled: boolean): Promise<void>
   if (!response.ok) throw new Error("Could not update memory settings");
 }
 
-async function saveExplicitUserMemory(userId: string, conversationId: string, value: string): Promise<void> {
+async function saveExplicitUserMemory(userId: string, conversationId: string, value: string, stableKey = ""): Promise<void> {
   const normalized = value.replace(/\s+/g, " ").trim().slice(0, 800);
   const sensitiveReason = sensitiveMemoryReason(normalized);
   if (sensitiveReason) throw new Error(sensitiveReason);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized.toLocaleLowerCase()));
   const hash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, 32);
+  await setMemoryEnabled(userId, true);
   const response = await rest("mahi_ai_user_memories?on_conflict=user_id,memory_key", {
     method: "POST",
     headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
     body: JSON.stringify({
       user_id: userId,
-      memory_key: "explicit_" + hash,
+      memory_key: stableKey || "explicit_" + hash,
       category: memoryCategory(normalized),
       memory_value: normalized,
       source_conversation_id: conversationId || null,
@@ -244,7 +245,25 @@ async function saveExplicitUserMemory(userId: string, conversationId: string, va
     })
   });
   if (!response.ok) throw new Error("Could not save this memory");
-  await setMemoryEnabled(userId, true);
+}
+
+function detectAutomaticMemory(prompt: string): { key: string; value: string } | null {
+  const text = prompt.trim().replace(/\s+/g, " ");
+  const patterns: Array<{ key: string; regex: RegExp; prefix: string }> = [
+    { key: "auto_name", regex: /^(?:my name is|call me|i go by)\s+([^.!?]{2,90})[.!]?$/i, prefix: "The user's name/preferred form of address is: " },
+    { key: "auto_preference", regex: /^(?:i prefer|my preferred language is|please (?:always )?(?:reply|answer) in|always answer me in|reply to me in|answer me in)\s+([^.!?]{2,160})[.!]?$/i, prefix: "The user's response preference is: " },
+    { key: "auto_active_project", regex: /^(?:i am building|i'm building|i am working on|i'm working on|my current project is|my main project is|my project is|i run)\s+([^.!?]{3,200})[.!]?$/i, prefix: "The user's current project/work context is: " },
+    { key: "auto_name", regex: /^আমার নাম\s+([^.!?।]{2,90})[.!?।]?$/u, prefix: "The user's name is: " },
+    { key: "auto_preference", regex: /^(?:আমি চাই )?(?:তুমি )?(?:সবসময়|সব সময়)\s+(.{3,140}?)\s+(?:উত্তর দাও|উত্তর দেবে|রিপ্লাই দাও)[.!?।]?$/u, prefix: "The user's response preference is: " },
+    { key: "auto_active_project", regex: /^আমি\s+(.{3,160}?)\s+(?:নিয়ে কাজ করছি|নিয়ে কাজ করছি|তৈরি করছি|বানাচ্ছি)[.!?।]?$/u, prefix: "The user's current project/work context is: " }
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern.regex);
+    if (!match?.[1]) continue;
+    const value = pattern.prefix + match[1].trim().slice(0, 350);
+    if (!sensitiveMemoryReason(value)) return { key: pattern.key, value };
+  }
+  return null;
 }
 
 async function clearUserMemories(userId: string): Promise<void> {
@@ -2546,6 +2565,24 @@ Deno.serve(async (req: Request) => {
   let userMemoryContext: UserMemoryContext | null = null;
   try {
     userMemoryContext = await loadUserMemoryContext(user.id, conversationId);
+    if (!memoryCommand && userMemoryContext.enabled) {
+      const automaticMemory = detectAutomaticMemory(displayPrompt);
+      if (automaticMemory) {
+        try {
+          await saveExplicitUserMemory(user.id, conversationId, automaticMemory.value, automaticMemory.key);
+          userMemoryContext = await loadUserMemoryContext(user.id, conversationId);
+          logStructured("info", "user_memory_auto_saved", {
+            request_id: requestId,
+            memory_key: automaticMemory.key
+          });
+        } catch (_) {
+          logStructured("warn", "user_memory_auto_save_failed", {
+            request_id: requestId,
+            memory_key: automaticMemory.key
+          });
+        }
+      }
+    }
   } catch (_) {
     logStructured("warn", "user_memory_context_unavailable", { request_id: requestId });
     if (!memoryActionNotice) memoryActionNotice = "Long-term memory could not be loaded for this request. Do not claim past chats were accessed.";
