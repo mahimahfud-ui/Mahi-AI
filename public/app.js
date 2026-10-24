@@ -1045,7 +1045,7 @@
   ui.input.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
       event.preventDefault();
-      if (!busy && ui.input.value.trim()) sendMessage(ui.input.value);
+      if (!busy && (ui.input.value.trim() || pendingFiles.length)) sendMessage(ui.input.value);
     }
   });
   if (apiUi.open) apiUi.open.addEventListener("click", openApiDirectory);
@@ -1069,11 +1069,30 @@
     });
   });
   document.addEventListener("keydown", (event) => {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k" &&
+        (!apiUi.overlay || apiUi.overlay.hidden)) {
       event.preventDefault();
       beginNewChat();
     }
     if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); }
+    if (event.key === "Tab" && apiUi.overlay && !apiUi.overlay.hidden) {
+      const focusable = Array.from(apiUi.overlay.querySelectorAll(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+      )).filter((element) => element.getClientRects().length > 0);
+      if (focusable.length) {
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      } else {
+        event.preventDefault();
+      }
+    }
   });
   window.addEventListener("online", () => { if (!busy) setError(""); });
   boot();
