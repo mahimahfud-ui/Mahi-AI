@@ -44,7 +44,7 @@ test("Edge Function streams tokens as they arrive and can reset a rejected or co
   assert.ok(edge.includes('["coding", "reasoning", "web_research", "code_execution"]'));
   assert.ok(edge.includes("provider_answer_rejected"));
   assert.ok(edge.includes("provider_answer_accepted"));
-  assert.ok(edge.includes("allProvidersFailedMessage(displayUserText)"));
+  assert.ok(edge.includes("allProvidersFailedMessage(displayUserText, failures)"));
 });
 
 test("simple low-risk chats skip the second model call while high-impact requests keep review", () => {
