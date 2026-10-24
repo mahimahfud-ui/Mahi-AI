@@ -1307,7 +1307,7 @@
     syncSwitch("autoScrollToggle", chatPreferences.autoScroll);
     syncSwitch("autoReadAloudToggle", chatPreferences.autoReadAloud);
     [["chatDensitySelect", chatPreferences.density], ["chatFontSizeSelect", chatPreferences.fontSize],
-      ["responseStyleSelect", chatPreferences.responseStyle], ["customInstructionsInput", chatPreferences.customInstructions]]
+      ["responseStyleSelect", chatPreferences.responseStyle]]
       .forEach(([id, val]) => { const field = $(id); if (field && field.value !== val) field.value = val; });
     if (persist !== false) persistChatPreferences();
   }
@@ -1382,6 +1382,7 @@
     let parsedPreferences = {};
     try { parsedPreferences = storedPreferences ? JSON.parse(storedPreferences) : {}; } catch (_) {}
     applyChatPreferences(parsedPreferences, false);
+    if ($("customInstructionsInput")) $("customInstructionsInput").value = chatPreferences.customInstructions;
     const settingsButton = $("toggleSettings");
     const settingsPanel = $("settingsPanel");
     if (settingsButton && settingsPanel) {
@@ -1432,6 +1433,7 @@
     if (resetButton) resetButton.addEventListener("click", () => {
       if (!window.confirm("Reset chat preferences on this device? Your conversations, display name, and theme will not be deleted.")) return;
       applyChatPreferences({ ...DEFAULT_CHAT_PREFERENCES }, true);
+      if ($("customInstructionsInput")) $("customInstructionsInput").value = "";
       const status = $("customInstructionsStatus");
       if (status) status.textContent = "Chat preferences reset.";
     });
