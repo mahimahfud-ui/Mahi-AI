@@ -95,7 +95,7 @@ async function classifyTaskSmart(prompt: string): Promise<string> {
       method: "POST",
       headers: { "Authorization": "Bearer " + envFirst(["GROQ_API_KEY"]), "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: envFirst(["GROQ_CLASSIFIER_MODEL"]) || "llama-3.1-8b-instant",
+        model: envFirst(["GROQ_CLASSIFIER_MODEL"]) || "openai/gpt-oss-20b",
         temperature: 0,
         max_tokens: 4,
         messages: [
