@@ -2290,6 +2290,13 @@ async function streamChatResponse(
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
   const available = providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText);
+  // Internal-only telemetry: report which provider routes the runtime can see without logging any keys.
+  logStructured("info", "provider_routes_prepared", {
+    request_id: requestId,
+    task_type: task,
+    provider_count: available.length,
+    available_providers: available
+  });
   return eventStreamResponse((controller, encoder, registerCancellation) => {
     let cancelled = false;
     let activeCandidate: ProviderStream | null = null;
@@ -2331,7 +2338,7 @@ async function streamChatResponse(
           // for the provider to ingest an attachment before generating an answer.
           const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution" || hasInlineAttachments;
           // Keep tool-heavy and multimodal work patient, but move on quickly from normal chat/coding routes.
-          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 12000 : 7500;
+          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 15000 : 12000;
           const providerBudget = Math.max(6000, Math.min(maxAttemptMs, Math.floor(remaining / providersLeft)));
           const provider = available[index];
           const providerStartedAt = Date.now();
