@@ -379,7 +379,7 @@ function flagEnabled(name: string): boolean {
   return envFirst([name])?.trim().toLowerCase() === "true";
 }
 
-function providerIsConfigured(name: string): boolean {
+function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (name === "shannon") return flagEnabled("ENABLE_SHANNON_FALLBACK") &&
     configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
@@ -392,7 +392,10 @@ function providerIsConfigured(name: string): boolean {
   if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
   if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") &&
     configuredSecret(["CLOUDFLARE_API_TOKEN"]) && configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
-  if (name === "openai") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["OPENAI_API_KEY"]);
+  // The user explicitly assigns programming/debugging requests to OpenAI. Permit
+  // that task-specific route when its API key exists, without enabling OpenAI for
+  // unrelated requests; other paid fallback usage still requires global opt-in.
+  if (name === "openai") return (task === "coding" || flagEnabled("ENABLE_PAID_FALLBACK")) && configuredSecret(["OPENAI_API_KEY"]);
   if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
@@ -446,8 +449,13 @@ function providerIsCoolingDown(name: string): boolean {
   return true;
 }
 
-function shouldPreferShannon(prompt: string): boolean {
-  return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a)?|sex(?:ual)?(?:ly)? explicit|explicit sexual content|adult erotic fiction|sex(?:ual)? scene(?:s)?|sex story|sexual fantasy|masturbat(?:ion|e)?|fetish(?:es)?)\b|(?:পর্ন|অশ্লীল|হেনতাই|যৌন উত্তেজক|প্রাপ্তবয়স্কদের যৌন কনটেন্ট|প্রাপ্তবয়স্কদের যৌন কনটেন্ট)/iu.test(prompt);
+function isAdultSensitivePrompt(prompt: string): boolean {
+  return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a|ism)?|sex(?:ual(?:ly)?|ual health| education)?|masturbat(?:ion|e)?|fetish(?:es)?|orgasm|nudity|nude|adult[- ]only|adult content|adult site|adult website|sexual wellness|reproductive health|contraception|onlyfans)\b|(?:পর্ন|অশ্লীল|হেনতাই|যৌন|নগ্নতা|উলঙ্গ|প্রাপ্তবয়স্কদের যৌন|প্রাপ্তবয়স্কদের যৌন|যৌনস্বাস্থ্য|যৌন শিক্ষা|গর্ভনিরোধ)/iu.test(prompt);
+}
+
+function shouldPreferVenice(prompt: string): boolean {
+  const sensitiveSocialTopics = /\b(?:politic(?:s|al)?|religio(?:n|us)|election|ideolog(?:y|ies)|rac(?:e|ism|ist)|sexism|gender identity|sexual orientation|abortion|war|terrorism|extremism|protest|controvers(?:y|ial)|polariz(?:ing|ed)|hate speech|discrimination)\b|(?:রাজনীতি|রাজনৈতিক|ধর্ম|নির্বাচন|বর্ণবাদ|যুদ্ধ|সন্ত্রাসবাদ|বিতর্কিত|বৈষম্য)/iu.test(prompt);
+  return isAdultSensitivePrompt(prompt) || sensitiveSocialTopics;
 }
 
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = ""): string[] {
@@ -457,13 +465,17 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     // is next and selects a free model with the needed feature when available.
     preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
     if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+  } else if (task === "coding") {
+    // Programming, debugging, repository changes and code generation go to OpenAI first.
+    // OpenAI is included only for this task when OPENAI_API_KEY is configured.
+    preferred = ["openai", "groq", "gemini", "openrouter", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic"];
+  } else if (isAdultSensitivePrompt(prompt) || (shouldPreferVenice(prompt) && task !== "web_research" && task !== "code_execution")) {
+    // Venice is the first choice for adult/sexual and other sensitive, controversial topics.
+    // Keep the remaining providers as fallbacks if Venice is unavailable or fails review.
+    preferred = ["venice", "gemini", "groq", "openrouter", "shannon", "mistral", "deepseek", "nvidia", "cloudflare", "anthropic", "openai"];
   } else if (task === "web_research" || task === "code_execution") {
     // Gemini has native Google Search, URL Context, and code-execution tool support.
-    preferred = ["gemini", "openrouter", "shannon", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
-  } else if (task === "coding") {
-    // Groq has been the fastest healthy coding route in production logs; put it first
-    // so a stalled OpenRouter request cannot delay ordinary first responses by 30 seconds.
-    preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "groq", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "reasoning") {
     preferred = ["gemini", "openrouter", "shannon", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "creative") {
@@ -472,14 +484,11 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   }
 
-  // OpenAI is the final fallback because its API can incur charges. Shannon is
-  // separately opt-in because its API may bill per token.
-  if (shouldPreferShannon(prompt) && !hasInlineAttachments) {
-    preferred = ["shannon", ...preferred.filter((name) => name !== "shannon")];
-  }
-  const fallback = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+  // The order expresses the task routing preference. All other configured providers
+  // remain in the cascade, with attachment-incompatible providers excluded.
+  const fallback = ["gemini", "groq", "openrouter", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])]
-    .filter((name) => providerIsConfigured(name) &&
+    .filter((name) => providerIsConfigured(name, task) &&
       !(hasInlineAttachments && (name === "venice" || name === "shannon")));
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
   // Preserve task/capability preference as the baseline, then adjust within that order
@@ -493,9 +502,12 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     const sampleCount = stats?.samples || 0;
     const failureRate = sampleCount ? (stats?.failures || 0) / sampleCount : 0;
     const latencyPenalty = stats ? Math.min(stats.averageLatencyMs / 1000, 15) * 0.75 : 0;
-    const paidFallbackPenalty = ["deepseek", "openai", "anthropic"].includes(name) ||
-      (name === "shannon" && !shouldPreferShannon(prompt)) ? 14 : 0;
-    return rank * 8 + failureRate * 6 + latencyPenalty + paidFallbackPenalty;
+    const paidFallbackPenalty = ["deepseek", "anthropic"].includes(name) ||
+      (name === "openai" && task !== "coding") ||
+      (name === "shannon" && !shouldPreferVenice(prompt)) ? 14 : 0;
+    // A designated specialist stays first when configured and healthy; observed latency
+    // and reliability only reorder the later fallback providers.
+    return rank * 40 + failureRate * 6 + latencyPenalty + paidFallbackPenalty;
   };
   // If every configured provider is cooling down, permit an eventual retry rather than
   // leaving the user with no route at all.
@@ -1893,7 +1905,7 @@ async function independentlyReviewAnswer(
   reviewBudgetMs = 9000
 ): Promise<{ answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" }> {
   const reviewers = available.filter((name) =>
-    providerIsConfigured(name) && !providerIsCoolingDown(name)
+    providerIsConfigured(name, task) && !providerIsCoolingDown(name)
   ).slice(0, 3);
   if (!reviewers.length || draft.length > 30000 || reviewBudgetMs < 1200) {
     return { answer: "", reviewer: null, verdict: "retry" };
