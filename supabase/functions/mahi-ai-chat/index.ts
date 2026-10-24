@@ -1379,7 +1379,7 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }]
   }));
-  const directUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
+  const directUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
   const response = await fetchProviderWithGatewayFallback("gemini", directUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
@@ -1866,10 +1866,17 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       const fallbackController = new AbortController();
       const fallbackTimer = setTimeout(() => fallbackController.abort(), Math.min(8000, timeoutMs));
       try {
+        let fallbackHeaderTimer: ReturnType<typeof setTimeout> | undefined;
         response = await Promise.race([
           fetch(directUrl, { method: "POST", headers, body: JSON.stringify(body), signal: fallbackController.signal }),
-          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("Provider connection timeout")), Math.min(8000, timeoutMs)))
+          new Promise<Response>((_, reject) => {
+            fallbackHeaderTimer = setTimeout(() => {
+              fallbackController.abort();
+              reject(new Error("Provider connection timeout"));
+            }, Math.min(8000, timeoutMs));
+          })
         ]);
+        if (fallbackHeaderTimer) clearTimeout(fallbackHeaderTimer);
       } finally {
         clearTimeout(fallbackTimer);
       }
