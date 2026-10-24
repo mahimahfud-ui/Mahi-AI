@@ -8,8 +8,8 @@ const edge = fs.readFileSync(
 );
 const readme = fs.readFileSync(require.resolve("../README.md"), "utf8");
 
-test("Shannon requires explicit opt-in and uses the official OpenAI-compatible endpoint", () => {
-  assert.match(edge, /name === "shannon"\) return flagEnabled\("ENABLE_SHANNON_FALLBACK"\) && configuredSecret\(\["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"\]\)/);
+test("Shannon is enabled by its configured key and uses the official OpenAI-compatible endpoint", () => {
+  assert.match(edge, /name === "shannon"\) return configuredSecret\(\["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"\]\)/);
   assert.match(edge, /SHANNON_API_KEY/);
   assert.match(edge, /https:\/\/api\.shannon-ai\.com\/v1\/chat\/completions/);
   assert.match(edge, /envFirst\(\["SHANNON_MODEL"\]\) \|\| "shannon-3"/);
@@ -18,14 +18,14 @@ test("Shannon requires explicit opt-in and uses the official OpenAI-compatible e
 
 test("Shannon remains a task-aware fallback and is skipped for inline attachments", () => {
   assert.match(edge, /preferred = \["groq", "gemini", "openrouter", "openai", "venice", "shannon"/);
-  assert.match(edge, /const fallback = \["gemini", "groq", "openrouter", "venice", "shannon"/);
+  assert.match(edge, /const fallback = \["gemini", "groq", "openrouter", "cloudflare", "shannon"/);
   assert.match(edge, /name === "shannon" && !shouldPreferVenice\(prompt\)/);
   assert.match(edge, /hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)/);
 });
 
 test("Shannon documentation covers opt-in, pricing, and text-only support", () => {
   assert.match(readme, /SHANNON_API_KEY/);
-  assert.match(readme, /ENABLE_SHANNON_FALLBACK=true/);
+  assert.match(readme, /configured key enables Shannon as a later fallback/);
   assert.match(readme, /checking Shannon's pricing and account balance/);
   assert.match(readme, /current integration is text-only/);
 });
