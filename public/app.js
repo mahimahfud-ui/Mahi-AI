@@ -598,8 +598,10 @@
       // Always re-check auth before a send. This recovers from expired tokens and
       // Supabase auth changes propagated from another tab.
       await ensureSession();
+      throwIfAborted(activeRequestController.signal);
     } catch (error) {
-      setError(plainError(error));
+      const cancelled = !!activeRequestController?.signal.aborted || error?.name === "AbortError";
+      setError(cancelled ? "Generation stopped. Your message and attachments are ready to retry." : plainError(error));
       activeRequestController = null;
       setBusy(false);
       return;
@@ -613,6 +615,7 @@
     addMessage("user", userText, { files: selectedFiles });
     const typing = addMessage("assistant", "", { typing: true });
     let uploadedAttachments = [];
+    let streamReader = null;
     try {
       uploadedAttachments = await uploadPendingAttachments(selectedFiles, activeRequestController.signal);
       throwIfAborted(activeRequestController.signal);
@@ -644,6 +647,7 @@
       }
       if (!response.body) throw new Error("Mahi AI: Streaming is not supported by this browser.");
       const reader = response.body.getReader();
+      streamReader = reader;
       const decoder = new TextDecoder();
       let buffer = "";
       let fullText = "";
@@ -731,6 +735,10 @@
         currentMessages.forEach((m, index) => addMessage(m.role, m.content, { userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
       }
     } finally {
+      if (streamReader) {
+        try { await streamReader.cancel(); } catch (_) {}
+        try { streamReader.releaseLock(); } catch (_) {}
+      }
       activeRequestController = null;
       setBusy(false);
       ui.input.disabled = false;
