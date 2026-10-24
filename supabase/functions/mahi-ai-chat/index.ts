@@ -37,6 +37,22 @@ const json = (
   responseHeaders: Record<string, string> = corsHeaders
 ) => new Response(JSON.stringify(body), { status, headers: responseHeaders });
 
+type StructuredLogLevel = "info" | "warn" | "error";
+
+function logStructured(level: StructuredLogLevel, event: string, fields: Record<string, unknown> = {}): void {
+  const entry = {
+    timestamp: new Date().toISOString(),
+    service: "mahi-ai-chat",
+    level,
+    event,
+    ...fields
+  };
+  const line = JSON.stringify(entry);
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
+}
+
 class RequestBodyTooLargeError extends Error {
   constructor() {
     super("That message is too large for a single request.");
@@ -640,18 +656,19 @@ function boundedIntegerSetting(name: string, fallback: number, minimum: number, 
   return Number.isInteger(value) && value >= minimum && value <= maximum ? value : fallback;
 }
 
-async function reserveUsageRequest(userId: string): Promise<UsageReservation> {
+async function reserveUsageRequest(userId: string, requestId: string): Promise<UsageReservation> {
   const response = await rest("rpc/mahi_ai_reserve_request", {
     method: "POST",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
       p_user_id: userId,
       p_minute_limit: boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_MINUTE", 10, 1, 120),
-      p_day_limit: boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_DAY", 200, 1, 5000)
+      p_day_limit: boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_DAY", 200, 1, 5000),
+      p_request_id: requestId
     })
   });
   if (!response.ok) {
-    console.error("Mahi AI rate-limit reservation failed", response.status);
+    logStructured("error", "rate_limit_reservation_failed", { request_id: requestId, status: response.status });
     throw new Error("Rate-limit service unavailable");
   }
   const payload = await response.json();
@@ -1463,14 +1480,24 @@ async function streamChatResponse(
 }
 
 Deno.serve(async (req: Request) => {
+  const requestId = crypto.randomUUID();
+  const requestStartedAt = Date.now();
   const origin = req.headers.get("origin");
   if (origin && !isAllowedOrigin(origin)) {
-    return new Response(JSON.stringify({ error: "Origin not allowed." }), {
+    logStructured("warn", "cors_origin_rejected", {
+      request_id: requestId,
+      origin: origin.slice(0, 200)
+    });
+    return new Response(JSON.stringify({ error: "Origin not allowed.", request_id: requestId }), {
       status: 403,
       headers: { "Content-Type": "application/json; charset=utf-8", "Vary": "Origin" }
     });
   }
-  const responseCors = corsHeadersFor(origin);
+  const responseCors = {
+    ...corsHeadersFor(origin),
+    "X-Request-ID": requestId,
+    "Access-Control-Expose-Headers": "X-Request-ID"
+  };
   if (req.method === "OPTIONS") return new Response("ok", { headers: responseCors });
   if (req.method !== "POST") return json(405, { error: "Method not allowed" }, responseCors);
   if (!baseUrl || !anonKey || !serviceKey) return json(503, { error: "Service is not configured yet." }, responseCors);
@@ -1504,12 +1531,17 @@ Deno.serve(async (req: Request) => {
 
   let reservation: UsageReservation;
   try {
-    reservation = await reserveUsageRequest(user.id);
+    reservation = await reserveUsageRequest(user.id, requestId);
   } catch (_) {
     return json(503, { error: "Mahi AI is temporarily unavailable. Please try again." }, responseCors);
   }
   if (!reservation.allowed) {
     const retry = Math.max(1, reservation.retryAfterSeconds);
+    logStructured("warn", "request_rate_limited", {
+      request_id: requestId,
+      limit_scope: reservation.limitScope,
+      retry_after_seconds: retry
+    });
     return json(429, {
       error: "Too many requests. Please wait before trying again.",
       code: "rate_limited",
@@ -1525,7 +1557,18 @@ Deno.serve(async (req: Request) => {
     attachments = await prepareAttachments(user.id, input?.attachments);
   } catch (error) {
     const reason = error instanceof Error ? error.message : "The attachment could not be processed.";
-    await updateUsage(usageId, { success: false, error_code: "attachment_rejected" });
+    await updateUsage(usageId, {
+      success: false,
+      error_code: "attachment_rejected",
+      duration_ms: Date.now() - requestStartedAt,
+      input_chars: messages.reduce((sum, message) => sum + message.content.length, 0),
+      attachment_count: Array.isArray(input?.attachments) ? Math.min(input.attachments.length, 5) : 0
+    });
+    logStructured("warn", "request_rejected", {
+      request_id: requestId,
+      error_code: "attachment_rejected",
+      duration_ms: Date.now() - requestStartedAt
+    });
     const status = /15 MB|20 MB|12 MB|no more than 5/i.test(reason) ? 413 : 400;
     return json(status, { error: reason }, responseCors);
   }
@@ -1554,6 +1597,21 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  await updateUsage(usageId, { task_type: task });
-  return await streamChatResponse(user.id, contextualMessages, task, conversationId, usageId, attachments, displayUserText, responseCors);
+  const inputChars = contextualMessages.reduce((sum, message) => sum + message.content.length, 0);
+  await updateUsage(usageId, {
+    task_type: task,
+    input_chars: inputChars,
+    attachment_count: attachments.length
+  });
+  logStructured("info", "request_started", {
+    request_id: requestId,
+    task_type: task,
+    message_count: contextualMessages.length,
+    input_chars: inputChars,
+    attachment_count: attachments.length
+  });
+  return await streamChatResponse(
+    user.id, contextualMessages, task, conversationId, usageId, attachments, displayUserText,
+    responseCors, requestId, requestStartedAt, inputChars
+  );
 });
