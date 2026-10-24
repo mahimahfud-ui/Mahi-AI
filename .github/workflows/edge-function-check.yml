@@ -62,6 +62,8 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Function
         run: deno check supabase/functions/mahi-ai-chat/index.ts
+      - name: Test image intent routing
+        run: deno test supabase/functions/mahi-ai-chat/image-intent.test.ts
       - name: Check Node server syntax
         run: node --check server.js
       - name: Check browser JavaScript syntax
