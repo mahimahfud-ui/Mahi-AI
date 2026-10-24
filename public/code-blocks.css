@@ -137,3 +137,222 @@ html[data-theme="light"] .mahi-code-btn.mahi-code-run {
 @media (prefers-reduced-motion: reduce) {
   .mahi-code-btn { transition: none; }
 }
+
+/* Advanced in-chat browser playground */
+.mahi-code-playground {
+  width: 100%;
+  min-width: 0;
+  margin-top: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(169, 179, 215, .2);
+  border-radius: 12px;
+  background: #0c0f17;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+}
+.mahi-code-playground[hidden] { display: none !important; }
+.mahi-code-browserbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 9px 11px;
+  background: #141824;
+  border-bottom: 1px solid rgba(169, 179, 215, .12);
+}
+.mahi-code-browser-left, .mahi-code-browser-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.mahi-code-browser-lights { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.mahi-code-browser-lights i { width: 7px; height: 7px; border-radius: 50%; display: block; background: #fb7185; }
+.mahi-code-browser-lights i:nth-child(2) { background: #fbbf24; }
+.mahi-code-browser-lights i:nth-child(3) { background: #34d399; }
+.mahi-code-address {
+  display: block;
+  max-width: 210px;
+  overflow: hidden;
+  padding: 5px 9px;
+  border: 1px solid rgba(169, 179, 215, .11);
+  border-radius: 6px;
+  background: #0c1019;
+  color: #8993aa;
+  font: 10px/1.3 ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mahi-code-browser-actions { justify-content: flex-end; flex-wrap: wrap; }
+.mahi-code-browser-actions .mahi-code-btn { min-height: 27px; padding: 5px 8px; font-size: 10px; }
+.mahi-code-preview-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 9px;
+  padding: 8px 10px;
+  background: #10141e;
+  border-bottom: 1px solid rgba(169, 179, 215, .1);
+}
+.mahi-code-viewport-group { display: flex; flex-wrap: wrap; gap: 4px; }
+.mahi-code-viewport-group .mahi-code-btn { min-height: 27px; padding: 5px 9px; font-size: 10px; }
+.mahi-code-viewport-group .mahi-code-btn[aria-pressed="true"] {
+  background: rgba(145, 120, 255, .22);
+  border-color: rgba(169, 145, 255, .55);
+  color: #d8ceff;
+}
+.mahi-code-network-label { display: inline-flex; align-items: center; gap: 7px; color: #9ba4b9; font-size: 10px; cursor: pointer; user-select: none; }
+.mahi-code-network { width: 14px; height: 14px; accent-color: #a896ff; margin: 0; }
+.mahi-code-stage {
+  width: 100%;
+  min-width: 0;
+  overflow: auto;
+  padding: 13px;
+  background:
+    radial-gradient(circle at 10px 10px, rgba(159, 170, 204, .08) 1px, transparent 1.5px) 0 0 / 16px 16px,
+    #0a0d14;
+}
+.mahi-code-device {
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+  overflow: hidden;
+  border: 1px solid rgba(169, 179, 215, .22);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+  transition: width .2s ease, max-width .2s ease, border-radius .2s ease;
+}
+.mahi-code-stage[data-viewport="tablet"] .mahi-code-device { width: 768px; max-width: 100%; }
+.mahi-code-stage[data-viewport="mobile"] .mahi-code-device { width: 390px; max-width: 100%; border-radius: 16px; }
+.mahi-code-iframe {
+  display: block;
+  width: 100%;
+  height: 430px;
+  min-height: 240px;
+  border: 0;
+  background: #fff;
+}
+.mahi-code-stage.has-runtime-error { box-shadow: inset 0 0 0 1px rgba(251, 113, 133, .45); }
+.mahi-code-console {
+  border-top: 1px solid rgba(169, 179, 215, .14);
+  background: #080a10;
+}
+.mahi-code-console[hidden] { display: none !important; }
+.mahi-code-console-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 11px;
+  background: #111520;
+  color: #aeb6ca;
+  font-size: 10px;
+}
+.mahi-code-console-head strong { font-size: 10px; font-weight: 700; }
+.mahi-code-console-head .mahi-code-btn { min-height: 24px; padding: 3px 8px; font-size: 10px; }
+.mahi-code-console-list {
+  max-height: 190px;
+  overflow: auto;
+  padding: 7px 11px 10px;
+  color: #c6cddd;
+  font: 11px/1.55 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.mahi-code-console-row {
+  padding: 3px 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  color: #c6cddd;
+  border-bottom: 1px solid rgba(169, 179, 215, .055);
+}
+.mahi-code-console-row:last-child { border-bottom: 0; }
+.mahi-code-console-row.info { color: #91b5ff; }
+.mahi-code-console-row.warn { color: #fbbf72; }
+.mahi-code-console-row.error { color: #ff9baa; }
+.mahi-code-console-row.success { color: #77dfb0; }
+.mahi-code-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 9px;
+  padding: 10px;
+  border: 1px solid rgba(169, 179, 215, .15);
+  border-radius: 10px;
+  background: #0e121b;
+}
+.mahi-code-editor[hidden] { display: none !important; }
+.mahi-code-editor-hint { color: #8f99b0; font-size: 10px; line-height: 1.5; }
+.mahi-code-editor-input {
+  display: block;
+  width: 100%;
+  min-height: 180px;
+  max-height: 430px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid rgba(169, 179, 215, .16);
+  border-radius: 8px;
+  background: #080b12;
+  color: #e3e7f4;
+  font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+}
+.mahi-code-editor-input:focus { outline: 2px solid rgba(169, 145, 255, .65); outline-offset: 1px; }
+.mahi-code-editor-actions { display: flex; justify-content: flex-end; gap: 7px; }
+.mahi-code-expand-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  overflow: auto;
+  padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(3, 5, 10, .94);
+  backdrop-filter: blur(16px);
+}
+.mahi-code-expand-close { align-self: flex-end; }
+.mahi-code-expand-overlay .mahi-code-playground {
+  width: min(1500px, 100%);
+  max-height: none;
+  margin: 0 auto;
+}
+.mahi-code-expand-overlay .mahi-code-iframe { height: min(64vh, 760px); min-height: 300px; }
+body.mahi-code-expanded-open { overflow: hidden !important; }
+html[data-theme="light"] .mahi-code-playground { background: #f7f8fc; border-color: rgba(31, 41, 59, .18); }
+html[data-theme="light"] .mahi-code-browserbar { background: #e8ebf3; border-color: rgba(31, 41, 59, .12); }
+html[data-theme="light"] .mahi-code-address { background: #f8f9fd; color: #596275; border-color: rgba(31, 41, 59, .15); }
+html[data-theme="light"] .mahi-code-preview-tools { background: #f0f2f8; border-color: rgba(31, 41, 59, .12); }
+html[data-theme="light"] .mahi-code-viewport-group .mahi-code-btn[aria-pressed="true"] { background: #e5e0ff; border-color: #b8a8ff; color: #382b82; }
+html[data-theme="light"] .mahi-code-network-label { color: #4e586d; }
+html[data-theme="light"] .mahi-code-stage { background-color: #e2e5ef; }
+html[data-theme="light"] .mahi-code-console { background: #f9faff; border-color: rgba(31, 41, 59, .14); }
+html[data-theme="light"] .mahi-code-console-head { background: #e9ecf4; color: #4b556b; }
+html[data-theme="light"] .mahi-code-console-list { color: #30374a; }
+html[data-theme="light"] .mahi-code-console-row { color: #30374a; border-color: rgba(31, 41, 59, .07); }
+html[data-theme="light"] .mahi-code-console-row.info { color: #2456a6; }
+html[data-theme="light"] .mahi-code-console-row.warn { color: #925500; }
+html[data-theme="light"] .mahi-code-console-row.error { color: #b4233d; }
+html[data-theme="light"] .mahi-code-console-row.success { color: #147a4b; }
+html[data-theme="light"] .mahi-code-editor { background: #f2f4fa; border-color: rgba(31, 41, 59, .15); }
+html[data-theme="light"] .mahi-code-editor-hint { color: #606b80; }
+html[data-theme="light"] .mahi-code-editor-input { background: #fff; color: #202838; border-color: rgba(31, 41, 59, .18); }
+html[data-theme="light"] .mahi-code-browser-actions .mahi-code-btn,
+html[data-theme="light"] .mahi-code-console-head .mahi-code-btn { color: #30374a; background: #f8f9fd; border-color: rgba(31, 41, 59, .15); }
+@media (max-width: 560px) {
+  .mahi-code-browserbar { align-items: flex-start; }
+  .mahi-code-browser-left { width: 100%; }
+  .mahi-code-browser-actions { justify-content: flex-start; }
+  .mahi-code-preview-tools { align-items: flex-start; }
+  .mahi-code-viewport-group { width: 100%; }
+  .mahi-code-stage { padding: 7px; }
+  .mahi-code-iframe { height: 360px; }
+  .mahi-code-stage[data-viewport="mobile"] .mahi-code-device { border-radius: 13px; }
+  .mahi-code-expand-overlay .mahi-code-iframe { height: 65vh; min-height: 260px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mahi-code-device { transition: none; }
+}
