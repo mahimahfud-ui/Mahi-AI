@@ -465,7 +465,7 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     // so a stalled OpenRouter request cannot delay ordinary first responses by 30 seconds.
     preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "reasoning") {
-    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "shannon", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "creative") {
     preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else {
