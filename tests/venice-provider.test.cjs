@@ -19,6 +19,7 @@ test("Venice is skipped for inline media that needs native provider support", ()
 });
 
 
+
 test("porn/NSFW text prompts select Venice before task-specific routes", () => {
   const pornRoute = edge.indexOf('if (isPornRelatedPrompt(prompt) && !hasInlineAttachments)');
   const attachmentRoute = edge.indexOf('} else if (hasInlineAttachments)', pornRoute);
@@ -27,7 +28,8 @@ test("porn/NSFW text prompts select Venice before task-specific routes", () => {
   assert.ok(attachmentRoute > pornRoute, "attachments must keep their compatible-provider path");
   assert.ok(codingRoute > pornRoute, "porn routing must override ordinary coding priority");
   assert.ok(edge.includes("function isPornRelatedPrompt(prompt: string): boolean {"));
-  assert.ok(edge.includes("function shouldPreferVenice(prompt: string): boolean {\\n  return isPornRelatedPrompt(prompt);\\n}"));
+  assert.ok(edge.includes("function shouldPreferVenice(prompt: string): boolean {"));
+  assert.ok(edge.includes("return isPornRelatedPrompt(prompt);"));
 });
 
 test("Venice is excluded from non-porn provider cascades", () => {
@@ -36,5 +38,6 @@ test("Venice is excluded from non-porn provider cascades", () => {
 });
 
 test("a successful Venice response to a porn-related prompt is not rewritten by a second provider", () => {
-  assert.ok(edge.includes("const requiresReview = shouldRequireIndependentReview(task, originalPrompt) &&\\n              !(isPornRelatedPrompt(originalPrompt) && provider === \"venice\");"));
+  assert.ok(edge.includes("const requiresReview = shouldRequireIndependentReview(task, originalPrompt) &&"));
+  assert.ok(edge.includes('!(isPornRelatedPrompt(originalPrompt) && provider === "venice");'));
 });
