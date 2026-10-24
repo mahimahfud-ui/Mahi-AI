@@ -480,3 +480,26 @@ body {
     height: var(--app-height, 100dvh);
   }
 }
+
+
+/* Legacy viewport-unit fallback for full-screen layouts. */
+@supports not (height: 100dvh) {
+  .app-shell {
+    height: var(--app-height, 100vh);
+    max-height: var(--app-height, 100vh);
+  }
+
+  .main-panel {
+    height: 100%;
+    max-height: 100%;
+  }
+
+  .sidebar {
+    height: var(--app-height, 100vh);
+    max-height: var(--app-height, 100vh);
+  }
+
+  .mobile-scrim.show {
+    height: var(--app-height, 100vh);
+  }
+}
