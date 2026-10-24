@@ -44,11 +44,12 @@ test("temporary chats skip history and long-term memory, and branches preserve c
   assert.match(edge, /branchContext \? messages\.slice\(0, -1\) : \[\]/);
 });
 
-test("provider routing stays server-side and paid optional routes honor opt-in flags", () => {
-  assert.match(edge, /if \(name === "shannon"\) return flagEnabled\("ENABLE_SHANNON_FALLBACK"\)/);
-  assert.match(edge, /if \(name === "deepseek"\) return flagEnabled\("ENABLE_PAID_FALLBACK"\)/);
-  assert.match(edge, /if \(name === "cloudflare"\) return flagEnabled\("ENABLE_CLOUDFLARE_FALLBACK"\)/);
-  assert.match(edge, /if \(name === "openai"\) return \(task === "coding" \|\| flagEnabled\("ENABLE_PAID_FALLBACK"\)\)/);
+test("provider routing stays server-side and configured keys activate fallback routes", () => {
+  assert.match(edge, /if \(name === "shannon"\) return configuredSecret\(\["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"\]\)/);
+  assert.match(edge, /if \(name === "deepseek"\) return configuredSecret/);
+  assert.match(edge, /if \(name === "cloudflare"\) return configuredSecret/);
+  assert.match(edge, /if \(name === "openai"\) return configuredSecret/);
+  assert.match(edge, /if \(name === "anthropic"\) return configuredSecret/);
   assert.doesNotMatch(app, /GEMINI_API_KEY|OPENROUTER_API_KEY|GROQ_API_KEY/);
 });
 
