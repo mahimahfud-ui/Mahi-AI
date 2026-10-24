@@ -14,11 +14,7 @@ test("Venice AI is configured as an OpenAI-compatible chat fallback", () => {
   assert.match(edge, /envFirst\(\["VENICE_MODEL"\]\) \|\| "zai-org-glm-5"/);
 });
 
-test("Venice is skipped only for inline media that needs native provider support", () => {
-  assert.match(edge, /hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)/);
-});
-
-test("porn\/NSFW text prompts prefer Venice before task-specific routes", () => {
+test("porn\/NSFW text prompts put Venice first without locking the route", () => {
   const pornRoute = edge.indexOf('if (isPornRelatedPrompt(prompt) && !hasInlineAttachments)');
   const attachmentRoute = edge.indexOf('} else if (hasInlineAttachments)', pornRoute);
   const codingRoute = edge.indexOf('} else if (task === "coding")', pornRoute);
@@ -31,8 +27,8 @@ test("porn\/NSFW text prompts prefer Venice before task-specific routes", () => 
   assert.ok(edge.includes("return isPornRelatedPrompt(prompt);"));
 });
 
-test("Venice is an ordinary fallback in every provider cascade", () => {
-  assert.ok(edge.includes('!(hasInlineAttachments && (name === "venice" || name === "shannon"))'));
+test("no provider is excluded from any cascade any more", () => {
+  assert.ok(edge.includes(".filter((name) => providerIsConfigured(name, task));"));
   assert.ok(!edge.includes('(isPornRelatedPrompt(prompt) || name !== "venice")'));
   assert.ok(edge.includes("function isSensitiveSocialPrompt(prompt: string): boolean"));
 });
