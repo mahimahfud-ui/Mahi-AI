@@ -36,7 +36,13 @@
   }
   function loadPrefs() {
     let raw = null;
-    try { raw = JSON.parse(readStorage(STORAGE_KEY) || "{}"); } catch (_) {}
+    const saved = readStorage(STORAGE_KEY);
+    try { raw = JSON.parse(saved || "{}"); } catch (_) {}
+    // Preserve a theme choice made before this Settings Hub existed.
+    if (!saved) {
+      const legacyTheme = readStorage("mahi-ai-theme");
+      if (legacyTheme === "light" || legacyTheme === "dark") raw = { theme: legacyTheme };
+    }
     return normalize(raw);
   }
   function normalize(value) {
@@ -74,6 +80,9 @@
     root.setAttribute("data-char-counter", String(prefs.showCharCount));
   }
   function syncControls() {
+    const tabList = panel.querySelector('[role="tablist"]');
+    if (tabList) tabList.setAttribute("aria-orientation",
+      window.matchMedia && window.matchMedia("(max-width: 760px)").matches ? "horizontal" : "vertical");
     panel.querySelectorAll("[data-pref]").forEach((control) => {
       const key = control.getAttribute("data-pref");
       if (!(key in prefs)) return;
@@ -146,13 +155,16 @@
   panel.querySelectorAll("[data-settings-tab]").forEach((button) => {
     button.addEventListener("click", () => showTab(button.getAttribute("data-settings-tab"), false));
     button.addEventListener("keydown", (event) => {
-      if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+      const horizontal = !!(window.matchMedia && window.matchMedia("(max-width: 760px)").matches);
+      const previousKey = horizontal ? "ArrowLeft" : "ArrowUp";
+      const nextKey = horizontal ? "ArrowRight" : "ArrowDown";
+      if (![previousKey, nextKey, "Home", "End"].includes(event.key)) return;
       event.preventDefault();
       const tabs = [...panel.querySelectorAll("[data-settings-tab]")];
       let index = tabs.indexOf(button);
       if (event.key === "Home") index = 0;
       else if (event.key === "End") index = tabs.length - 1;
-      else index = (index + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+      else index = (index + (event.key === nextKey ? 1 : -1) + tabs.length) % tabs.length;
       showTab(tabs[index].getAttribute("data-settings-tab"), true);
     });
   });
