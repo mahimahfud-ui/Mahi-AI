@@ -396,7 +396,7 @@ async function readProviderError(response: Response): Promise<string> {
     return response.status + " " + body.slice(0, 500);
   } catch (_) { return "Provider request failed with status " + response.status; }
 }
-async function openAICompatible(provider: string, url: string, key: string, model: string, messages: ChatMessage[], extraHeaders: Record<string, string> = {}, timeoutMs = 45000, systemOverride?: string): Promise<string> {
+async function openAICompatible(provider: string, url: string, key: string, model: string, messages: ChatMessage[], extraHeaders: Record<string, string> = {}, timeoutMs = 45000, systemOverride?: string, parentSignal?: AbortSignal): Promise<string> {
   const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", ...extraHeaders },
@@ -407,7 +407,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
       max_tokens: 8192,
       stream: false
     })
-  }, timeoutMs);
+  }, timeoutMs, parentSignal);
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
   const content = result?.choices?.[0]?.message?.content;
@@ -415,7 +415,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
   if (!text.trim()) throw new Error(provider + " returned no text");
   return text.trim();
 }
-async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<string> {
+async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string, parentSignal?: AbortSignal): Promise<string> {
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
   const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
@@ -435,7 +435,8 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
         generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
       })
     },
-    timeoutMs
+    timeoutMs,
+    parentSignal
   );
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
@@ -443,8 +444,8 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
   if (!text.trim()) throw new Error("Gemini returned no text");
   return text.trim();
 }
-async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<{ text: string; provider: string }> {
-  if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride), provider: name };
+async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string, parentSignal?: AbortSignal): Promise<{ text: string; provider: string }> {
+  if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride, parentSignal), provider: name };
   if (name === "groq") {
     const key = envFirst(["GROQ_API_KEY"]);
     if (!key) throw new Error("Not configured");
@@ -499,7 +500,7 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
         system: systemOverride || systemPrompt(task),
         messages: messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
       })
-    }, timeoutMs);
+    }, timeoutMs, parentSignal);
     if (!response.ok) throw new Error(await readProviderError(response));
     const result = await response.json();
     const text = (result?.content || []).map((part: any) => part.text || "").join("");
@@ -1155,7 +1156,7 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
   return null;
 }
 async function independentlyReviewAnswer(
-  available: string[], originalPrompt: string, contextText: string, draft: string, task: string
+  available: string[], originalPrompt: string, contextText: string, draft: string, task: string, signal?: AbortSignal
 ): Promise<{ answer: string; reviewer: string | null }> {
   // Review only with another eligible non-paid provider; retry alternatives if one is unhealthy.
   const reviewers = available.filter((name) =>
@@ -1170,8 +1171,9 @@ async function independentlyReviewAnswer(
     "Review independently for concrete correctness/completeness. If sound, return verdict=keep with the exact original answer. If wrong, return verdict=correct and a complete corrected answer in the original request's language. Never invent facts, citations, execution, or live web verification."
   ].join("\n\n---\n\n");
   for (const reviewer of reviewers) {
+    if (signal?.aborted) return { answer: draft, reviewer: null };
     try {
-      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem);
+      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem, signal);
       rememberProviderSuccess(reviewer);
       const parsed = parseReviewedAnswer(result.text);
       if (!parsed || !parsed.answer.trim()) continue;
@@ -1181,6 +1183,7 @@ async function independentlyReviewAnswer(
           corrected.length > Math.min(40000, draft.length * 2 + 3000)) continue;
       return { answer: corrected, reviewer };
     } catch (error) {
+      if (signal?.aborted) return { answer: draft, reviewer: null };
       const reason = error instanceof Error ? error.message : String(error);
       rememberProviderFailure(reviewer, reason);
       console.warn("Mahi AI independent review provider failed; trying another:", reviewer, reason.slice(0, 120));
@@ -1266,7 +1269,7 @@ async function streamChatResponse(
         if (!signal.aborted && reviewProviders.length && task !== "web_research" && task !== "code_execution" &&
             !hasInlineAttachments && chosen.text.length <= 30000) {
           sseEvent(controller, encoder, { type: "status", message: "Checking the answer for accuracy and completeness…" });
-          const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task);
+          const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task, signal);
           finalAnswer = review.answer;
           reviewer = review.reviewer;
         }
