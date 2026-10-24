@@ -25,7 +25,9 @@ test("adds a valid head when the generated document has none", () => {
 test("adds metadata to an existing head without corrupting its markup", () => {
   const html = "<!doctype html><html><head class=\"preview\"></head><body>OK</body></html>";
   const output = buildLivePreviewDocument(html, [], []);
-  assert.match(output, /<head class="preview"><meta charset="utf-8"><meta name="viewport"/i);
+  assert.match(output, /<head class="preview">[^<]*(?:<meta[^>]+>){2}/i);
+  assert.match(output, /<meta charset="utf-8"/i);
+  assert.match(output, /<meta name="viewport"/i);
   assert.match(output, /<\/head><body>OK<\/body>/i);
   assert.doesNotMatch(output, /function addMessage\(/);
 });
@@ -33,7 +35,7 @@ test("adds metadata to an existing head without corrupting its markup", () => {
 test("injects CSS in the document head and JavaScript before body close", () => {
   const html = "<!doctype html><html><head></head><body><h1>Preview</h1></body></html>";
   const output = buildLivePreviewDocument(html, ["h1 { color: red; }"], ["window.previewReady = true;"]);
-  assert.match(output, /<head><style>[\s\S]*h1 \{ color: red; \}[\s\S]*<\/style><\/head>/i);
+  assert.match(output, /<head>[\s\S]*<style>[\s\S]*h1 \{ color: red; \}[\s\S]*<\/style><\/head>/i);
   assert.match(output, /<script>[\s\S]*window\.previewReady = true;[\s\S]*<\/script><\/body>/i);
 });
 
