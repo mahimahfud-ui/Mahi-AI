@@ -65,15 +65,19 @@ The root \`render.yaml\` targets the \`main\` branch and sets auto-deploy to com
 
 ## Free-tier notes
 
-The router is best-effort: it fully buffers each provider response and then falls back on errors, timeouts, empty output, or known truncation. It follows the user's language and writing style where the selected model supports it. There is currently no app-defined per-user daily or per-minute request cap; provider quotas, context/output token caps, file-processing constraints, and Supabase runtime limits still apply. Paid chat fallbacks require `ENABLE_PAID_FALLBACK=true`; image-generation APIs require `ENABLE_PAID_IMAGE_GENERATION=true`.
+The router is best-effort: it fully buffers each provider response and then falls back on errors, timeouts, empty output, or known truncation. It follows the user's language and writing style where the selected model supports it. The app applies configurable per-guest rolling-minute and rolling-24-hour limits; provider quotas, context/output token caps, file-processing constraints, and Supabase runtime limits still apply. Paid chat fallbacks require `ENABLE_PAID_FALLBACK=true`; image-generation APIs require `ENABLE_PAID_IMAGE_GENERATION=true`.
 
 ## Security
 
-- Conversation reads/deletes are scoped to \`auth.uid()\` through RLS.
-- The function verifies the caller's Supabase JWT. It does not enforce an app-defined daily or per-minute usage cap; provider and platform limits still apply.
-- Provider credentials stay in Supabase Edge Function secrets.
-- Guest accounts do not carry across browsers/devices unless users later link a sign-in identity.
-
+- Conversation reads and deletes are scoped to `auth.uid()` through RLS.
+- The Edge Function verifies the caller's Supabase JWT and reserves requests atomically in Postgres before attachment processing. Defaults are 10 requests per guest user per rolling minute and 200 per rolling 24 hours.
+- Configure `MAHI_AI_RATE_LIMIT_PER_MINUTE` (1–120) and `MAHI_AI_RATE_LIMIT_PER_DAY` (1–5000) in Supabase Edge Function secrets to adjust the limits.
+- Apply `supabase/migrations/20261024110000_production_hardening.sql` in the Supabase SQL Editor before deploying the updated Edge Function. The reservation RPC can only be executed by `service_role`; rate-limit reservations and failed attempts are included in usage events.
+- CORS uses exact origin matching instead of `*`. Defaults are `https://mahi-ai.onrender.com`, `http://localhost:3000`, and `http://127.0.0.1:3000`. For a custom frontend domain, set `MAHI_AI_ALLOWED_ORIGINS` to a comma-separated list of exact origins, including scheme and optional port, without paths or trailing slashes.
+- Provider keys remain in Supabase Edge Function secrets and must never be placed in GitHub or browser files.
+- Provider latency and reliability scores guide routing only within a warm Edge Function isolate and reset after a cold start. Paid fallback eligibility remains controlled by the existing opt-in flags.
+- This rate limit is per guest-user ID, not a complete anti-abuse system: anonymous sessions can be recreated. Add a trusted gateway/IP-level limit or require verified accounts before treating it as a hard quota.
+- Guest accounts do not carry across browsers or devices unless users later link a sign-in identity.
 
 ### Banglish image generation
 Image intents recognize English, Bangla and Banglish requests (for example `bongobondhur image genarate koro`) and route them to image generation. The image prompt is normalized to avoid an unwanted code/tutorial answer. For cost safety, image generation is disabled by default; after setting `ENABLE_PAID_IMAGE_GENERATION=true`, the provider order is Gemini → Grok Imagine → OpenAI for configured keys. Set `XAI_API_KEY` in Supabase Edge Function secrets to enable Grok.

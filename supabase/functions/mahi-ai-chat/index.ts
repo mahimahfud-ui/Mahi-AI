@@ -1,12 +1,81 @@
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json; charset=utf-8"
+  "Content-Type": "application/json; charset=utf-8",
+  "Vary": "Origin"
 };
 
-const json = (status: number, body: Record<string, unknown>) =>
-  new Response(JSON.stringify(body), { status, headers: corsHeaders });
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://mahi-ai.onrender.com",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+];
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const parsed = new URL(origin);
+    if (parsed.origin !== origin || !["https:", "http:"].includes(parsed.protocol)) return false;
+    const configured = envFirst(["MAHI_AI_ALLOWED_ORIGINS"]);
+    const allowed = configured
+      ? configured.split(",").map((value) => value.trim()).filter(Boolean)
+      : DEFAULT_ALLOWED_ORIGINS;
+    return allowed.includes(origin);
+  } catch (_) {
+    return false;
+  }
+}
+
+function corsHeadersFor(origin: string | null): Record<string, string> {
+  const headers = { ...corsHeaders };
+  if (origin && isAllowedOrigin(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
+
+const json = (
+  status: number,
+  body: Record<string, unknown>,
+  responseHeaders: Record<string, string> = corsHeaders
+) => new Response(JSON.stringify(body), { status, headers: responseHeaders });
+
+class RequestBodyTooLargeError extends Error {
+  constructor() {
+    super("That message is too large for a single request.");
+    this.name = "RequestBodyTooLargeError";
+  }
+}
+
+async function readBoundedJson(req: Request, maxBytes: number): Promise<unknown> {
+  const headerLength = Number(req.headers.get("content-length") || "0");
+  if (Number.isFinite(headerLength) && headerLength > maxBytes) throw new RequestBodyTooLargeError();
+  if (!req.body) throw new Error("Request body is empty.");
+
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    while (true) {
+      const part = await reader.read();
+      if (part.done) break;
+      total += part.value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch (_) {}
+        throw new RequestBodyTooLargeError();
+      }
+      chunks.push(part.value);
+    }
+  } finally {
+    try { reader.releaseLock(); } catch (_) {}
+  }
+
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  return JSON.parse(text);
+}
 
 function envFirst(names: string[]): string {
   for (const name of names) {
@@ -269,6 +338,29 @@ function providerIsConfigured(name: string): boolean {
   if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
+type ProviderHealthSample = {
+  successes: number;
+  failures: number;
+  samples: number;
+  averageLatencyMs: number;
+};
+
+const providerHealth = new Map<string, ProviderHealthSample>();
+// In-isolate circuit breaker cooldown state; it is intentionally ephemeral.
+const providerCooldownUntil = new Map<string, number>();
+
+function recordProviderOutcome(name: string, success: boolean, elapsedMs: number): void {
+  const previous = providerHealth.get(name);
+  providerHealth.set(name, {
+    successes: (previous?.successes || 0) + (success ? 1 : 0),
+    failures: (previous?.failures || 0) + (success ? 0 : 1),
+    samples: (previous?.samples || 0) + 1,
+    averageLatencyMs: previous
+      ? previous.averageLatencyMs * 0.75 + Math.max(0, elapsedMs) * 0.25
+      : Math.max(0, elapsedMs)
+  });
+}
+
 function providerCooldownMs(reason: string): number {
   const message = reason.toLowerCase();
   if (/\b401\b|\b403\b|invalid api key|authentication failed|rejected the api key/.test(message)) return 30 * 60_000;
@@ -321,9 +413,24 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   const fallback = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])].filter(providerIsConfigured);
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
+  // Preserve task/capability preference as the baseline, then adjust within that order
+  // using recent in-isolate latency and reliability. Opted-in paid fallback providers
+  // carry an extra cost penalty so telemetry cannot casually make them the first route.
+  const candidates = healthy.length ? healthy : configured;
+  const preferredRank = new Map<string, number>(preferred.map((name, index) => [name, index] as const));
+  const score = (name: string): number => {
+    const rank = preferredRank.get(name) ?? 99;
+    const stats = providerHealth.get(name);
+    const sampleCount = stats?.samples || 0;
+    const failureRate = sampleCount ? (stats?.failures || 0) / sampleCount : 0;
+    const latencyPenalty = stats ? Math.min(stats.averageLatencyMs / 1000, 15) * 0.75 : 0;
+    const paidFallbackPenalty = ["deepseek", "openai", "anthropic"].includes(name) ? 14 : 0;
+    return rank * 8 + failureRate * 6 + latencyPenalty + paidFallbackPenalty;
+  };
   // If every configured provider is cooling down, permit an eventual retry rather than
   // leaving the user with no route at all.
-  return healthy.length ? healthy : configured;
+  return candidates.sort((a, b) => score(a) - score(b) ||
+    (preferredRank.get(a) ?? 99) - (preferredRank.get(b) ?? 99));
 }
 
 function openRouterModel(task: string): string {
@@ -477,18 +584,42 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
   throw new Error("Unknown provider");
 }
 
-async function logUsage(userId: string, body: Record<string, unknown>): Promise<string | null> {
-  const response = await rest("mahi_ai_usage_events", {
+type UsageReservation = {
+  allowed: boolean;
+  usageId: string | null;
+  retryAfterSeconds: number;
+  limitScope: string | null;
+};
+
+function boundedIntegerSetting(name: string, fallback: number, minimum: number, maximum: number): number {
+  const value = Number(envFirst([name]));
+  return Number.isInteger(value) && value >= minimum && value <= maximum ? value : fallback;
+}
+
+async function reserveUsageRequest(userId: string): Promise<UsageReservation> {
+  const response = await rest("rpc/mahi_ai_reserve_request", {
     method: "POST",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ user_id: userId, ...body })
+    body: JSON.stringify({
+      p_user_id: userId,
+      p_minute_limit: boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_MINUTE", 10, 1, 120),
+      p_day_limit: boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_DAY", 200, 1, 5000)
+    })
   });
   if (!response.ok) {
-    console.error("Mahi AI usage audit insert failed", response.status);
-    return null;
+    console.error("Mahi AI rate-limit reservation failed", response.status);
+    throw new Error("Rate-limit service unavailable");
   }
-  try { const data = await response.json(); return data?.[0]?.id ? String(data[0].id) : null; }
-  catch (_) { return null; }
+  const payload = await response.json();
+  const row = Array.isArray(payload) ? payload[0] : payload;
+  if (!row || typeof row.allowed !== "boolean") throw new Error("Rate-limit service returned an invalid response");
+  const retry = Number(row.retry_after_seconds);
+  return {
+    allowed: row.allowed,
+    usageId: row.usage_id == null ? null : String(row.usage_id),
+    retryAfterSeconds: Number.isFinite(retry) ? Math.max(1, Math.ceil(retry)) : 60,
+    limitScope: typeof row.limit_scope === "string" ? row.limit_scope : null
+  };
 }
 async function updateUsage(id: string | null, body: Record<string, unknown>) {
   if (!id) return;
@@ -692,7 +823,8 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       ? " Use sandboxed Python code execution to check calculations or analyze data when necessary. Base numerical answers on actual tool results."
       : "");
     url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) +
-      ":streamGenerateContent?alt=sse&key=" + encodeURIComponent(key);
+      ":streamGenerateContent?alt=sse";
+    headers["x-goog-api-key"] = key;
     body = {
       systemInstruction: { parts: [{ text: geminiSystem }] },
       contents: normalized.map((m, index) => {
@@ -1018,7 +1150,7 @@ async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: 
   const response = await fetch(baseUrl + "/storage/v1/object/mahi-ai-generated/" + encodedPath, {
     method: "POST",
     headers: adminHeaders({ "Content-Type": mimeType, "x-upsert": "false" }),
-    body: bytes
+    body: bytes.slice().buffer as ArrayBuffer
   });
   if (!response.ok) {
     console.error("Generated image storage failed:", response.status, (await response.text()).slice(0, 300));
@@ -1028,7 +1160,8 @@ async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: 
 }
 
 function eventStreamResponse(
-  onStart: (controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder) => void
+  onStart: (controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder) => void,
+  responseCors: Record<string, string> = corsHeaders
 ): Response {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) { onStart(controller, new TextEncoder()); }
@@ -1036,7 +1169,7 @@ function eventStreamResponse(
   return new Response(stream, {
     status: 200,
     headers: {
-      ...corsHeaders,
+      ...responseCors,
       "Content-Type": "text/event-stream; charset=utf-8",
       "Cache-Control": "no-cache, no-transform",
       "X-Accel-Buffering": "no"
@@ -1046,7 +1179,7 @@ function eventStreamResponse(
 
 async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
-  attachments: PreparedAttachment[], displayUserText: string
+  attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>
 ): Promise<Response> {
   return eventStreamResponse((controller, encoder) => {
     (async () => {
@@ -1085,7 +1218,7 @@ async function streamImageGenerationResponse(
         try { controller.close(); } catch (_) {}
       }
     })();
-  });
+  }, responseCors);
 }
 
 function qualityReviewSystem(): string {
@@ -1141,10 +1274,10 @@ async function independentlyReviewAnswer(
 }
 async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
-  attachments: PreparedAttachment[], displayUserText: string
+  attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>
 ): Promise<Response> {
   if (task === "image_generation") {
-    return streamImageGenerationResponse(userId, messages, initialConversationId, usageId, attachments, displayUserText);
+    return streamImageGenerationResponse(userId, messages, initialConversationId, usageId, attachments, displayUserText, responseCors);
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
@@ -1166,6 +1299,7 @@ async function streamChatResponse(
           const providersLeft = available.length - index;
           const providerBudget = Math.max(7000, Math.min(30000, Math.floor(remaining / providersLeft)));
           const provider = available[index];
+          const providerStartedAt = Date.now();
           sseEvent(controller, encoder, {
             type: "status",
             message: index === 0
@@ -1188,10 +1322,12 @@ async function streamChatResponse(
             if (!completeText.trim()) throw new Error("Provider returned an empty response");
             chosen = { provider, text: completeText.trim() };
             rememberProviderSuccess(provider);
+            recordProviderOutcome(provider, true, Date.now() - providerStartedAt);
             break;
           } catch (error) {
             if (candidate) candidate.cleanup();
             const reason = error instanceof Error ? error.message : String(error);
+            recordProviderOutcome(provider, false, Date.now() - providerStartedAt);
             failures.push(provider + ":" + reason.slice(0, 100));
             rememberProviderFailure(provider, reason);
             if (reason !== "Not configured") console.warn("Mahi AI full-response provider attempt failed:", provider, reason.slice(0, 180));
@@ -1240,24 +1376,38 @@ async function streamChatResponse(
         try { controller.close(); } catch (_) {}
       }
     })();
-  });
+  }, responseCors);
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
-  if (req.method !== "POST") return json(405, { error: "Method not allowed" });
-  if (!baseUrl || !anonKey || !serviceKey) return json(503, { error: "Service is not configured yet." });
+  const origin = req.headers.get("origin");
+  if (origin && !isAllowedOrigin(origin)) {
+    return new Response(JSON.stringify({ error: "Origin not allowed." }), {
+      status: 403,
+      headers: { "Content-Type": "application/json; charset=utf-8", "Vary": "Origin" }
+    });
+  }
+  const responseCors = corsHeadersFor(origin);
+  if (req.method === "OPTIONS") return new Response("ok", { headers: responseCors });
+  if (req.method !== "POST") return json(405, { error: "Method not allowed" }, responseCors);
+  if (!baseUrl || !anonKey || !serviceKey) return json(503, { error: "Service is not configured yet." }, responseCors);
 
-  const user = await verifyUser(req);
-  if (!user) return json(401, { error: "Please reload the app to renew your guest session." });
+  let user: { id: string } | null;
+  try {
+    user = await verifyUser(req);
+  } catch (_) {
+    return json(503, { error: "Authentication service is temporarily unavailable." }, responseCors);
+  }
+  if (!user) return json(401, { error: "Please reload the app to renew your guest session." }, responseCors);
 
   let input: any;
   try {
-    const length = Number(req.headers.get("content-length") || "0");
-    if (length > 1500000) return json(413, { error: "That message is too large for a single request." });
-    input = await req.json();
-  } catch (_) {
-    return json(400, { error: "Invalid request." });
+    input = await readBoundedJson(req, 1500000);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
+      return json(413, { error: "That message is too large for a single request." }, responseCors);
+    }
+    return json(400, { error: "Invalid request." }, responseCors);
   }
   const incoming = Array.isArray(input?.messages) ? input.messages : [];
   const messages: ChatMessage[] = incoming
@@ -1266,8 +1416,25 @@ Deno.serve(async (req: Request) => {
     .map((m: any) => ({ role: m.role, content: m.content.trim().slice(0, 30000) }))
     .filter((m: ChatMessage) => m.content.length > 0);
   const lastUserIndex = messages.map((m) => m.role).lastIndexOf("user");
-  if (lastUserIndex < 0 || lastUserIndex !== messages.length - 1) return json(400, { error: "Send a message to begin." });
-  if (messages.reduce((sum, m) => sum + m.content.length, 0) > 120000) return json(413, { error: "Trim your message history and try again." });
+  if (lastUserIndex < 0 || lastUserIndex !== messages.length - 1) return json(400, { error: "Send a message to begin." }, responseCors);
+  if (messages.reduce((sum, m) => sum + m.content.length, 0) > 120000) return json(413, { error: "Trim your message history and try again." }, responseCors);
+
+  let reservation: UsageReservation;
+  try {
+    reservation = await reserveUsageRequest(user.id);
+  } catch (_) {
+    return json(503, { error: "Mahi AI is temporarily unavailable. Please try again." }, responseCors);
+  }
+  if (!reservation.allowed) {
+    const retry = Math.max(1, reservation.retryAfterSeconds);
+    return json(429, {
+      error: "Too many requests. Please wait before trying again.",
+      code: "rate_limited",
+      retry_after_seconds: retry
+    }, { ...responseCors, "Retry-After": String(retry) });
+  }
+  const usageId = reservation.usageId;
+  if (!usageId) return json(503, { error: "Mahi AI is temporarily unavailable. Please try again." }, responseCors);
 
   const displayPrompt = messages[messages.length - 1].content;
   let attachments: PreparedAttachment[] = [];
@@ -1275,8 +1442,9 @@ Deno.serve(async (req: Request) => {
     attachments = await prepareAttachments(user.id, input?.attachments);
   } catch (error) {
     const reason = error instanceof Error ? error.message : "The attachment could not be processed.";
+    await updateUsage(usageId, { success: false, error_code: "attachment_rejected" });
     const status = /15 MB|20 MB|12 MB|no more than 5/i.test(reason) ? 413 : 400;
-    return json(status, { error: reason });
+    return json(status, { error: reason }, responseCors);
   }
   const attachmentLabels = attachments.length
     ? "\n\nAttached files: " + attachments.map((item) => item.name + " (" + item.mimeType + ")").join(", ")
@@ -1294,13 +1462,15 @@ Deno.serve(async (req: Request) => {
     try {
       const ok = await getConversation(user.id, conversationId);
       if (!ok) {
-        return json(404, { error: "Conversation not found." });
+        await updateUsage(usageId, { success: false, error_code: "conversation_not_found" });
+        return json(404, { error: "Conversation not found." }, responseCors);
       }
     } catch (_) {
-      return json(503, { error: "Mahi AI is temporarily unavailable." });
+      await updateUsage(usageId, { success: false, error_code: "conversation_lookup_failed" });
+      return json(503, { error: "Mahi AI is temporarily unavailable." }, responseCors);
     }
   }
 
-  const usageId = await logUsage(user.id, { task_type: task, success: false });
-  return await streamChatResponse(user.id, contextualMessages, task, conversationId, usageId, attachments, displayUserText);
+  await updateUsage(usageId, { task_type: task });
+  return await streamChatResponse(user.id, contextualMessages, task, conversationId, usageId, attachments, displayUserText, responseCors);
 });
