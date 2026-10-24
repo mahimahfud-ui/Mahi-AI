@@ -5,6 +5,9 @@ on:
     paths:
       - "supabase/functions/mahi-ai-chat/**"
       - "supabase/migrations/**"
+      - "server.js"
+      - "public/app.js"
+      - "public/config.js"
       - ".github/workflows/edge-function-check.yml"
   push:
     branches:
@@ -30,3 +33,9 @@ jobs:
           deno-version: v2.x
       - name: Type-check Edge Function
         run: deno check supabase/functions/mahi-ai-chat/index.ts
+      - name: Check Node server syntax
+        run: node --check server.js
+      - name: Check browser JavaScript syntax
+        run: |
+          node --check public/app.js
+          node --check public/config.js
