@@ -20,13 +20,15 @@ test("Venice is skipped for inline media that needs native provider support", ()
 
 
 
-test("porn/NSFW text prompts select Venice before task-specific routes", () => {
+test("porn/NSFW text prompts are routed to Venice only before task-specific routes", () => {
   const pornRoute = edge.indexOf('if (isPornRelatedPrompt(prompt) && !hasInlineAttachments)');
   const attachmentRoute = edge.indexOf('} else if (hasInlineAttachments)', pornRoute);
   const codingRoute = edge.indexOf('} else if (task === "coding")', pornRoute);
   assert.ok(pornRoute >= 0, "porn-first routing branch should exist");
   assert.ok(attachmentRoute > pornRoute, "attachments must keep their compatible-provider path");
   assert.ok(codingRoute > pornRoute, "porn routing must override ordinary coding priority");
+  assert.ok(edge.includes('preferred = ["venice"];'));
+  assert.ok(edge.includes('const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments\\n    ? ["venice"]'));
   assert.ok(edge.includes("function isPornRelatedPrompt(prompt: string): boolean {"));
   assert.ok(edge.includes("function shouldPreferVenice(prompt: string): boolean {"));
   assert.ok(edge.includes("return isPornRelatedPrompt(prompt);"));
