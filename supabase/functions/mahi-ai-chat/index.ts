@@ -1143,7 +1143,7 @@ function isMahiOwnerProfileRequest(prompt: string): boolean {
   if (!mentionsOwner) return false;
   const standaloneAlias = /^\s*@?(?:mahi|mahimahfud|mahi[\s_-]+mahfud)\s*[?.!]*\s*$/i.test(value);
   const asksAboutOwner = /\b(?:who|what|about|tell|bio|biography|profile|details?|information|background|owner|creator|developer|founder|projects?|social|contact|portfolio|work|education|ke|ki|kor(?:e|en)?|somporke|porichoy|bistarito|jante|bolo|bolbe)\b|(?:কে|সম্পর্কে|পরিচয়|পরিচয়|বিস্তারিত|তথ্য|জীবনী|কী করেন|কি করেন|প্রকল্প|কাজগুলো|জানতে চাই)/iu.test(value);
-  const negativeClaimAboutOwner = /\b(?:bad|fake|fraud|scam(?:mer)?|liar|cheater|corrupt|useless|stupid|trash|pathetic|worst|dishonest|idiot|thief|criminal)\b|(?:খারাপ|ভুয়া|ভুয়া|প্রতারক|ধোঁকাবাজ|চোর|বাজে|অযোগ্য|মিথ্যাবাদী|ফালতু|জোচ্চোর)/iu.test(value);
+  const negativeClaimAboutOwner = /\b(?:bad|fake|fraud|scam(?:mer)?|liar|cheater|corrupt|useless|stupid|trash|pathetic|worst|dishonest|idiot|thief|criminal|kharap|vuya|bhua|protarok|mithyabadi|faltu|baje|opodartho|chor)\b|(?:খারাপ|ভুয়া|ভুয়া|প্রতারক|ধোঁকাবাজ|চোর|বাজে|অযোগ্য|মিথ্যাবাদী|ফালতু|জোচ্চোর)/iu.test(value);
   return standaloneAlias || asksAboutOwner || negativeClaimAboutOwner;
 }
 function getMahiOwnerProfileContext(prompt: string): string {
