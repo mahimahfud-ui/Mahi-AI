@@ -512,3 +512,6 @@ html[data-theme="light"] .account-button:hover { background: rgba(143,125,255,.1
   .voice-end-button{padding:0 10px}
 }
 @media(prefers-reduced-motion:reduce){.voice-panel,.voice-orb,.voice-orb-wrap:before,.voice-orb-wrap:after{animation:none!important}}
+
+.voice-mic-button.is-recording{background:linear-gradient(145deg,#ffb8c8,#e76e91);border-color:rgba(255,191,208,.45);box-shadow:0 0 0 7px rgba(231,110,145,.11),0 8px 28px rgba(231,110,145,.25)}
+.voice-stage[data-state="listening"] .voice-orb{animation:voiceOrbListen 1.4s ease-in-out infinite}
