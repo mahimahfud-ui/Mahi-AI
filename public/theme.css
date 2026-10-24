@@ -1,0 +1,31 @@
+/* Mahi AI — theme.css
+   Full "Midnight ink, lilac light" theme file should replace this stub.
+   Load order: styles.css → theme.css → motion.css → craft.css → motion-b.css
+*/
+:root {
+  color-scheme: dark;
+  --ink-0: #06070c;
+  --ink-1: #0a0c14;
+  --ink-2: #0f121c;
+  --ink-3: #151927;
+  --ink-4: #1d2233;
+  --line-1: rgba(190, 198, 240, .07);
+  --line-2: rgba(190, 198, 240, .12);
+  --line-3: rgba(190, 198, 240, .22);
+  --text-1: #eef0fa;
+  --text-2: #bcc2d6;
+  --text-3: #9097b0;
+  --text-4: #7b829a;
+  --accent: #a896ff;
+  --accent2: #6e8bff;
+  --accent-hi: #ddd6ff;
+  --accent-rgb: 168, 150, 255;
+  --accent2-rgb: 110, 139, 255;
+  --bg: var(--ink-0);
+  --panel: var(--ink-1);
+  --panel-2: var(--ink-2);
+  --line: var(--line-2);
+  --muted: var(--text-3);
+  --text: var(--text-1);
+}
+body { background: var(--ink-0); color: var(--text-1); }
