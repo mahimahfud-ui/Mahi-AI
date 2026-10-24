@@ -4,12 +4,19 @@ MahiCloud is a dark, responsive multilingual chat app with task-aware provider r
 
 The public-facing product name is **MahiCloud**. The existing GitHub repository name and Supabase Edge Function slug remain unchanged as technical identifiers to preserve links and deployment.
 
+## Chat features
+
+- Streaming replies with a stop-generation control, per-message copy, edit-and-replace, and regenerate.
+- Search saved conversation titles, rename or delete a chat, and export the current conversation as Markdown or JSON.
+- Temporary chats stay out of saved conversation history and long-term memory; they remain only in the open browser session until you leave or start another chat.
+- Existing capabilities remain available: responsive dark UI, multilingual chats, authenticated history, attachments, voice input/read-aloud, web research and source links, image generation where explicitly enabled, code execution/live previews, public API discovery, and per-user memory controls.
+
 ## Architecture
 
 - Frontend: static HTML/CSS/JavaScript in \`public/\`.
 - Authentication and data: Supabase Auth guest sessions and Postgres tables with Row Level Security.
 - AI backend: Supabase Edge Function \`mahi-ai-chat\`. Provider selection happens on the server; the UI never receives the provider name or API key.
-- Providers supported by the router: Google Gemini, Groq, OpenRouter, Shannon AI, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, and Anthropic. Provider eligibility follows server-side opt-in flags: paid fallbacks, Shannon, NVIDIA/Cloudflare, and image generation stay disabled unless explicitly enabled.
+- Providers supported by the router: Google Gemini, Groq, OpenRouter, Shannon AI, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, Anthropic, and Venice AI. Provider eligibility is decided server-side; provider names and keys are never sent to the browser. Paid fallbacks and optional providers remain gated by their server-side opt-in flags, with the task-specific OpenAI coding route as the documented exception.
 - Hosting: Node 18+; \`npm start\` serves the frontend. \`render.yaml\` configures Render to deploy commits on \`main\`.
 
 ## Supabase setup
@@ -27,9 +34,9 @@ Recommended free-tier provider secrets (add one or more):
 - `MISTRAL_API_KEY` — [Mistral La Plateforme](https://console.mistral.ai/api-keys)
 
 Optional providers and opt-in flags:
-- `DEEPSEEK_API_KEY` (or legacy `DeepSeek`), `OPENAI_API_KEY`, and/or `ANTHROPIC_API_KEY` are treated as possible paid fallbacks. They are ignored unless `ENABLE_PAID_FALLBACK=true` is set in Supabase Edge Function Secrets.
+- `DEEPSEEK_API_KEY` (or legacy `DeepSeek`) and `ANTHROPIC_API_KEY` are ignored unless `ENABLE_PAID_FALLBACK=true` is set in Supabase Edge Function Secrets. `OPENAI_API_KEY` is also gated for general requests; the specifically designated coding route may use OpenAI when the key is configured. Set `ENABLE_PAID_FALLBACK=true` to allow OpenAI in other tasks and to allow paid OpenRouter model overrides.
 - `NVIDIA_API_KEY` is ignored unless `ENABLE_NVIDIA_FALLBACK=true` is set after checking your account's allowance and billing settings.
-- `SHANNON_API_KEY` (or `SHANNONAI_API_KEY` / `SHANNON_AI_API_KEY`) is ignored unless `ENABLE_SHANNON_FALLBACK=true` is set after checking Shannon's pricing and account balance. The default model is `shannon-3`; optionally set `SHANNON_MODEL`. [Official API docs](https://shannon-ai.com/docs/api) document the OpenAI-compatible endpoint at `https://api.shannon-ai.com/v1/chat/completions`. Explicit porn/erotic/adult-content requests prefer Shannon when enabled; for ordinary text chats it remains a cost-penalized fallback. The current integration is text-only; existing attachment requests continue through other eligible providers.
+- `SHANNON_API_KEY` (or `SHANNONAI_API_KEY` / `SHANNON_AI_API_KEY`) is ignored unless `ENABLE_SHANNON_FALLBACK=true` is set after checking Shannon's pricing and account balance. The default model is `shannon-3`; optionally set `SHANNON_MODEL`. [Official API docs](https://shannon-ai.com/docs/api) document the OpenAI-compatible endpoint at `https://api.shannon-ai.com/v1/chat/completions`. Venice AI is the preferred route for adult/sensitive prompts when configured; Shannon remains an optional, cost-penalized text fallback. The current integration is text-only; existing attachment requests continue through other eligible providers.
 - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are ignored unless `ENABLE_CLOUDFLARE_FALLBACK=true` is set after checking your Workers AI allowance and billing settings.
 - Image generation is disabled by default because the supported image APIs may incur charges. Set `ENABLE_PAID_IMAGE_GENERATION=true` only if you intentionally accept those charges. The current Gemini 3.1 Flash Image API model has no free tier; see [Google's API pricing](https://ai.google.dev/gemini-api/docs/pricing). When enabled, image routing tries Gemini, then Grok (if `XAI_API_KEY` or `GROK_API_KEY` is configured), then OpenAI (if `OPENAI_API_KEY` is configured).
 
@@ -39,7 +46,7 @@ The router classifies the actual request intent (coding, reasoning, creative wri
 
 MahiCloud uses a relaxed, friendly tone for ordinary casual conversation and may use a few emojis when the moment is playful or cheerful. It avoids forced emojis and keeps coding, serious, sensitive, and professional requests focused.
 
-The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner of the MahiCloud assistant. When responding to insults or negative factual claims about the owner, MahiCloud should be confident and assertive but civil: correct unsupported or false claims using known public facts and project information, distinguish opinion from verifiable fact, acknowledge fair criticism when warranted, and never invent evidence, achievements, or personal details or answer with harassment.
+The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner of the MahiCloud assistant. When responding to insults or negative factual claims about the owner, MahiCloud should be confident, fact-based, and assertive but civil: correct unsupported or false claims using known public facts and project information, distinguish opinion from verifiable fact, acknowledge fair criticism when warranted, and never invent evidence, achievements, or personal details or answer with harassment.
 
 ## Long-term memory
 
@@ -63,7 +70,7 @@ Guest-session limitation: memory is tied to the Supabase Auth user ID. Clearing 
 - Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Any file type can be selected and uploaded, but unsupported binary types may only pass their name/type unless their contents can be extracted.
 - Requests to generate or edit an image are disabled by default to prevent accidental paid API calls. Set `ENABLE_PAID_IMAGE_GENERATION=true` in Supabase Edge Function Secrets only when you accept possible charges. The route tries Gemini, then Grok, then OpenAI for configured keys. Set `OPENAI_IMAGE_MODEL` or `XAI_IMAGE_MODEL` to override the respective model. Generated images are stored privately and shown through expiring signed links.
 - Google's Gemini 3.1 Flash Image API model has no free tier. Image generation still depends on provider account access, model availability, quota, and billing status.
-- API roles: task-specific routing tries eligible providers until a complete response succeeds. OpenAI, Anthropic, DeepSeek, non-free OpenRouter model overrides, and image generation require explicit opt-in flags before they can be used automatically. Image attachments can also be passed to OpenRouter/Gemini vision routes when a selected model supports them.
+- API roles: task-specific routing tries eligible providers until a complete response succeeds. Anthropic, DeepSeek, non-coding OpenAI routes, non-free OpenRouter model overrides, and image generation require explicit opt-in flags before they can be used automatically. The coding route may use OpenAI when configured. Image attachments can also be passed to OpenRouter/Gemini vision routes when a selected model supports them.
 
 ## Deploy the Edge Function
 
