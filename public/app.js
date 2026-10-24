@@ -591,6 +591,8 @@
     const typing = addMessage("assistant", "", { typing: true });
     setBusy(true);
     let uploadedAttachments = [];
+    let responseCompleted = false;
+    let fullText = "";
     try {
       if (!session) await ensureSession();
       uploadedAttachments = await uploadPendingAttachments(selectedFiles);
@@ -623,7 +625,6 @@
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
-      let fullText = "";
       let completed = false;
       const messageContent = typing.querySelector(".message-content");
       messageContent.classList.add("streaming-text");
@@ -671,6 +672,7 @@
       }
       if (!fullText.trim()) throw new Error("Mahi AI: No response was returned. Please try again.");
       fullText = fullText.trim();
+      responseCompleted = true;
       messageContent.classList.remove("streaming-text");
       const resolvedReply = await resolveStoredImageMarkers(fullText);
       messageContent.innerHTML = safeMarkdown(resolvedReply);
@@ -680,8 +682,33 @@
       pendingFiles = [];
       renderAttachmentList();
       updateCounter();
-      await refreshConversations();
+      try {
+        await refreshConversations();
+      } catch (historyError) {
+        // A delivered answer must not be rolled back just because history refresh failed.
+        console.warn("Mahi AI reply delivered; conversation history refresh failed:",
+          historyError instanceof Error ? historyError.message.slice(0, 160) : "Unknown error");
+      }
     } catch (error) {
+      if (responseCompleted) {
+        // Preserve a successfully received answer if image-marker resolution or another
+        // non-critical UI step failed after the stream already finished.
+        const messageContent = typing.querySelector(".message-content");
+        if (messageContent) {
+          messageContent.classList.remove("streaming-text");
+          messageContent.innerHTML = safeMarkdown(fullText.replace(/!\[Generated image\]\(mahi-storage:\/\/[^)]+\)/g, "[Generated image is stored in this chat.]"));
+          delete typing.dataset.typing;
+        }
+        if (currentMessages[currentMessages.length - 1]?.role !== "assistant") {
+          currentMessages.push({ role: "assistant", content: fullText });
+        }
+        pendingFiles = [];
+        renderAttachmentList();
+        updateCounter();
+        console.warn("Mahi AI reply was received; a post-response UI step failed:",
+          error instanceof Error ? error.message.slice(0, 160) : "Unknown error");
+        return;
+      }
       typing.remove();
       currentMessages.pop();
       if (uploadedAttachments.length) {
