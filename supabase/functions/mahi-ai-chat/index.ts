@@ -1000,7 +1000,10 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     ] : undefined;
     body = {
       model, messages: chatMessages, temperature: 0.3, max_tokens: 8192, stream: true,
-      ...(resourceTools ? { tools: resourceTools, max_tool_calls: 2 } : {})
+      ...(resourceTools ? {
+        tools: resourceTools,
+        stop_server_tools_when: [{ type: "step_count_is", step_count: 2 }]
+      } : {})
     };
   }
 
