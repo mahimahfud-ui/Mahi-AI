@@ -591,7 +591,7 @@ body {
 }
 @media (max-width: 760px) {
   .sidebar-resize-handle { display: none !important; }
-  .sidebar { width: min(290px, 86vw) !important; min-width: 0 !important; flex-basis: auto !important; }
+  :root:root body .sidebar { width: min(290px, 86vw) !important; min-width: 0 !important; flex: 0 0 auto !important; }
 }
 .sidebar-bottom { position: relative; }
 :root:root body .sidebar-bottom .settings-panel {
