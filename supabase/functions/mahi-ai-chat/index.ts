@@ -309,9 +309,15 @@ function shouldUseCodeExecution(prompt: string): boolean {
 
 function shouldUseWebSearch(prompt: string): boolean {
   const s = prompt.toLowerCase();
-  return /\b(search (?:the )?(?:web|internet)|look up online|find online|browse|web search|latest|current|currently|today|tonight|yesterday|right now|recent|newest|breaking|live|news|headline|release date|latest version|official documentation|source links?|citations?|fact.?check|verify online|price today|current price|exchange rate|weather today|who won|this week|this month|as of 20\d{2})\b/i.test(s) ||
+  const currentInfo = /\b(search (?:the )?(?:web|internet)|look up online|find online|browse|web search|latest|current|currently|today|tonight|yesterday|right now|recent|newest|breaking|live|news|headline|release date|latest version|official documentation|source links?|citations?|fact.?check|verify online|price today|current price|exchange rate|weather today|who won|this week|this month|as of 20\d{2})\b/i.test(s) ||
     /(?:সর্বশেষ|বর্তমানে|বর্তমান|আজকের|আজকে|আজ |এখনকার|এখন |সাম্প্রতিক|সদ্য|সর্বনিকট|খবর|নিউজ|লাইভ|দাম কত|আজকের দাম|রেট কত|আপডেট|আপডেটেড|সূত্র দাও|সোর্স দাও|অনলাইনে খুঁজ|ওয়েবে খুঁজ|ওয়েবে খুঁজ|ওয়েব সার্চ|ওয়েব সার্চ|যাচাই করে বল|সর্বশেষ তথ্য|বর্তমান তথ্য|এখন কে|কে জিতেছে|কখন রিলিজ)/i.test(s) ||
     /\b(?:ekhon|ajker|ajke|sorbosesh|shorbosesh|latest|current|notun update|khobor|dam koto|rate koto|online e khujo|web e khujo|source dao|source shoho|verify kore|check kore bolo|updated info|release hoise|ber hoise)\b/i.test(s);
+  const resourceIntent = /\b(?:research|look up|find|search for|give|provide|share|list|collect|recommend|show)\b.{0,70}\b(?:resources?|sources?|references?|citations?|official links?|docs?|documentation|papers?|articles?|tutorials?|datasets?|tools?)\b/i.test(s) ||
+    /\b(?:resources?|sources?|references?|citations?|official links?|documentation|papers?|articles?|tutorials?)\s+(?:for|about|on|regarding)\b/i.test(s) ||
+    /\b(?:resource|resources|source|sources|reference|references|link|links)\s*(?:gula|gulo|dao|daw|de|den|diye|shoho|soho|lagbe|chai|diben|din)\b/i.test(s) ||
+    /(?:রিসোর্স|সূত্র|সোর্স|রেফারেন্স|লিংক).{0,35}(?:দাও|দিন|দিয়ে|দিয়ে|সহ|খুঁজ|লাগবে|চাই|কর|দেখ)/i.test(s) ||
+    /(?:research kore|resource dao|source dao|reference dao|link dao|link shoho|link soho|source shoho|source soho|online theke|internet theke|web theke|web e khujo|online e khujo|website link dao|resource gula|source gulo)\b/i.test(s);
+  return currentInfo || resourceIntent;
 }
 
 function classifyTask(prompt: string): string {
@@ -762,17 +768,27 @@ async function* readGeminiEventStream(response: Response): AsyncGenerator<string
   const decoder = new TextDecoder();
   let buffer = "";
   const groundedSources = new Map<string, string>();
+  const rememberSource = (uri: unknown, label: unknown) => {
+    if (typeof uri !== "string" || groundedSources.size >= 8) return;
+    try {
+      const parsed = new URL(uri);
+      if (parsed.protocol !== "https:" || groundedSources.has(parsed.toString())) return;
+      const title = String(label || parsed.hostname).replace(/[\[\]<>\r\n]/g, "").slice(0, 110);
+      groundedSources.set(parsed.toString(), title || parsed.hostname);
+    } catch (_) {}
+  };
   const captureSources = (candidate: any) => {
-    for (const chunk of candidate?.groundingMetadata?.groundingChunks || []) {
-      const uri = chunk?.web?.uri;
-      if (typeof uri !== "string") continue;
-      try {
-        const parsed = new URL(uri);
-        if (parsed.protocol !== "https:" || groundedSources.has(parsed.toString())) continue;
-        const title = String(chunk?.web?.title || parsed.hostname).replace(/[\[\]<>\r\n]/g, "").slice(0, 110);
-        groundedSources.set(parsed.toString(), title || parsed.hostname);
-        if (groundedSources.size >= 8) break;
-      } catch (_) {}
+    const grounding = candidate?.groundingMetadata || candidate?.grounding_metadata;
+    for (const chunk of grounding?.groundingChunks || grounding?.grounding_chunks || []) {
+      rememberSource(chunk?.web?.uri, chunk?.web?.title);
+      if (groundedSources.size >= 8) break;
+    }
+    const urlContext = candidate?.urlContextMetadata || candidate?.url_context_metadata;
+    for (const item of urlContext?.urlMetadata || urlContext?.url_metadata || []) {
+      const status = String(item?.urlRetrievalStatus || item?.url_retrieval_status || "");
+      if (status && !/success/i.test(status)) continue;
+      rememberSource(item?.retrievedUrl || item?.retrieved_url, item?.title);
+      if (groundedSources.size >= 8) break;
     }
   };
   const readEvent = async function* (raw: string): AsyncGenerator<string, void, unknown> {
@@ -869,9 +885,9 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     const normalized = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
     const latestPrompt = [...normalized].reverse().find((m) => m.role === "user")?.content || "";
     const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
-    const useWebSearch = shouldUseWebSearch(latestPrompt) && !hasInlineAttachments;
+    const useWebSearch = (task === "web_research" || shouldUseWebSearch(latestPrompt)) && !hasInlineAttachments;
     const useUrlContext = shouldUseUrlContext(latestPrompt) && !hasInlineAttachments;
-    const useCodeExecution = shouldUseCodeExecution(latestPrompt) && !hasInlineAttachments;
+    const useCodeExecution = (task === "code_execution" || shouldUseCodeExecution(latestPrompt)) && !hasInlineAttachments;
     const geminiTools: Record<string, unknown>[] = [];
     if (useWebSearch) geminiTools.push({ google_search: {} });
     if (useUrlContext) geminiTools.push({ url_context: {} });
@@ -967,7 +983,25 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         ];
       }
     }
-    body = { model, messages: chatMessages, temperature: 0.3, max_tokens: 8192, stream: true };
+    const resourceTools = name === "openrouter" && task === "web_research" ? [
+      {
+        type: "openrouter:web_search",
+        parameters: {
+          engine: "auto",
+          max_results: 5,
+          max_total_results: 5,
+          search_context_size: "medium"
+        }
+      },
+      {
+        type: "openrouter:web_fetch",
+        parameters: { engine: "openrouter", max_content_tokens: 12000 }
+      }
+    ] : undefined;
+    body = {
+      model, messages: chatMessages, temperature: 0.3, max_tokens: 8192, stream: true,
+      ...(resourceTools ? { tools: resourceTools, max_tool_calls: 2 } : {})
+    };
   }
 
   let headerTimer: ReturnType<typeof setTimeout> | undefined;
