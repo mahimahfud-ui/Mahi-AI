@@ -52,8 +52,8 @@ test("coding uses a fast provider first and fallback attempts are bounded", () =
   const codingStart = edge.indexOf('} else if (task === "coding") {');
   const reasoningStart = edge.indexOf('} else if (task === "reasoning") {', codingStart);
   const coding = edge.slice(codingStart, reasoningStart);
-  assert.match(coding, /preferred = \\["groq", "gemini", "openrouter"/);
-  assert.match(edge, /maxAttemptMs = taskNeedsLongToolExecution \\? 24000 : index === 0 \\? 14000 : 9000/);
-  assert.match(edge, /\\)\\.slice\\(0, 1\\);/);
-  assert.match(edge, /task, 4500, reviewSystem/);
+  assert.ok(coding.includes('preferred = ["groq", "gemini", "openrouter"'));
+  assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 14000 : 9000;"));
+  assert.ok(edge.includes(").slice(0, 1);"), "review is limited to one alternate provider");
+  assert.ok(edge.includes("task, 4500, reviewSystem"));
 });
