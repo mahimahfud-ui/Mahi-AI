@@ -600,8 +600,8 @@ function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
   if (name === "nvidia") return configuredSecret(["NVIDIA_API_KEY"]);
   // Cloudflare requires both an API token and the correct account ID.
-  if (name === "cloudflare") return configuredSecret(["CLOUDFLARE_API_TOKEN"]) &&
-    configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
+  if (name === "cloudflare") return configuredSecret(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY"]) &&
+    configuredSecret(["CLOUDFLARE_ACCOUNT_ID", "CF_ACCOUNT_ID"]);
   // Adding a provider-specific key is the user-controlled opt-in to that route.
   // These providers may incur charges under their respective plans and quotas.
   if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);
