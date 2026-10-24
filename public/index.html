@@ -4,9 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#090b10">
-  <meta name="description" content="Mahi AI — one helpful assistant for your everyday tasks.">
+  <meta name="description" content="MahiCloud — one helpful assistant for your everyday tasks.">
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
-  <title>Mahi AI</title>
+  <title>MahiCloud</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -29,7 +29,7 @@
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
         <img class="brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true">
-        <div class="brand-copy"><strong>Mahi AI</strong><span>Your everyday assistant</span></div>
+        <div class="brand-copy"><strong>MahiCloud</strong><span>Your everyday assistant</span></div>
         <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
       <button class="new-chat" id="newChat"><span class="plus" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>New chat</span><kbd>Ctrl K</kbd></button>
@@ -116,11 +116,11 @@
         <form class="composer" id="chatForm">
           <input id="fileInput" type="file" multiple hidden>
           <div id="attachmentList" class="attachment-list" hidden aria-label="Selected attachments"></div>
-          <label for="promptInput" class="sr-only">Message Mahi AI</label>
-          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message Mahi AI…" autocomplete="off" enterkeyhint="send"></textarea>
-          <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with Mahi AI"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
+          <label for="promptInput" class="sr-only">Message MahiCloud</label>
+          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message MahiCloud…" autocomplete="off" enterkeyhint="send"></textarea>
+          <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
         </form>
-        <p class="footer-note">Attach up to 5 files, 15 MB each. Some file types may need text or PDF conversion. Mahi AI can make mistakes.</p>
+        <p class="footer-note">Attach up to 5 files, 15 MB each. Some file types may need text or PDF conversion. MahiCloud can make mistakes.</p>
       </footer>
     </main>
   </div>
@@ -131,7 +131,7 @@
       <header class="account-modal-header">
         <div class="account-modal-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></div>
         <div class="account-modal-heading">
-          <div class="account-modal-eyebrow">MAHI AI · YOUR WORKSPACE</div>
+          <div class="account-modal-eyebrow">MAHICLOUD · YOUR WORKSPACE</div>
           <h2 id="accountDialogTitle">Save your chats</h2>
           <p id="accountDialogDescription">Use any valid email address or a phone number with its international country code.</p>
         </div>
@@ -188,7 +188,7 @@
       <header class="voice-panel-header">
         <div class="voice-brand">
           <div class="voice-brand-mark" aria-hidden="true"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt=""></div>
-          <div><h2 id="voiceModeTitle">Voice with Mahi AI</h2><p id="voiceModeDescription">Talk in any language. I’ll detect it and reply aloud.</p></div>
+          <div><h2 id="voiceModeTitle">Voice with MahiCloud</h2><p id="voiceModeDescription">Talk in any language. I’ll detect it and reply aloud.</p></div>
         </div>
         <button class="icon-button voice-close" type="button" data-voice-close aria-label="End voice conversation" title="Close voice mode"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </header>
@@ -202,7 +202,7 @@
         <button class="voice-mic-button" id="voiceMicButton" type="button" aria-label="Start listening" title="Start or pause listening"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg></button>
         <button class="voice-end-button" id="voiceEndButton" type="button">End voice</button>
       </footer>
-      <p class="voice-privacy-note">When you start voice mode, your browser asks for microphone access if needed. Pause briefly after speaking; Mahi AI detects your language, replies aloud, then listens for your next turn. Speech voice availability depends on your device.</p>
+      <p class="voice-privacy-note">When you start voice mode, your browser asks for microphone access if needed. Pause briefly after speaking; MahiCloud detects your language, replies aloud, then listens for your next turn. Speech voice availability depends on your device.</p>
     </section>
   </div>
   <div class="api-explorer" id="apiExplorer" hidden>
