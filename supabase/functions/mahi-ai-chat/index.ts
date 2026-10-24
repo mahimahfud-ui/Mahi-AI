@@ -381,6 +381,8 @@ function flagEnabled(name: string): boolean {
 
 function providerIsConfigured(name: string): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+  if (name === "shannon") return flagEnabled("ENABLE_SHANNON_FALLBACK") &&
+    configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
   if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
   if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
   // Direct DeepSeek API requests may incur charges; require explicit opt-in.
@@ -444,33 +446,41 @@ function providerIsCoolingDown(name: string): boolean {
   return true;
 }
 
-function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false): string[] {
+function shouldPreferShannon(prompt: string): boolean {
+  return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a)?|sexually explicit|explicit sexual content|adult erotic fiction|sex story|sexual fantasy|masturbat(?:ion|e)?|fetish(?:es)?)\b|(?:পর্ন|অশ্লীল|হেনতাই|যৌন উত্তেজক|প্রাপ্তবয়স্কদের যৌন কনটেন্ট|প্রাপ্তবয়স্কদের যৌন কনটেন্ট)/iu.test(prompt);
+}
+
+function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = ""): string[] {
   let preferred: string[];
   if (hasInlineAttachments) {
     // Gemini handles multimodal and file inputs directly; OpenRouter's free router
     // is next and selects a free model with the needed feature when available.
-    preferred = ["gemini", "openrouter", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
-    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "web_research" || task === "code_execution") {
     // Gemini has native Google Search, URL Context, and code-execution tool support.
-    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "shannon", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "coding") {
     // Groq has been the fastest healthy coding route in production logs; put it first
     // so a stalled OpenRouter request cannot delay ordinary first responses by 30 seconds.
-    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "reasoning") {
     preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "creative") {
-    preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else {
-    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   }
 
-  // OpenAI is the final fallback because its API can incur charges. Other optional
-  // providers are eligible only when their server-side keys are configured.
-  const fallback = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+  // OpenAI is the final fallback because its API can incur charges. Shannon is
+  // separately opt-in because its API may bill per token.
+  if (shouldPreferShannon(prompt) && !hasInlineAttachments) {
+    preferred = ["shannon", ...preferred.filter((name) => name !== "shannon")];
+  }
+  const fallback = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])]
-    .filter((name) => providerIsConfigured(name) && !(hasInlineAttachments && name === "venice"));
+    .filter((name) => providerIsConfigured(name) &&
+      !(hasInlineAttachments && (name === "venice" || name === "shannon")));
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
   // Preserve task/capability preference as the baseline, then adjust within that order
   // using recent in-isolate latency and reliability. Opted-in paid fallback providers
@@ -483,7 +493,8 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     const sampleCount = stats?.samples || 0;
     const failureRate = sampleCount ? (stats?.failures || 0) / sampleCount : 0;
     const latencyPenalty = stats ? Math.min(stats.averageLatencyMs / 1000, 15) * 0.75 : 0;
-    const paidFallbackPenalty = ["deepseek", "openai", "anthropic"].includes(name) ? 14 : 0;
+    const paidFallbackPenalty = ["deepseek", "openai", "anthropic"].includes(name) ||
+      (name === "shannon" && !shouldPreferShannon(prompt)) ? 14 : 0;
     return rank * 8 + failureRate * 6 + latencyPenalty + paidFallbackPenalty;
   };
   // If every configured provider is cooling down, permit an eventual retry rather than
@@ -1034,6 +1045,12 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
 }
 async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<{ text: string; provider: string }> {
   if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride), provider: name };
+  if (name === "shannon") {
+    const key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+    if (!key) throw new Error("Not configured");
+    const model = envFirst(["SHANNON_MODEL"]) || "shannon-3";
+    return { text: await openAICompatible(name, "https://api.shannon-ai.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
+  }
   if (name === "groq") {
     const key = envFirst(["GROQ_API_KEY"]);
     if (!key) throw new Error("Not configured");
@@ -1391,7 +1408,10 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     useAnthropic = true;
   } else {
     let key = "";
-    if (name === "groq") { key = envFirst(["GROQ_API_KEY"]); url = "https://api.groq.com/openai/v1/chat/completions"; }
+    if (name === "shannon") {
+      key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+      url = "https://api.shannon-ai.com/v1/chat/completions";
+    } else if (name === "groq") { key = envFirst(["GROQ_API_KEY"]); url = "https://api.groq.com/openai/v1/chat/completions"; }
     else if (name === "openrouter") {
       key = envFirst(["OPENROUTER_API_KEY"]);
       url = "https://openrouter.ai/api/v1/chat/completions";
@@ -1415,7 +1435,8 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     if (!key) { cleanup(); throw new Error("Not configured"); }
     headers.Authorization = "Bearer " + key;
     let model = "";
-    if (name === "groq") model = envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b";
+    if (name === "shannon") model = envFirst(["SHANNON_MODEL"]) || "shannon-3";
+    else if (name === "groq") model = envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b";
     else if (name === "openrouter") model = openRouterModel(task);
     else if (name === "deepseek") model = envFirst(["DEEPSEEK_MODEL"]) || "deepseek-flash";
     else if (name === "venice") model = envFirst(["VENICE_MODEL"]) || "zai-org-glm-5";
@@ -1913,7 +1934,7 @@ async function streamChatResponse(
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
-  const available = providerOrder(task, hasInlineAttachments, hasInlineImages);
+  const available = providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText);
   return eventStreamResponse((controller, encoder, registerCancellation) => {
     let cancelled = false;
     let activeCandidate: ProviderStream | null = null;
