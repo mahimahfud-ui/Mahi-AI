@@ -6,7 +6,7 @@ Mahi AI is a dark, responsive multilingual chat app with task-aware provider rou
 
 - New conversations receive a concise title from the opening request; titles prefer the first meaningful sentence and avoid cutting off mid-word.
 - Search the **Recents** list by conversation title without leaving the current chat.
-- Press **Ctrl/Cmd + K** to open the command palette. Use the arrow keys and Enter to navigate and run commands; Escape closes the palette. **Ctrl/Cmd + Shift + N** starts a new conversation.
+- Press **Ctrl/Cmd + K** to open the command palette. Use the arrow keys and Enter to navigate and run commands; Escape closes the palette. **Alt + Shift + N** starts a new conversation.
 - Completed answers include task-aware actions such as **Improve**, **Explain**, **Summarize**, **Continue**, or **Fix code**, plus suggested next steps chosen from the conversation context.
 - Website previews run in a sandboxed iframe. Missing HTML metadata and styles are inserted without replacing the document's existing root or head tags.
 
