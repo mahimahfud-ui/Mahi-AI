@@ -817,7 +817,7 @@ async function publicApiJson(url: string, cacheMs = 60_000): Promise<any> {
   const cached = publicApiCache.get(url);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
   const response = await fetchWithTimeout(url, {
-    headers: { "Accept": "application/json", "User-Agent": "Mahi-AI/1.0 (public-data lookup)" }
+    headers: { "Accept": "application/json", "User-Agent": "MahiCloud/1.0 (public-data lookup)" }
   }, 4500);
   if (!response.ok) throw new Error("Public API returned HTTP " + response.status);
   const raw = await response.text();
