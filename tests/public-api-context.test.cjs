@@ -39,7 +39,9 @@ test("API context is added server-side without changing stored/displayed user te
 
 test("API catalogue discovery does not dynamically execute returned arbitrary API URLs", () => {
   assert.match(edge, /getPublicApiCatalogue/);
-  assert.match(edge, /source_registry: entry\.githubUrl/);
+  assert.match(edge, /Mahi AI Public API Library \(public-apis community README\)/);
+  assert.match(edge, /parsedUrl\.protocol !== "https:" \|\| !PUBLIC_API_ALLOWED_HOSTS\.has\(parsedUrl\.hostname\)/);
+  assert.match(edge, /raw\.githubusercontent\.com\/public-apis\/public-apis\/master\/README\.md/);
   assert.match(edge, /Only fixed HTTPS hosts in the server-side allowlist are callable/);
   assert.doesNotMatch(edge, /fetch\(entry\.baseUrl/);
   assert.doesNotMatch(edge, /fetch\(data\.baseUrl/);
