@@ -1,0 +1,23 @@
+/* MahiCloud — Claude-style layer. Loaded LAST so it overrides earlier sheets.
+   Warm palette, centered column, soft message cards. */
+:root {
+  --claude-bg: #f5f3ef;
+  --claude-surface: #ffffff;
+  --claude-border: #e8e4dc;
+  --claude-text: #1a1a1a;
+  --claude-muted: #6b6560;
+  --claude-accent: #d97757;
+  --claude-user: #ebe7e0;
+  --claude-radius: 16px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --claude-bg: #1c1b1a;
+    --claude-surface: #262422;
+    --claude-border: #3a3733;
+    --claude-text: #f5f3ef;
+    --claude-muted: #a39e96;
+    --claude-user: #2f2c29;
+  }
+}
+/* Placeholder - full CSS from pack should be used. See mahi-upgrade-pack.zip */
