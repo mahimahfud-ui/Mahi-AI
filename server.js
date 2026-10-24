@@ -45,7 +45,7 @@ const server = http.createServer((req, res) => {
   }
   // Reject path bytes that can make filesystem APIs throw synchronously or that
   // proxies and Node may interpret differently.
-  if (pathname.includes("\\0") || pathname.includes("\\\\")) {
+  if (pathname.includes("\0") || pathname.includes("\\")) {
     return send(res, 400, "Bad request");
   }
   if (pathname === "/healthz") {
@@ -72,7 +72,7 @@ const server = http.createServer((req, res) => {
       "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
       // Files have stable names rather than content hashes, so revalidate code on
       // every navigation and avoid serving stale frontend/backend configuration.
-      "Cache-Control": /\\.(?:html?|js|css|json)$/i.test(pathname) ? "no-cache" : "public, max-age=3600"
+      "Cache-Control": /\.(?:html?|js|css|json)$/i.test(pathname) ? "no-cache" : "public, max-age=3600"
     });
     res.end(req.method === "HEAD" ? undefined : file);
     });
@@ -82,8 +82,8 @@ const server = http.createServer((req, res) => {
   }
 });
 
-server.requestTimeout = 10000;
-server.headersTimeout = 12000;
+server.requestTimeout = 15000;
+server.headersTimeout = 10000;
 server.keepAliveTimeout = 5000;
 server.maxHeadersCount = 100;
 
