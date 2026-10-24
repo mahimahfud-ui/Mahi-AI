@@ -356,3 +356,10 @@ html[data-theme="light"] .mahi-code-console-head .mahi-code-btn { color: #30374a
 @media (prefers-reduced-motion: reduce) {
   .mahi-code-device { transition: none; }
 }
+
+
+/* Small shared fixes for toolbar ergonomics */
+.mahi-code-actions .mahi-code-btn { flex: 0 0 auto; }
+.mahi-code-run { position: relative; }
+.mahi-code-run::before { content: ""; display: inline-block; width: 0; height: 0; margin-right: 5px; border-top: 4px solid transparent; border-bottom: 4px solid transparent; border-left: 5px solid currentColor; }
+.mahi-code-expand-overlay .mahi-code-playground { flex: 0 0 auto; }
