@@ -66,5 +66,5 @@ test("settings panel exposes persistent working chat preferences", () => {
   assert.match(app, /response_style: chatPreferences\.responseStyle/);
   assert.match(edge, /const customInstructions = typeof input\?\.custom_instructions/);
   assert.match(edge, /const responseStyle = typeof input\?\.response_style/);
-  assert.match(edge, /startProviderStream\(provider, providerMessages, task, attachments, providerBudget\)/);
+  assert.match(edge, /startProviderStream\(provider, providerMessages, task, attachments, providerBudget, adminInstructionContext\)/);
 });
