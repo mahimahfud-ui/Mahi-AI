@@ -61,17 +61,66 @@
           <svg class="settings-chevron ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
         </button>
         <div class="settings-panel" id="settingsPanel" hidden>
-          <div class="setting-row">
-            <div class="setting-copy"><span class="setting-title">Appearance</span><small>Choose dark or light mode</small></div>
-            <button class="theme-toggle" id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="Toggle light mode">
-              <span class="theme-toggle-knob" aria-hidden="true"></span><span id="themeToggleLabel">Dark</span>
-            </button>
-          </div>
-          <form class="name-setting-form" id="displayNameForm">
-            <label for="displayNameInput">Your display name</label>
-            <div class="name-setting-control"><input id="displayNameInput" type="text" maxlength="32" autocomplete="nickname" placeholder="e.g. Mahi"><button type="submit">Save</button></div>
-            <p class="setting-status" id="nameSaveStatus" role="status">Stored in this browser only.</p>
-          </form>
+          <section class="settings-group" aria-labelledby="generalSettingsTitle">
+            <h3 class="settings-group-title" id="generalSettingsTitle">General</h3>
+            <div class="setting-row">
+              <div class="setting-copy"><span class="setting-title">Appearance</span><small>Choose dark or light mode</small></div>
+              <button class="theme-toggle" id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="Toggle light mode">
+                <span class="theme-toggle-knob" aria-hidden="true"></span><span id="themeToggleLabel">Dark</span>
+              </button>
+            </div>
+            <div class="setting-row">
+              <div class="setting-copy"><span class="setting-title">Enter sends message</span><small>Turn off to use Ctrl/⌘ + Enter to send</small></div>
+              <button class="setting-switch" id="enterToSendToggle" type="button" role="switch" aria-checked="true" aria-label="Enter sends message"><span></span></button>
+            </div>
+            <label class="setting-row" for="chatDensitySelect">
+              <span class="setting-copy"><span class="setting-title">Conversation spacing</span><small>Control the space between messages</small></span>
+              <select class="setting-select" id="chatDensitySelect"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select>
+            </label>
+            <label class="setting-row" for="chatFontSizeSelect">
+              <span class="setting-copy"><span class="setting-title">Message text size</span><small>Adjust chat readability</small></span>
+              <select class="setting-select" id="chatFontSizeSelect"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option></select>
+            </label>
+            <div class="setting-row">
+              <div class="setting-copy"><span class="setting-title">Auto-scroll</span><small>Keep the latest reply in view</small></div>
+              <button class="setting-switch" id="autoScrollToggle" type="button" role="switch" aria-checked="true" aria-label="Auto-scroll to latest reply"><span></span></button>
+            </div>
+          </section>
+          <section class="settings-group" aria-labelledby="personalizationSettingsTitle">
+            <h3 class="settings-group-title" id="personalizationSettingsTitle">Personalization</h3>
+            <label class="settings-field" for="responseStyleSelect"><span class="setting-title">Default response style</span>
+              <select class="setting-select setting-select-wide" id="responseStyleSelect">
+                <option value="default">Balanced</option><option value="friendly">Friendly</option><option value="concise">Concise</option><option value="detailed">Detailed</option><option value="professional">Professional</option>
+              </select>
+            </label>
+            <form class="settings-field" id="customInstructionsForm">
+              <label class="setting-title" for="customInstructionsInput">Custom instructions</label>
+              <small class="settings-help">Preferences for future replies, such as language, tone, or how you like explanations. Safety and accuracy rules still apply.</small>
+              <textarea class="setting-textarea" id="customInstructionsInput" rows="3" maxlength="3000" placeholder="Example: Reply in Bangla unless I ask otherwise. Explain technical steps simply."></textarea>
+              <div class="settings-save-row"><span class="setting-status" id="customInstructionsStatus" role="status">Saved on this device when you press Save.</span><button class="setting-save-button" type="submit">Save</button></div>
+            </form>
+            <form class="name-setting-form" id="displayNameForm">
+              <label for="displayNameInput">Your display name</label>
+              <div class="name-setting-control"><input id="displayNameInput" type="text" maxlength="32" autocomplete="nickname" placeholder="e.g. Mahi"><button type="submit">Save</button></div>
+              <p class="setting-status" id="nameSaveStatus" role="status">Stored in this browser only.</p>
+            </form>
+          </section>
+          <section class="settings-group" aria-labelledby="voiceSettingsTitle">
+            <h3 class="settings-group-title" id="voiceSettingsTitle">Voice</h3>
+            <div class="setting-row">
+              <div class="setting-copy"><span class="setting-title">Read replies aloud</span><small>Automatically speak new responses when supported</small></div>
+              <button class="setting-switch" id="autoReadAloudToggle" type="button" role="switch" aria-checked="false" aria-label="Read replies aloud automatically"><span></span></button>
+            </div>
+          </section>
+          <section class="settings-group" aria-labelledby="dataSettingsTitle">
+            <h3 class="settings-group-title" id="dataSettingsTitle">Data controls</h3>
+            <p class="settings-help">Export the current conversation, or reset chat preferences stored in this browser. Exporting is available for the current chat only.</p>
+            <div class="settings-actions">
+              <button class="setting-action-button" id="settingsExportMarkdown" type="button">Export Markdown</button>
+              <button class="setting-action-button" id="settingsExportJson" type="button">Export JSON</button>
+              <button class="setting-action-button" id="resetChatPreferences" type="button">Reset chat preferences</button>
+            </div>
+          </section>
         </div>
       </section>
       <section class="sidebar-social" aria-label="Social and contact links">
@@ -91,6 +140,7 @@
         <div class="privacy-note"><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
         <div class="profile-row"><div class="avatar" id="profileAvatar">Y</div><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
       </div>
+      <div class="sidebar-resize-handle" id="sidebarResizeHandle" role="separator" tabindex="0" aria-label="Resize chat history sidebar" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="440" aria-valuenow="260" title="Drag to resize chat history"></div>
     </aside>
 
     <main class="main-panel">
