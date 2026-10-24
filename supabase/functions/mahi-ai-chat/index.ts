@@ -466,9 +466,9 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
     if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "coding") {
-    // Programming, debugging, repository changes and code generation go to OpenAI first.
-    // OpenAI is included only for this task when OPENAI_API_KEY is configured.
-    preferred = ["openai", "groq", "gemini", "openrouter", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic"];
+    // Start coding requests with the fast Groq route; configured alternatives remain available.
+    // OpenAI still remains a fallback when the paid-fallback opt-in is enabled.
+    preferred = ["groq", "gemini", "openrouter", "openai", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic"];
   } else if (isAdultSensitivePrompt(prompt) || (shouldPreferVenice(prompt) && task !== "web_research" && task !== "code_execution")) {
     // Venice is the first choice for adult/sexual and other sensitive, controversial topics.
     // Keep the remaining providers as fallbacks if Venice is unavailable or fails review.
@@ -2013,7 +2013,8 @@ async function streamChatResponse(
           }
           const providersLeft = available.length - index;
           const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution";
-          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 14000 : 9000;
+          // Keep tool-heavy work patient, but move on quickly from slow chat/coding routes.
+          const maxAttemptMs = taskNeedsLongToolExecution ? 22000 : index === 0 ? 12000 : 7500;
           const providerBudget = Math.max(6000, Math.min(maxAttemptMs, Math.floor(remaining / providersLeft)));
           const provider = available[index];
           const providerStartedAt = Date.now();
