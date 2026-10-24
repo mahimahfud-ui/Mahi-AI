@@ -46,7 +46,7 @@ function corsHeadersFor(origin: string | null): Record<string, string> {
 // Used only for a rejected-origin error response. It lets browser clients read the
 // explicit rejection JSON; it does not authorize any API operation.
 function corsHeadersForRejectedOrigin(origin: string | null, requestId: string): Record<string, string> {
-  const headers = {
+  const headers: Record<string, string> = {
     ...corsHeaders,
     "Vary": "Origin",
     "X-Request-ID": requestId,
