@@ -23,6 +23,7 @@
   let voiceRecorderSubmitOnStop = true, voiceRecorderStopTimer = null, voiceNoSpeechCount = 0;
   let voiceAudioContext = null, voiceAnalyser = null, voiceAudioSource = null, voiceMonitorFrame = null;
   let voiceHasSpeech = false, voiceSpeechStartedAt = 0, voiceSilenceStartedAt = 0;
+  let voiceResponseLanguage = "";
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let accountMethod = "email", accountMode = "register";
@@ -305,7 +306,9 @@
       .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
-  function spokenLanguage(text) {
+  function spokenLanguage(text, detectedLanguage) {
+    const requestedLocale = String(detectedLanguage || "").trim();
+    if (/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2}$/i.test(requestedLocale)) return requestedLocale;
     const value = String(text || "");
     const lower = value.toLowerCase();
     if (/[\u0980-\u09FF]/.test(value)) return "bn-BD";
@@ -338,7 +341,7 @@
     if (/\b(hello|the|this|that|please|thanks|what|how|can|would|you|your)\b/i.test(lower)) return "en-US";
     return "en-US";
   }
-  function speakText(value, inVoiceMode) {
+  function speakText(value, inVoiceMode, detectedLanguage) {
     const synth = window.speechSynthesis;
     const Utterance = window.SpeechSynthesisUtterance;
     if (!synth || !Utterance) return Promise.resolve(false);
@@ -347,7 +350,7 @@
     try { synth.cancel(); } catch (_) {}
     return new Promise((resolve) => {
       const utterance = new Utterance(text);
-      const language = spokenLanguage(text);
+      const language = spokenLanguage(text, detectedLanguage || (inVoiceMode ? voiceResponseLanguage : ""));
       utterance.lang = language;
       utterance.rate = 1;
       utterance.pitch = 1;
@@ -577,7 +580,8 @@
       if (voiceUI.transcript) voiceUI.transcript.textContent = "There is no room for another attachment. Remove an attachment in the chat and try again.";
       return;
     }
-    const instruction = "Listen to the attached audio recording and identify the language or languages spoken without asking the user to choose a language. Understand the actual request and respond conversationally in the same language the user used; if the user mixes languages, naturally match that mix. Do not merely transcribe or describe the recording unless asked. Keep the reply natural to say aloud. If the audio is unclear, ask one short clarification in the language most likely spoken.";
+    voiceResponseLanguage = "";
+    const instruction = "Listen to the attached audio recording and identify the language or languages spoken without asking the user to choose a language. Understand the actual request and respond conversationally in the same language the user used; if the user mixes languages, naturally match that mix. Do not merely transcribe or describe the recording unless asked. Keep the reply natural to say aloud. If the audio is unclear, ask one short clarification in the language most likely spoken. For this voice turn only, append a final machine-readable language marker in the exact format [[MAHI_LANG:xx-YY]] after the answer, using the best matching BCP-47 locale for the language you detected (examples: bn-BD, en-US, hi-IN, ur-PK, es-ES, fr-FR). The marker is internal metadata and must not be part of the spoken answer. Do not apply this marker instruction to later non-voice turns."; 
     if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message received. Detecting your language and preparing a reply…";
     voicePaused = false;
     try {
@@ -1479,7 +1483,7 @@
         } else if (payload.type === "delta" && typeof payload.text === "string") {
           if (!fullText) messageContent.textContent = "";
           fullText += payload.text;
-          messageContent.textContent = fullText;
+          messageContent.textContent = fullText.replace(/\s*\[\[MAHI_LANG:[\s\S]*$/i, "");
           scrollToBottom();
         } else if (payload.type === "done") {
           if (payload.conversation_id) conversationId = payload.conversation_id;
@@ -1507,6 +1511,16 @@
       }
       if (!fullText.trim()) throw new Error("Mahi AI: No response was returned. Please try again.");
       fullText = fullText.trim();
+      let detectedVoiceLanguage = "";
+      if (voiceModeActive) {
+        const languageMarker = fullText.match(/\[\[MAHI_LANG:([a-z]{2,3}(?:-[A-Za-z0-9]{2,8}){0,2})\]\]\s*$/i);
+        if (languageMarker) {
+          detectedVoiceLanguage = languageMarker[1];
+          fullText = fullText.slice(0, languageMarker.index).trim();
+        }
+        voiceResponseLanguage = detectedVoiceLanguage;
+      }
+      if (!fullText) throw new Error("Mahi AI: The answer contained no readable text. Please try again.");
       responseCompleted = true;
       messageContent.classList.remove("streaming-text");
       const resolvedReply = await resolveStoredImageMarkers(fullText);
@@ -1515,7 +1529,7 @@
       delete typing.dataset.typing;
       addSpeechActions(typing, fullText);
       currentMessages.push({ role: "assistant", content: fullText });
-      if (voiceModeActive) await speakText(fullText, true);
+      if (voiceModeActive) await speakText(fullText, true, detectedVoiceLanguage);
       pendingFiles = [];
       renderAttachmentList();
       updateCounter();
