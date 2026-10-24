@@ -744,19 +744,19 @@ async function fetchProviderWithGatewayFallback(
 
 function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
-  if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
+  if (name === "shannon") return flagEnabled("ENABLE_SHANNON_FALLBACK") && configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
   if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
   if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
   // Direct DeepSeek API requests may incur charges; require explicit opt-in.
-  if (name === "deepseek") return configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
+  if (name === "deepseek") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
   if (name === "mistral") return configuredSecret(["MISTRAL_API_KEY"]);
   if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"]);
   if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
-  if (name === "cloudflare") return configuredSecret(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY", "Cloudflare"]);
+  if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") && configuredSecret(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY", "Cloudflare"]);
   // The user explicitly assigns programming/debugging requests to OpenAI. Permit
   // that task-specific route when its API key exists, without enabling OpenAI for
   // unrelated requests; other paid fallback usage still requires global opt-in.
-  if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);
+  if (name === "openai") return (task === "coding" || flagEnabled("ENABLE_PAID_FALLBACK")) && configuredSecret(["OPENAI_API_KEY"]);
   if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
