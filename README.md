@@ -69,6 +69,14 @@ The router is best-effort: it fully buffers each provider response and then fall
 
 ## Security
 
+- Conversation reads/deletes are scoped to `auth.uid()` through RLS.
+- The function verifies the caller's Supabase JWT. Requests are reserved atomically in Postgres before attachment processing, with a default limit of 10 requests per guest user per rolling minute and 200 per rolling 24 hours. Override with `MAHI_AI_RATE_LIMIT_PER_MINUTE` (1–120) and `MAHI_AI_RATE_LIMIT_PER_DAY` (1–5000) in Edge Function secrets.
+- Apply `supabase/migrations/20261024110000_production_hardening.sql` in the Supabase SQL Editor before deploying the updated Edge Function. It creates a service-role-only RPC and counts all reserved requests, including failed requests, toward rate limits.
+- CORS uses exact origin matching rather than `*`. The defaults are `https://mahi-ai.onrender.com`, `http://localhost:3000`, and `http://127.0.0.1:3000`. For a custom frontend domain, set `MAHI_AI_ALLOWED_ORIGINS` to a comma-separated list of exact origins (scheme and optional port; no path or trailing slash) in Edge Function secrets.
+- Provider credentials stay in Supabase Edge Function secrets; never place provider keys in GitHub or browser files.
+- Provider latency/reliability samples guide routing only within a warm Edge Function isolate and reset after a cold start. Cost-sensitive fallback eligibility remains controlled by the existing opt-in flags.
+- Guest accounts do not carry across browsers/devices unless users later link a sign-in identity.
+
 - Conversation reads/deletes are scoped to \`auth.uid()\` through RLS.
 - The function verifies the caller's Supabase JWT. It does not enforce an app-defined daily or per-minute usage cap; provider and platform limits still apply.
 - Provider credentials stay in Supabase Edge Function secrets.
