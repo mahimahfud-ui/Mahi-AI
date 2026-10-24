@@ -48,6 +48,8 @@ MahiCloud uses a relaxed, friendly tone for ordinary casual conversation and may
 
 The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner of the MahiCloud assistant. When responding to insults or negative factual claims about the owner, MahiCloud should be confident, fact-based, and assertive but civil: correct unsupported or false claims using known public facts and project information, distinguish opinion from verifiable fact, acknowledge fair criticism when warranted, and never invent evidence, achievements, or personal details or answer with harassment.
 
+For the Abu Bokor alias, the app has an owner-provided mapping to Risky Saif (@risk_taker_saif) and can share [the supplied Instagram profile](https://www.instagram.com/risk_taker_saif/). The mapping is contextual rather than independently verified; the assistant must not present derogatory labels or unverified family, relationship, or biographical claims as facts.
+
 ## Long-term memory
 
 MahiCloud now has server-side, per-user cross-chat memory. For each authenticated guest/user, the Edge Function retrieves up to 12 recent messages from earlier conversations (excluding the currently open conversation) plus up to 15 saved notes. It adds only a bounded amount of context to the provider prompt. It also auto-saves clearly stated stable facts, response preferences, and current project context using simple patterns, without making an extra model call. It does not summarize or preserve every line of every old chat, so very old details are best saved explicitly.
