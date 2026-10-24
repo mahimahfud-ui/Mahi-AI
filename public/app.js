@@ -39,7 +39,18 @@
     if (/anonymous|sign.?in|not enabled|signup/i.test(msg)) {
       return "Guest access is not enabled yet. In Supabase, open Authentication → Sign In / Providers and enable Anonymous Sign-Ins, then reload this page.";
     }
-    if (/fetch|network|failed to fetch/i.test(msg)) return "Connection failed. Check your internet connection and try again.";
+    const origin = typeof location !== "undefined" ? location.origin : "";
+    if (/origin not allowed|cors/i.test(msg)) {
+      return "Mahi AI blocked this page origin" + (origin ? " (" + origin + ")" : "") +
+        ". Add the exact origin to MAHI_AI_ALLOWED_ORIGINS in Supabase → Edge Functions → mahi-ai-chat → Secrets, then redeploy the function and hard-refresh this page.";
+    }
+    if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        return "You appear to be offline. Check your internet connection and try again.";
+      }
+      return "Could not reach Mahi AI" + (origin ? " from " + origin : "") +
+        ". This is often a CORS/origin allowlist issue or the Edge Function being unavailable — not necessarily your internet. Check MAHI_AI_ALLOWED_ORIGINS in Supabase → Edge Functions → mahi-ai-chat → Secrets, redeploy the function, then hard-refresh this page.";
+    }
     return "Mahi AI could not complete that request. Please try again in a moment.";
   }
   function setBusy(value) {
