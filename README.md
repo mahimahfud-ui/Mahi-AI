@@ -1,6 +1,8 @@
-# Mahi AI
+# MahiCloud
 
-Mahi AI is a dark, responsive multilingual chat app with task-aware provider routing, whole-response failover, and Supabase-backed guest sessions and conversation history.
+MahiCloud is a dark, responsive multilingual chat app with task-aware provider routing, whole-response failover, and Supabase-backed guest sessions and conversation history.
+
+The public-facing product name is **MahiCloud**. The existing GitHub repository name and Supabase Edge Function slug remain unchanged as technical identifiers to preserve links and deployment.
 
 ## Architecture
 
@@ -35,13 +37,13 @@ The router classifies the actual request intent (coding, reasoning, creative wri
 
 ## Friendly conversation style and owner profile
 
-Mahi AI uses a relaxed, friendly tone for ordinary casual conversation and may use a few emojis when the moment is playful or cheerful. It avoids forced emojis and keeps coding, serious, sensitive, and professional requests focused.
+MahiCloud uses a relaxed, friendly tone for ordinary casual conversation and may use a few emojis when the moment is playful or cheerful. It avoids forced emojis and keeps coding, serious, sensitive, and professional requests focused.
 
-The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner of Mahi-AI. When responding to insults or negative factual claims about the owner, Mahi AI should be confident and assertive but civil: correct unsupported or false claims using known public facts and project information, distinguish opinion from verifiable fact, acknowledge fair criticism when warranted, and never invent evidence, achievements, or personal details or answer with harassment.
+The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner of the MahiCloud assistant. When responding to insults or negative factual claims about the owner, MahiCloud should be confident and assertive but civil: correct unsupported or false claims using known public facts and project information, distinguish opinion from verifiable fact, acknowledge fair criticism when warranted, and never invent evidence, achievements, or personal details or answer with harassment.
 
 ## Long-term memory
 
-Mahi AI now has server-side, per-user cross-chat memory. For each authenticated guest/user, the Edge Function retrieves up to 12 recent messages from earlier conversations (excluding the currently open conversation) plus up to 15 saved notes. It adds only a bounded amount of context to the provider prompt. It also auto-saves clearly stated stable facts, response preferences, and current project context using simple patterns, without making an extra model call. It does not summarize or preserve every line of every old chat, so very old details are best saved explicitly.
+MahiCloud now has server-side, per-user cross-chat memory. For each authenticated guest/user, the Edge Function retrieves up to 12 recent messages from earlier conversations (excluding the currently open conversation) plus up to 15 saved notes. It adds only a bounded amount of context to the provider prompt. It also auto-saves clearly stated stable facts, response preferences, and current project context using simple patterns, without making an extra model call. It does not summarize or preserve every line of every old chat, so very old details are best saved explicitly.
 
 Users can control memory in chat:
 - `Remember that I prefer Banglish answers` — save a personal preference or note for future chats.
@@ -113,15 +115,15 @@ The assistant uses an accuracy-first instruction and, when another eligible non-
 
 ## Automatic public API tools
 
-Mahi AI can enrich eligible requests with server-side public API data without asking the user to connect an account or paste an API key. Built-in adapters cover Open-Meteo live weather, daily ExchangeRate-API currency rates, Nager.Date public holidays, Open Library book search, Wikipedia reference search, and catalogue discovery from the same community-maintained `public-apis` README used by the in-app Public API Library. Catalogue results are limited to entries marked no-auth and HTTPS.
+MahiCloud can enrich eligible requests with server-side public API data without asking the user to connect an account or paste an API key. Built-in adapters cover Open-Meteo live weather, daily ExchangeRate-API currency rates, Nager.Date public holidays, Open Library book search, Wikipedia reference search, and catalogue discovery from the same community-maintained `public-apis` README used by the in-app Public API Library. Catalogue results are limited to entries marked no-auth and HTTPS.
 
-Only fixed HTTPS hosts in the server-side allowlist are callable. The community catalogue is used for discovery, not to execute arbitrary third-party endpoints. A directory entry is not proof that an API is healthy, free, suitable, or permissionless; verify provider documentation, pricing, terms, and rate limits before relying on it. Results are cached briefly and passed to the model as untrusted reference data with source links. If a public endpoint is slow, unavailable, unsupported, or does not match the request, Mahi AI falls back to its existing response/research path. These integrations do not guarantee error-free or always-current answers.
+Only fixed HTTPS hosts in the server-side allowlist are callable. The community catalogue is used for discovery, not to execute arbitrary third-party endpoints. A directory entry is not proof that an API is healthy, free, suitable, or permissionless; verify provider documentation, pricing, terms, and rate limits before relying on it. Results are cached briefly and passed to the model as untrusted reference data with source links. If a public endpoint is slow, unavailable, unsupported, or does not match the request, MahiCloud falls back to its existing response/research path. These integrations do not guarantee error-free or always-current answers.
 
 ## Live web research
 
-Mahi AI detects current/latest/news/price queries, explicit online research, source links, references, resources, and common Bangla/Banglish equivalents. With no inline media attachment, Gemini is preferred for native Google Search grounding; public HTTPS URLs additionally enable Gemini URL Context. Retrieved URL-context metadata and grounding metadata are collected into a **Sources** list where the provider returns them.
+MahiCloud detects current/latest/news/price queries, explicit online research, source links, references, resources, and common Bangla/Banglish equivalents. With no inline media attachment, Gemini is preferred for native Google Search grounding; public HTTPS URLs additionally enable Gemini URL Context. Retrieved URL-context metadata and grounding metadata are collected into a **Sources** list where the provider returns them.
 
-If Gemini is unavailable for a resource request, the OpenRouter fallback receives its server-side `openrouter:web_search` and `openrouter:web_fetch` tools. These execute inside OpenRouter, so Mahi AI does not need a browser-side search loop. Resource tools are enabled only for web-research tasks and stop after two server-tool steps. Search-engine usage may incur extra charges depending on the engine/provider and account terms; free-model routing does not mean web search is unlimited or always free. URL fetching and search results depend on engine settings, site availability, model support, quota, and applicable terms.
+If Gemini is unavailable for a resource request, the OpenRouter fallback receives its server-side `openrouter:web_search` and `openrouter:web_fetch` tools. These execute inside OpenRouter, so MahiCloud does not need a browser-side search loop. Resource tools are enabled only for web-research tasks and stop after two server-tool steps. Search-engine usage may incur extra charges depending on the engine/provider and account terms; free-model routing does not mean web search is unlimited or always free. URL fetching and search results depend on engine settings, site availability, model support, quota, and applicable terms.
 
 Ordinary questions do not trigger web search. If no configured retrieval-capable provider successfully retrieves sources, the assistant must not claim it verified facts live or invent citations. URLs requiring login, paywalled/private pages, and unsupported pages may not be retrievable.
 
