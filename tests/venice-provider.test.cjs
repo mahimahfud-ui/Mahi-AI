@@ -26,15 +26,15 @@ test("porn/NSFW text prompts select Venice before task-specific routes", () => {
   assert.ok(pornRoute >= 0, "porn-first routing branch should exist");
   assert.ok(attachmentRoute > pornRoute, "attachments must keep their compatible-provider path");
   assert.ok(codingRoute > pornRoute, "porn routing must override ordinary coding priority");
-  assert.match(edge, /function isPornRelatedPrompt\\(prompt: string\\): boolean \\{/);
-  assert.match(edge, /function shouldPreferVenice\\(prompt: string\\): boolean \\{\\s*return isPornRelatedPrompt\\(prompt\\);\\s*\\}/);
+  assert.ok(edge.includes("function isPornRelatedPrompt(prompt: string): boolean {"));
+  assert.ok(edge.includes("function shouldPreferVenice(prompt: string): boolean {\\n  return isPornRelatedPrompt(prompt);\\n}"));
 });
 
 test("Venice is excluded from non-porn provider cascades", () => {
-  assert.match(edge, /\\(isPornRelatedPrompt\\(prompt\\) \\|\\| name !== "venice"\\)/);
-  assert.match(edge, /function isSensitiveSocialPrompt\\(prompt: string\\): boolean/);
+  assert.ok(edge.includes('(isPornRelatedPrompt(prompt) || name !== "venice")'));
+  assert.ok(edge.includes("function isSensitiveSocialPrompt(prompt: string): boolean"));
 });
 
 test("a successful Venice response to a porn-related prompt is not rewritten by a second provider", () => {
-  assert.match(edge, /const requiresReview = shouldRequireIndependentReview\\(task, originalPrompt\\) &&\\s*!\\(isPornRelatedPrompt\\(originalPrompt\\) && provider === "venice"\\);/);
+  assert.ok(edge.includes("const requiresReview = shouldRequireIndependentReview(task, originalPrompt) &&\\n              !(isPornRelatedPrompt(originalPrompt) && provider === \"venice\");"));
 });
