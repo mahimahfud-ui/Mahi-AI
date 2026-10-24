@@ -20,7 +20,7 @@ test("network failures name the page origin and explain likely causes", () => {
   const message = makePlainError(true, "https://mahi-ai-kdm2.onrender.com")(
     new TypeError("Failed to fetch")
   );
-  assert.match(message, /Could not reach Mahi AI/);
+  assert.match(message, /Could not reach MahiCloud/);
   assert.match(message, /https:\/\/mahi-ai-kdm2\.onrender\.com/);
   assert.match(message, /CORS\/origin allowlist/i);
   assert.doesNotMatch(message, /^Connection failed\. Check your internet/);
