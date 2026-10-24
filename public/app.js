@@ -204,8 +204,13 @@
     const toolbar = document.createElement("div");
     toolbar.className = "message-actions";
     toolbar.setAttribute("aria-label", "Answer actions");
+    const source = String(content || "").toLowerCase();
+    const codeLike = /\b(code|function|javascript|typescript|python|sql|debug|stack trace|api|html|css|react|test suite)\b/.test(source) ||
+      source.includes(String.fromCharCode(96).repeat(3));
     const actions = [
-      { label: "Improve", prompt: "Improve your previous answer. Make it clearer, more precise, and better organized. Preserve its meaning, correct issues you notice, and avoid unsupported claims." },
+      codeLike
+        ? { label: "Fix code", prompt: "Review the code in your previous answer for bugs, syntax errors, edge cases, and compatibility issues. Provide a corrected complete version and briefly explain the important fixes. Do not claim to have run it unless you actually did." }
+        : { label: "Improve", prompt: "Improve your previous answer. Make it clearer, more precise, and better organized. Preserve its meaning, correct issues you notice, and avoid unsupported claims." },
       { label: "Explain", prompt: "Explain your previous answer in simpler language, step by step, and include a concrete example." },
       { label: "Summarize", prompt: "Summarize your previous answer into the essential points, using concise bullets when useful." },
       { label: "Continue", prompt: "Continue from where your previous answer ended. Avoid repeating content already covered." }
