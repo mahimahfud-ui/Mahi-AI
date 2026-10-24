@@ -16,7 +16,7 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 - Frontend: static HTML/CSS/JavaScript in \`public/\`.
 - Authentication and data: Supabase Auth guest sessions and Postgres tables with Row Level Security.
 - AI backend: Supabase Edge Function \`mahi-ai-chat\`. Provider selection happens on the server; the UI never receives the provider name or API key.
-- Providers supported by the router: Google Gemini, Groq, OpenRouter, Shannon AI, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, Anthropic, and Venice AI. Provider eligibility is decided server-side; provider names and keys are never sent to the browser. Paid fallbacks and optional providers remain gated by their server-side opt-in flags, with the task-specific OpenAI coding route as the documented exception.
+- Providers supported by the router: Google Gemini, Groq, OpenRouter, Shannon AI, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, Anthropic, and Venice AI. Provider eligibility is decided server-side; provider names and keys are never sent to the browser. A provider with a configured server-side API key is eligible for the fallback cascade; preferred providers are tried first and additional configured routes are attempted when earlier routes fail, time out, or cool down. Some providers may charge for fallback usage.
 - Hosting: Node 18+; \`npm start\` serves the frontend. \`render.yaml\` configures Render to deploy commits on \`main\`.
 
 ## Supabase setup
@@ -33,14 +33,14 @@ Recommended free-tier provider secrets (add one or more):
 - `OPENROUTER_API_KEY` — [OpenRouter](https://openrouter.ai/settings/keys)
 - `MISTRAL_API_KEY` — [Mistral La Plateforme](https://console.mistral.ai/api-keys)
 
-Optional providers and opt-in flags:
-- `DEEPSEEK_API_KEY` (or legacy `DeepSeek`) and `ANTHROPIC_API_KEY` are ignored unless `ENABLE_PAID_FALLBACK=true` is set in Supabase Edge Function Secrets. `OPENAI_API_KEY` is also gated for general requests; the specifically designated coding route may use OpenAI when the key is configured. Set `ENABLE_PAID_FALLBACK=true` to allow OpenAI in other tasks and to allow paid OpenRouter model overrides.
-- `NVIDIA_API_KEY` is ignored unless `ENABLE_NVIDIA_FALLBACK=true` is set after checking your account's allowance and billing settings.
-- `SHANNON_API_KEY` (or `SHANNONAI_API_KEY` / `SHANNON_AI_API_KEY`) is ignored unless `ENABLE_SHANNON_FALLBACK=true` is set after checking Shannon's pricing and account balance. The default model is `shannon-3`; optionally set `SHANNON_MODEL`. [Official API docs](https://shannon-ai.com/docs/api) document the OpenAI-compatible endpoint at `https://api.shannon-ai.com/v1/chat/completions`. Venice AI is the preferred route for adult/sensitive prompts when configured; Shannon remains an optional, cost-penalized text fallback. The current integration is text-only; existing attachment requests continue through other eligible providers.
-- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are ignored unless `ENABLE_CLOUDFLARE_FALLBACK=true` is set after checking your Workers AI allowance and billing settings.
+Configured fallback keys:
+- `DEEPSEEK_API_KEY` (or legacy `DeepSeek`), `ANTHROPIC_API_KEY`, and `OPENAI_API_KEY` activate these providers as later fallback routes. The coding route keeps OpenAI nearer the front of the chain. These APIs may be paid; review pricing and account limits before use.
+- `NVIDIA_API_KEY` activates NVIDIA when present. It is not required unless you choose to add this provider key.
+- `SHANNON_API_KEY` (or `SHANNONAI_API_KEY` / `SHANNON_AI_API_KEY`) — a configured key enables Shannon as a later fallback. The default model is `shannon-3`; optionally set `SHANNON_MODEL`. [Official API docs](https://shannon-ai.com/docs/api) document the OpenAI-compatible endpoint at `https://api.shannon-ai.com/v1/chat/completions`. Shannon usage may be billed, so check pricing and account balance first. Venice AI remains the preferred route for adult/sensitive prompts when configured; Shannon fallback is skipped for attachment requests in the current integration.
+- `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` enable Cloudflare Workers AI fallback when configured. Check your Workers AI allowance and billing settings before relying on it.
 - Image generation is disabled by default because the supported image APIs may incur charges. Set `ENABLE_PAID_IMAGE_GENERATION=true` only if you intentionally accept those charges. The current Gemini 3.1 Flash Image API model has no free tier; see [Google's API pricing](https://ai.google.dev/gemini-api/docs/pricing). When enabled, image routing tries Gemini, then Grok (if `XAI_API_KEY` or `GROK_API_KEY` is configured), then OpenAI (if `OPENAI_API_KEY` is configured).
 
-The router classifies the actual request intent (coding, reasoning, creative writing, or general use) instead of classifying every question that merely mentions HTML/API/Python as coding. It uses task-specific provider priority, whole-response failover, and short-lived failure cooldowns. OpenRouter defaults to `openrouter/free`; free model overrides remain allowed while paid fallback is off, and non-free model overrides require `ENABLE_PAID_FALLBACK=true`. The free router selects a model from the currently available free set and can change its selection over time. Provider names and keys stay server-side. Free API tiers have changing quotas and do not imply unlimited usage. Never add credentials to GitHub.
+The router classifies request intent (coding, reasoning, creative writing, or general use) and uses task-specific provider priority, whole-response failover, and short-lived failure cooldowns. OpenRouter defaults to `openrouter/free`; non-free OpenRouter model overrides still require `ENABLE_PAID_FALLBACK=true`. The free router selects from the currently available free set and can change its selection over time. Provider names and keys stay server-side. Free API tiers have changing quotas and do not imply unlimited usage. Never add credentials to GitHub.
 
 ## Friendly conversation style and owner profile
 
@@ -70,7 +70,7 @@ Guest-session limitation: memory is tied to the Supabase Auth user ID. Clearing 
 - Images, PDFs, audio, and video (inline media total up to 12 MB) route to Gemini multimodal input. Any file type can be selected and uploaded, but unsupported binary types may only pass their name/type unless their contents can be extracted.
 - Requests to generate or edit an image are disabled by default to prevent accidental paid API calls. Set `ENABLE_PAID_IMAGE_GENERATION=true` in Supabase Edge Function Secrets only when you accept possible charges. The route tries Gemini, then Grok, then OpenAI for configured keys. Set `OPENAI_IMAGE_MODEL` or `XAI_IMAGE_MODEL` to override the respective model. Generated images are stored privately and shown through expiring signed links.
 - Google's Gemini 3.1 Flash Image API model has no free tier. Image generation still depends on provider account access, model availability, quota, and billing status.
-- API roles: task-specific routing tries eligible providers until a complete response succeeds. Anthropic, DeepSeek, non-coding OpenAI routes, non-free OpenRouter model overrides, and image generation require explicit opt-in flags before they can be used automatically. The coding route may use OpenAI when configured. Image attachments can also be passed to OpenRouter/Gemini vision routes when a selected model supports them.
+- API roles: task-specific routing tries configured provider routes until a complete response succeeds. DeepSeek, Anthropic, OpenAI, Shannon, and Cloudflare can serve as configured fallbacks without a second provider-enable flag; their paid usage can incur charges. Non-free OpenRouter model overrides and image generation still require explicit opt-in flags. Image attachments can also be passed to supported vision routes.
 
 ## Deploy the Edge Function
 
@@ -95,7 +95,7 @@ The root \`render.yaml\` targets the \`main\` branch and sets auto-deploy to com
 
 ## Free-tier notes
 
-The router is best-effort: it fully buffers each provider response and then falls back on errors, timeouts, empty output, or known truncation. It follows the user's language and writing style where the selected model supports it. The app applies configurable per-guest rolling-minute and rolling-24-hour limits; provider quotas, context/output token caps, file-processing constraints, and Supabase runtime limits still apply. Paid chat fallbacks require `ENABLE_PAID_FALLBACK=true`; image-generation APIs require `ENABLE_PAID_IMAGE_GENERATION=true`.
+The router is best-effort: it buffers each provider response and falls back on errors, timeouts, empty output, or known truncation. Ordinary chat uses a 60-second overall provider budget with shorter per-provider attempts; research, tool execution, and attachment requests retain a longer budget. A configured paid-provider key makes that provider eligible as a fallback, so monitor pricing and balance. OpenRouter non-free model overrides still require `ENABLE_PAID_FALLBACK=true`; image-generation APIs require `ENABLE_PAID_IMAGE_GENERATION=true`.
 
 ## Security
 
@@ -107,7 +107,7 @@ The router is best-effort: it fully buffers each provider response and then fall
 - CORS does not use a wildcard: it allows this app's HTTPS Render hosts matching `mahi-ai*.onrender.com`, HTTP(S) localhost/127.0.0.1/IPv6-loopback on any port, and the explicit defaults. For a custom frontend domain, set `MAHI_AI_ALLOWED_ORIGINS` to a comma-separated list of exact origins, including scheme and optional port, without paths or trailing slashes. These custom origins extend (rather than replace) the defaults.
 - Rejected origins receive only a safe error response with their origin echoed for CORS visibility; every non-preflight request from a rejected origin still stops with `403 Origin not allowed` before authentication or database work. The frontend distinguishes offline, CORS/origin rejection, and likely function reachability problems.
 - Provider keys remain in Supabase Edge Function secrets and must never be placed in GitHub or browser files.
-- Provider latency and reliability scores guide routing only within a warm Edge Function isolate and reset after a cold start. Paid fallback eligibility remains controlled by the existing opt-in flags.
+- Provider latency and reliability scores guide routing only within a warm Edge Function isolate and reset after a cold start. Configured keys enable provider fallback routes; request-level cooldowns help move away from routes that recently failed.
 - This rate limit is per guest-user ID, not a complete anti-abuse system: anonymous sessions can be recreated. Add a trusted gateway/IP-level limit or require verified accounts before treating it as a hard quota.
 - Guest accounts do not carry across browsers or devices unless users later link a sign-in identity.
 
