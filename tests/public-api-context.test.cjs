@@ -39,7 +39,7 @@ test("API context is added server-side without changing stored/displayed user te
 
 test("API catalogue discovery does not dynamically execute returned arbitrary API URLs", () => {
   assert.match(edge, /getPublicApiCatalogue/);
-  assert.match(edge, /Mahi AI Public API Library \(public-apis community README\)/);
+  assert.match(edge, /MahiCloud Public API Library \(public-apis community README\)/);
   assert.match(edge, /parsedUrl\.protocol !== "https:" \|\| !PUBLIC_API_ALLOWED_HOSTS\.has\(parsedUrl\.hostname\)/);
   assert.match(edge, /raw\.githubusercontent\.com\/public-apis\/public-apis\/master\/README\.md/);
   assert.match(edge, /homepage_or_api_url: entry\.url/);
