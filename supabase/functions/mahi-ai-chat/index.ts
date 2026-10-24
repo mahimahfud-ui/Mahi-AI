@@ -182,7 +182,10 @@ async function prepareAttachments(userId: string, values: unknown): Promise<Prep
     if (!item.path.startsWith(userId + "/") || item.path.includes("..") || item.path.startsWith("/")) {
       throw new Error("An attachment reference is invalid.");
     }
-    const declared = Number(item.size || 0);
+    const declared = Number(item.size ?? 0);
+    if (!Number.isFinite(declared) || declared < 0) {
+      throw new Error("An attachment size is invalid. Remove the file and upload it again.");
+    }
     if (declared > 15 * 1024 * 1024) throw new Error("Each attachment must be 15 MB or smaller.");
     totalBytes += declared;
     if (totalBytes > 20 * 1024 * 1024) throw new Error("All attachments together must be 20 MB or smaller.");
@@ -459,11 +462,10 @@ function systemPrompt(task: string): string {
   return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + "." + previewGuidance + toolGuidance + " Do not mention internal providers, routing, or API infrastructure.";
 }
 type ChatMessage = { role: "user" | "assistant"; content: string };
-async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), ms);
-  try { return await fetch(url, { ...init, signal: controller.signal }); }
-  finally { clearTimeout(timer); }
+async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000, parentSignal?: AbortSignal): Promise<Response> {
+  const signals: AbortSignal[] = [AbortSignal.timeout(ms)];
+  if (parentSignal) signals.push(parentSignal);
+  return await fetch(url, { ...init, signal: AbortSignal.any(signals) });
 }
 async function readProviderError(response: Response): Promise<string> {
   try {
@@ -471,7 +473,7 @@ async function readProviderError(response: Response): Promise<string> {
     return response.status + " " + body.slice(0, 500);
   } catch (_) { return "Provider request failed with status " + response.status; }
 }
-async function openAICompatible(provider: string, url: string, key: string, model: string, messages: ChatMessage[], extraHeaders: Record<string, string> = {}, timeoutMs = 45000, systemOverride?: string): Promise<string> {
+async function openAICompatible(provider: string, url: string, key: string, model: string, messages: ChatMessage[], extraHeaders: Record<string, string> = {}, timeoutMs = 45000, systemOverride?: string, parentSignal?: AbortSignal): Promise<string> {
   const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", ...extraHeaders },
@@ -482,7 +484,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
       max_tokens: 8192,
       stream: false
     })
-  }, timeoutMs);
+  }, timeoutMs, parentSignal);
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
   const content = result?.choices?.[0]?.message?.content;
@@ -490,7 +492,7 @@ async function openAICompatible(provider: string, url: string, key: string, mode
   if (!text.trim()) throw new Error(provider + " returned no text");
   return text.trim();
 }
-async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<string> {
+async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string, parentSignal?: AbortSignal): Promise<string> {
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
   const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
@@ -510,7 +512,8 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
         generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
       })
     },
-    timeoutMs
+    timeoutMs,
+    parentSignal
   );
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
@@ -518,12 +521,12 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
   if (!text.trim()) throw new Error("Gemini returned no text");
   return text.trim();
 }
-async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<{ text: string; provider: string }> {
-  if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride), provider: name };
+async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string, parentSignal?: AbortSignal): Promise<{ text: string; provider: string }> {
+  if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride, parentSignal), provider: name };
   if (name === "groq") {
     const key = envFirst(["GROQ_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://api.groq.com/openai/v1/chat/completions", key, envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b", messages, {}, timeoutMs, systemOverride), provider: name };
+    return { text: await openAICompatible(name, "https://api.groq.com/openai/v1/chat/completions", key, envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b", messages, {}, timeoutMs, systemOverride, parentSignal), provider: name };
   }
   if (name === "openrouter") {
     const key = envFirst(["OPENROUTER_API_KEY"]);
@@ -574,7 +577,7 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
         system: systemOverride || systemPrompt(task),
         messages: messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
       })
-    }, timeoutMs);
+    }, timeoutMs, parentSignal);
     if (!response.ok) throw new Error(await readProviderError(response));
     const result = await response.json();
     const text = (result?.content || []).map((part: any) => part.text || "").join("");
@@ -787,10 +790,17 @@ async function* readAnthropicEventStream(response: Response): AsyncGenerator<str
   }
 }
 
-async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = [], timeoutMs = 25000): Promise<ProviderStream> {
+async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = [], timeoutMs = 25000, parentSignal?: AbortSignal): Promise<ProviderStream> {
   const controller = new AbortController();
+  const abortFromParent = () => controller.abort();
+  if (parentSignal?.aborted) controller.abort();
+  else parentSignal?.addEventListener("abort", abortFromParent, { once: true });
   const totalTimer = setTimeout(() => controller.abort(), timeoutMs);
-  const cleanup = () => { clearTimeout(totalTimer); controller.abort(); };
+  const cleanup = () => {
+    clearTimeout(totalTimer);
+    parentSignal?.removeEventListener("abort", abortFromParent);
+    controller.abort();
+  };
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   let url = "";
   let body: Record<string, unknown> = {};
@@ -939,7 +949,8 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
 }
 
 function sseEvent(controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder, value: Record<string, unknown>) {
-  controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
+  if (controller.desiredSize === null) return;
+  try { controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n")); } catch (_) {}
 }
 
 function prepareImagePrompt(rawPrompt: string): string {
@@ -955,7 +966,7 @@ function prepareImagePrompt(rawPrompt: string): string {
     : "Generate the requested image directly. Do not answer with code or instructions. User's image request: " + prompt;
 }
 
-async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttachment[], signal?: AbortSignal): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
   const prompt = prepareImagePrompt(rawPrompt);
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Gemini image generation is not configured.");
@@ -982,7 +993,7 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": key },
     body: JSON.stringify(requestBody)
-  }, 70000);
+  }, 70000, signal);
   if (!response.ok) {
     const status = response.status;
     const body = await response.text().catch(() => "");
@@ -996,7 +1007,7 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
           contents: [{ role: "user", parts }],
           generationConfig: { responseModalities: ["TEXT", "IMAGE"] }
         })
-      }, 70000);
+      }, 70000, signal);
       if (!response.ok) throw new Error(await readProviderError(response));
     } else {
       throw new Error(status + " " + body.slice(0, 500));
@@ -1018,7 +1029,7 @@ async function generateGeminiImage(rawPrompt: string, attachments: PreparedAttac
   const bytes = Uint8Array.from(atob(imageData), (char) => char.charCodeAt(0));
   return { text: text.trim() || "Here is the image you requested.", bytes, mimeType };
 }
-async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachment[], signal?: AbortSignal): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
   const key = envFirst(["XAI_API_KEY", "GROK_API_KEY"]);
   if (!key) throw new Error("Grok image generation is not configured.");
   const prompt = prepareImagePrompt(rawPrompt);
@@ -1036,7 +1047,7 @@ async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachm
     method: "POST",
     headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json" },
     body: JSON.stringify(body)
-  }, 45000);
+  }, 45000, signal);
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
   const item = result?.data?.[0];
@@ -1050,7 +1061,7 @@ async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachm
     if (imageUrl.protocol !== "https:" || imageUrl.hostname !== "imgen.x.ai" || !imageUrl.pathname.startsWith("/xai-imgen/")) {
       throw new Error("Grok returned an unexpected image URL.");
     }
-    const imageResponse = await fetchWithTimeout(imageUrl.toString(), {}, 12000);
+    const imageResponse = await fetchWithTimeout(imageUrl.toString(), {}, 12000, signal);
     if (!imageResponse.ok) throw new Error("Could not download the image generated by Grok.");
     mimeType = String(imageResponse.headers.get("content-type") || mimeType).split(";")[0].toLowerCase();
     if (!/^image\/(jpeg|png|webp)$/i.test(mimeType)) throw new Error("Grok returned an unsupported image format.");
@@ -1066,7 +1077,7 @@ async function generateGrokImage(rawPrompt: string, attachments: PreparedAttachm
   };
 }
 
-async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
+async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttachment[], signal?: AbortSignal): Promise<{ text: string; bytes: Uint8Array; mimeType: string }> {
   const prompt = prepareImagePrompt(rawPrompt);
   const key = envFirst(["OPENAI_API_KEY"]);
   if (!key) throw new Error("OpenAI image generation is not configured.");
@@ -1096,7 +1107,7 @@ async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttac
       quality: "medium", output_format: "png", n: 1
     });
   }
-  const response = await fetchWithTimeout(url, { method: "POST", headers, body }, 55000);
+  const response = await fetchWithTimeout(url, { method: "POST", headers, body }, 55000, signal);
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
   const encoded = result?.data?.[0]?.b64_json;
@@ -1108,15 +1119,16 @@ async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttac
   };
 }
 
-async function generateImageWithFallback(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
+async function generateImageWithFallback(prompt: string, attachments: PreparedAttachment[], signal?: AbortSignal): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
   if (!flagEnabled("ENABLE_PAID_IMAGE_GENERATION")) {
     throw new Error("Paid image generation is disabled by default. Set ENABLE_PAID_IMAGE_GENERATION=true only if you accept possible image API charges.");
   }
   const failures: string[] = [];
   if (configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
     try {
-      return { ...(await generateGeminiImage(prompt, attachments)), provider: "gemini-image" };
+      return { ...(await generateGeminiImage(prompt, attachments, signal)), provider: "gemini-image" };
     } catch (error) {
+      if (signal?.aborted) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       failures.push("Gemini: " + reason.slice(0, 160));
       console.warn("Mahi AI Gemini image generation failed; trying Grok:", reason.slice(0, 180));
@@ -1124,8 +1136,9 @@ async function generateImageWithFallback(prompt: string, attachments: PreparedAt
   }
   if (configuredSecret(["XAI_API_KEY", "GROK_API_KEY"])) {
     try {
-      return { ...(await generateGrokImage(prompt, attachments)), provider: "grok-image" };
+      return { ...(await generateGrokImage(prompt, attachments, signal)), provider: "grok-image" };
     } catch (error) {
+      if (signal?.aborted) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       failures.push("Grok: " + reason.slice(0, 160));
       console.warn("Mahi AI Grok image generation failed; trying OpenAI fallback:", reason.slice(0, 180));
@@ -1133,8 +1146,9 @@ async function generateImageWithFallback(prompt: string, attachments: PreparedAt
   }
   if (configuredSecret(["OPENAI_API_KEY"])) {
     try {
-      return { ...(await generateOpenAIImage(prompt, attachments)), provider: "openai-image" };
+      return { ...(await generateOpenAIImage(prompt, attachments, signal)), provider: "openai-image" };
     } catch (error) {
+      if (signal?.aborted) throw error;
       const reason = error instanceof Error ? error.message : String(error);
       failures.push("OpenAI: " + reason.slice(0, 160));
       console.warn("Mahi AI OpenAI image generation failed:", reason.slice(0, 180));
@@ -1143,14 +1157,15 @@ async function generateImageWithFallback(prompt: string, attachments: PreparedAt
   throw new Error("All configured image-generation providers failed: " + (failures.join(" | ") || "no image provider is configured"));
 }
 
-async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: string): Promise<string> {
+async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: string, signal?: AbortSignal): Promise<string> {
   const ext = mimeType === "image/webp" ? "webp" : mimeType === "image/jpeg" ? "jpg" : "png";
   const path = userId + "/" + crypto.randomUUID() + "." + ext;
   const encodedPath = path.split("/").map(encodeURIComponent).join("/");
   const response = await fetch(baseUrl + "/storage/v1/object/mahi-ai-generated/" + encodedPath, {
     method: "POST",
     headers: adminHeaders({ "Content-Type": mimeType, "x-upsert": "false" }),
-    body: bytes.slice().buffer as ArrayBuffer
+    body: bytes.slice().buffer as ArrayBuffer,
+    signal
   });
   if (!response.ok) {
     console.error("Generated image storage failed:", response.status, (await response.text()).slice(0, 300));
@@ -1160,11 +1175,13 @@ async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: 
 }
 
 function eventStreamResponse(
-  onStart: (controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder) => void,
+  onStart: (controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder, signal: AbortSignal) => void,
   responseCors: Record<string, string> = corsHeaders
 ): Response {
+  const abortController = new AbortController();
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) { onStart(controller, new TextEncoder()); }
+    start(controller) { onStart(controller, new TextEncoder(), abortController.signal); },
+    cancel() { abortController.abort(); }
   });
   return new Response(stream, {
     status: 200,
@@ -1181,7 +1198,7 @@ async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>
 ): Promise<Response> {
-  return eventStreamResponse((controller, encoder) => {
+  return eventStreamResponse((controller, encoder, signal) => {
     (async () => {
       let conversationId = initialConversationId;
       try {
@@ -1190,14 +1207,17 @@ async function streamImageGenerationResponse(
         );
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
         sseEvent(controller, encoder, { type: "status", message: "Generating image…" });
-        const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
-        const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
+        const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments, signal);
+        if (signal.aborted) return;
+        const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType, signal);
+        if (signal.aborted) return;
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
         await saveChatTurn(userId, conversationId, displayUserText, reply);
         await updateUsage(usageId, { success: true, provider: result.provider, task_type: "image_generation", error_code: null });
         sseEvent(controller, encoder, { type: "delta", text: reply });
         sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
       } catch (error) {
+        if (signal.aborted) return;
         const reason = error instanceof Error ? error.message : String(error);
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
         await updateUsage(usageId, { success: false, provider: "gemini-grok-openai-image", task_type: "image_generation", error_code: "image_generation_failed" });
@@ -1239,7 +1259,7 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
   return null;
 }
 async function independentlyReviewAnswer(
-  available: string[], originalPrompt: string, contextText: string, draft: string, task: string
+  available: string[], originalPrompt: string, contextText: string, draft: string, task: string, signal?: AbortSignal
 ): Promise<{ answer: string; reviewer: string | null }> {
   // Review only with another eligible non-paid provider; retry alternatives if one is unhealthy.
   const reviewers = available.filter((name) =>
@@ -1254,8 +1274,9 @@ async function independentlyReviewAnswer(
     "Review independently for concrete correctness/completeness. If sound, return verdict=keep with the exact original answer. If wrong, return verdict=correct and a complete corrected answer in the original request's language. Never invent facts, citations, execution, or live web verification."
   ].join("\n\n---\n\n");
   for (const reviewer of reviewers) {
+    if (signal?.aborted) return { answer: draft, reviewer: null };
     try {
-      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem);
+      const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, 9000, reviewSystem, signal);
       rememberProviderSuccess(reviewer);
       const parsed = parseReviewedAnswer(result.text);
       if (!parsed || !parsed.answer.trim()) continue;
@@ -1265,6 +1286,7 @@ async function independentlyReviewAnswer(
           corrected.length > Math.min(40000, draft.length * 2 + 3000)) continue;
       return { answer: corrected, reviewer };
     } catch (error) {
+      if (signal?.aborted) return { answer: draft, reviewer: null };
       const reason = error instanceof Error ? error.message : String(error);
       rememberProviderFailure(reviewer, reason);
       console.warn("Mahi AI independent review provider failed; trying another:", reviewer, reason.slice(0, 120));
@@ -1282,7 +1304,7 @@ async function streamChatResponse(
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
   const available = providerOrder(task, hasInlineAttachments, hasInlineImages);
-  return eventStreamResponse((controller, encoder) => {
+  return eventStreamResponse((controller, encoder, signal) => {
     (async () => {
       let conversationId = initialConversationId;
       const failures: string[] = [];
@@ -1291,6 +1313,7 @@ async function streamChatResponse(
       const totalProviderBudgetMs = 115000;
       try {
         for (let index = 0; index < available.length; index++) {
+          if (signal.aborted) return;
           const remaining = totalProviderBudgetMs - (Date.now() - startedAt);
           if (remaining < 7000) {
             failures.push("remaining_provider_budget_exhausted");
@@ -1310,7 +1333,7 @@ async function streamChatResponse(
           });
           let candidate: ProviderStream | null = null;
           try {
-            candidate = await startProviderStream(provider, messages, task, attachments, providerBudget);
+            candidate = await startProviderStream(provider, messages, task, attachments, providerBudget, signal);
             let completeText = "";
             while (true) {
               const next = await candidate.iterator.next();
@@ -1326,6 +1349,7 @@ async function streamChatResponse(
             break;
           } catch (error) {
             if (candidate) candidate.cleanup();
+            if (signal.aborted) return;
             const reason = error instanceof Error ? error.message : String(error);
             recordProviderOutcome(provider, false, Date.now() - providerStartedAt);
             failures.push(provider + ":" + reason.slice(0, 100));
@@ -1333,6 +1357,7 @@ async function streamChatResponse(
             if (reason !== "Not configured") console.warn("Mahi AI full-response provider attempt failed:", provider, reason.slice(0, 180));
           }
         }
+        if (signal.aborted) return;
         if (!chosen) {
           await updateUsage(usageId, { success: false, error_code: "all_providers_failed" });
           console.error("All Mahi AI providers failed:", failures.join(" | ").slice(0, 1400));
@@ -1350,13 +1375,15 @@ async function streamChatResponse(
         if (reviewProviders.length && task !== "web_research" && task !== "code_execution" &&
             !hasInlineAttachments && chosen.text.length <= 30000) {
           sseEvent(controller, encoder, { type: "status", message: "Checking the answer for accuracy and completeness…" });
-          const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task);
+          const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task, signal);
           finalAnswer = review.answer;
           reviewer = review.reviewer;
         }
+        if (signal.aborted) return;
         conversationId = await createConversationIfNeeded(
           userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
         );
+        if (signal.aborted) return;
         await saveChatTurn(userId, conversationId, displayUserText, finalAnswer);
         await updateUsage(usageId, { success: true, provider: reviewer ? chosen.provider + "+review:" + reviewer : chosen.provider, task_type: task, error_code: null });
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
