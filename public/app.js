@@ -21,6 +21,8 @@
   let voiceRecognition = null, voiceCurrentUtterance = null, voiceRestartTimer = null;
   let voiceForceRecorder = false, voiceRecorder = null, voiceMediaStream = null, voiceMediaChunks = [];
   let voiceRecorderSubmitOnStop = true, voiceRecorderStopTimer = null, voiceNoSpeechCount = 0;
+  let voiceAudioContext = null, voiceAnalyser = null, voiceAudioSource = null, voiceMonitorFrame = null;
+  let voiceHasSpeech = false, voiceSpeechStartedAt = 0, voiceSilenceStartedAt = 0;
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let accountMethod = "email", accountMode = "register";
@@ -304,9 +306,36 @@
       .trim();
   }
   function spokenLanguage(text) {
-    if (/[\u0980-\u09FF]/.test(text)) return "bn-BD";
-    if (/[\u0900-\u097F]/.test(text)) return "hi-IN";
-    if (/[\u0600-\u06FF]/.test(text)) return "ur-PK";
+    const value = String(text || "");
+    const lower = value.toLowerCase();
+    if (/[\u0980-\u09FF]/.test(value)) return "bn-BD";
+    if (/[\u0A00-\u0A7F]/.test(value)) return "pa-IN";
+    if (/[\u0B80-\u0BFF]/.test(value)) return "ta-IN";
+    if (/[\u0C00-\u0C7F]/.test(value)) return "te-IN";
+    if (/[\u0C80-\u0CFF]/.test(value)) return "kn-IN";
+    if (/[\u0D00-\u0D7F]/.test(value)) return "ml-IN";
+    if (/[\u0B00-\u0B7F]/.test(value)) return "or-IN";
+    if (/[\u0900-\u097F]/.test(value)) return "hi-IN";
+    if (/[\u0E00-\u0E7F]/.test(value)) return "th-TH";
+    if (/[\u0400-\u04FF]/.test(value)) return "ru-RU";
+    if (/[\u0370-\u03FF]/.test(value)) return "el-GR";
+    if (/[\u3040-\u30FF]/.test(value)) return "ja-JP";
+    if (/[\uAC00-\uD7AF]/.test(value)) return "ko-KR";
+    if (/[\u4E00-\u9FFF]/.test(value)) return "zh-CN";
+    if (/[\u0679\u0688\u0691\u06BA\u06BE\u0686\u0698\u06AF\u067E\u06CC\u06D2]/.test(value)) return "ur-PK";
+    if (/[\u0600-\u06FF]/.test(value)) return "ar-SA";
+    if (/[\u0E80-\u0EFF]/.test(value)) return "lo-LA";
+    if (/[\u0F00-\u0FFF]/.test(value)) return "bo-CN";
+    if (/[\u1000-\u109F]/.test(value)) return "my-MM";
+    if (/[\u1780-\u17FF]/.test(value)) return "km-KH";
+    if (/[đăâêôơư]/i.test(value)) return "vi-VN";
+    if (/[çğıİöşü]/i.test(value) && /[ıİşğ]/i.test(value)) return "tr-TR";
+    if (/[ãõ]/i.test(value) || /\b(você|vocês|não|obrigado|obrigada|olá|também|está|estão)\b/i.test(value)) return "pt-BR";
+    if (/[ñ¿¡]/i.test(value) || /\b(hola|gracias|estás|están|también|buenos|buenas|quiero|puedes|pero|porque|cómo|qué)\b/i.test(value)) return "es-ES";
+    if (/[œÿ]/i.test(value) || /\b(bonjour|merci|avec|vous|nous|pour|suis|une|des|quoi|comment)\b/i.test(value)) return "fr-FR";
+    if (/[ß]/i.test(value) || /\b(der|die|das|und|nicht|mit|für|ich|bin|eine|einen|danke|bitte)\b/i.test(value)) return "de-DE";
+    if (/\b(ciao|grazie|buongiorno|buonasera|perché|anche|molto|vorrei)\b/i.test(value)) return "it-IT";
+    if (/\b(hello|the|this|that|please|thanks|what|how|can|would|you|your)\b/i.test(lower)) return "en-US";
     return "en-US";
   }
   function speakText(value, inVoiceMode) {
@@ -384,6 +413,41 @@
     actions.appendChild(button);
     body.appendChild(actions);
   }
+  function monitorVoiceActivity(recorder, analyser) {
+    const samples = new Uint8Array(analyser.fftSize);
+    const tick = () => {
+      if (!voiceModeActive || voiceRecorder !== recorder || recorder.state !== "recording" || voiceAnalyser !== analyser) return;
+      analyser.getByteTimeDomainData(samples);
+      let squareTotal = 0;
+      for (let i = 0; i < samples.length; i++) {
+        const sample = (samples[i] - 128) / 128;
+        squareTotal += sample * sample;
+      }
+      const volume = Math.sqrt(squareTotal / samples.length);
+      const now = Date.now();
+      if (volume >= 0.018) {
+        if (!voiceHasSpeech) {
+          voiceHasSpeech = true;
+          voiceSpeechStartedAt = now;
+          if (voiceUI.transcript) voiceUI.transcript.textContent = "I’m listening. Finish speaking naturally; I’ll detect your language automatically.";
+        }
+        voiceSilenceStartedAt = 0;
+      } else if (voiceHasSpeech) {
+        if (!voiceSilenceStartedAt) voiceSilenceStartedAt = now;
+        if (now - voiceSilenceStartedAt >= 1350 && now - voiceSpeechStartedAt >= 700) {
+          stopVoiceMediaRecording(true);
+          return;
+        }
+      }
+      if (voiceHasSpeech && now - voiceSpeechStartedAt >= 45000) {
+        stopVoiceMediaRecording(true);
+        return;
+      }
+      voiceMonitorFrame = window.requestAnimationFrame(tick);
+    };
+    voiceMonitorFrame = window.requestAnimationFrame(tick);
+  }
+
   async function startMediaRecording() {
     if (!voiceModeActive || voicePaused || busy || voiceIsSpeaking || voiceIsListening) return;
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function" ||
@@ -441,12 +505,31 @@
             : "Recording stopped. Tap the microphone when you’re ready.";
         }
       };
+      voiceHasSpeech = false;
+      voiceSpeechStartedAt = 0;
+      voiceSilenceStartedAt = 0;
       recorder.start(250);
       voiceIsListening = true;
-      setVoiceStatus("Recording… tap the mic to send", "listening");
-      if (voiceUI.transcript) voiceUI.transcript.textContent = "Speak naturally, then tap the microphone button to send your voice message.";
+      setVoiceStatus("Listening… speak naturally", "listening");
+      if (voiceUI.transcript) voiceUI.transcript.textContent = "Language detection is automatic. Pause briefly when you finish speaking; Mahi AI will answer aloud.";
+      const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextConstructor) {
+        try {
+          voiceAudioContext = new AudioContextConstructor();
+          voiceAnalyser = voiceAudioContext.createAnalyser();
+          voiceAnalyser.fftSize = 2048;
+          voiceAudioSource = voiceAudioContext.createMediaStreamSource(stream);
+          voiceAudioSource.connect(voiceAnalyser);
+          if (voiceAudioContext.state === "suspended" && typeof voiceAudioContext.resume === "function") {
+            void voiceAudioContext.resume().catch(() => {});
+          }
+          monitorVoiceActivity(recorder, voiceAnalyser);
+        } catch (_) {
+          if (voiceUI.transcript) voiceUI.transcript.textContent = "Speak, then tap the microphone to send. Automatic silence detection is unavailable in this browser.";
+        }
+      }
       voiceRecorderStopTimer = window.setTimeout(() => {
-        if (voiceRecorder && voiceRecorder.state === "recording") stopVoiceMediaRecording(true);
+        if (voiceRecorder && voiceRecorder.state === "recording") stopVoiceMediaRecording(voiceHasSpeech);
       }, 60000);
     } catch (error) {
       if (stream) stream.getTracks().forEach((track) => track.stop());
@@ -464,6 +547,19 @@
   function stopVoiceMediaTracks() {
     if (voiceRecorderStopTimer) window.clearTimeout(voiceRecorderStopTimer);
     voiceRecorderStopTimer = null;
+    if (voiceMonitorFrame !== null && typeof window.cancelAnimationFrame === "function") {
+      try { window.cancelAnimationFrame(voiceMonitorFrame); } catch (_) {}
+    }
+    voiceMonitorFrame = null;
+    if (voiceAudioSource) {
+      try { voiceAudioSource.disconnect(); } catch (_) {}
+    }
+    voiceAudioSource = null;
+    voiceAnalyser = null;
+    if (voiceAudioContext && voiceAudioContext.state !== "closed") {
+      try { void voiceAudioContext.close(); } catch (_) {}
+    }
+    voiceAudioContext = null;
     if (voiceMediaStream) {
       try { voiceMediaStream.getTracks().forEach((track) => track.stop()); } catch (_) {}
     }
@@ -481,123 +577,28 @@
       if (voiceUI.transcript) voiceUI.transcript.textContent = "There is no room for another attachment. Remove an attachment in the chat and try again.";
       return;
     }
-    const languageName = voiceUI.language && voiceUI.language.selectedOptions[0]
-      ? voiceUI.language.selectedOptions[0].textContent.trim() : "the selected language";
-    const instruction = "Please listen carefully to the attached voice recording. Understand the user's spoken request and answer that request directly, in " +
-      languageName + " when appropriate. Do not merely describe the audio or only transcribe it unless the user asked for transcription. If the recording is unclear, ask one concise clarification.";
-    if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message sent. Waiting for Mahi AI…";
+    const instruction = "Listen to the attached audio recording and identify the language or languages spoken without asking the user to choose a language. Understand the actual request and respond conversationally in the same language the user used; if the user mixes languages, naturally match that mix. Do not merely transcribe or describe the recording unless asked. Keep the reply natural to say aloud. If the audio is unclear, ask one short clarification in the language most likely spoken.";
+    if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message received. Detecting your language and preparing a reply…";
     voicePaused = false;
     try {
-      await sendMessage(instruction);
+      await sendMessage(instruction, { displayText: "🎙️ Voice message — language detected automatically" });
     } catch (_) {
       voicePaused = true;
     }
   }
   function startVoiceListening() {
     if (!voiceModeActive || voicePaused || busy || voiceIsSpeaking || voiceIsListening) return;
-    const Recognition = speechRecognitionConstructor();
-    if (voiceForceRecorder || !Recognition) {
-      void startMediaRecording();
-      return;
-    }
-    let recognition;
-    try { recognition = new Recognition(); } catch (_) {
-      voiceForceRecorder = true;
-      void startMediaRecording();
-      return;
-    }
-    voiceRecognition = recognition;
-    recognition.lang = voiceUI.language ? voiceUI.language.value || "bn-BD" : "bn-BD";
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-    let finalTranscript = "";
-    let submitted = false;
-    let retryDelay = 500;
-    recognition.onstart = () => {
-      voiceIsListening = true;
-      setVoiceStatus("Listening… speak now", "listening");
-      if (voiceUI.transcript && !voiceUI.interim.textContent) voiceUI.transcript.textContent = "I’m listening to you.";
-    };
-    recognition.onresult = (event) => {
-      let interim = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const result = event.results[i];
-        const transcript = result && result[0] ? String(result[0].transcript || "").trim() : "";
-        if (!transcript) continue;
-        if (result.isFinal) finalTranscript = (finalTranscript + " " + transcript).trim();
-        else interim = (interim + " " + transcript).trim();
-      }
-      if (voiceUI.interim) voiceUI.interim.textContent = interim;
-      if (interim && voiceUI.transcript) voiceUI.transcript.textContent = interim;
-      if (interim || finalTranscript) voiceNoSpeechCount = 0;
-      if (finalTranscript && !submitted) {
-        submitted = true;
-        const finalText = finalTranscript.trim();
-        if (voiceUI.transcript) voiceUI.transcript.textContent = finalText;
-        if (voiceUI.interim) voiceUI.interim.textContent = "";
-        setVoiceStatus("Thinking…", "thinking");
-        try { recognition.stop(); } catch (_) {}
-        void sendMessage(finalText);
-      }
-    };
-    recognition.onerror = (event) => {
-      const error = String(event && event.error || "");
-      if (error === "not-allowed" || error === "service-not-allowed" || error === "network") {
-        // Browser dictation can fail when its remote speech service is unavailable.
-        // Fall back to direct microphone recording for the multimodal provider.
-        voiceForceRecorder = true;
-        retryDelay = 350;
-        if (voiceUI.transcript) voiceUI.transcript.textContent = "Browser speech recognition is unavailable. Switching to microphone recording…";
-      } else if (error === "audio-capture") {
-        voicePaused = true;
-        setVoiceStatus("No microphone was found", "error");
-      } else if (error === "no-speech") {
-        voiceNoSpeechCount++;
-        retryDelay = 700;
-        if (voiceNoSpeechCount >= 3) {
-          voiceForceRecorder = true;
-          retryDelay = 350;
-          if (voiceUI.transcript) voiceUI.transcript.textContent = "Speech recognition could not detect your voice. Switching to microphone recording…";
-        } else if (voiceUI.transcript) {
-          voiceUI.transcript.textContent = "I didn’t catch that. Try speaking again.";
-        }
-      } else {
-        voiceForceRecorder = true;
-        retryDelay = 350;
-        if (voiceUI.transcript) voiceUI.transcript.textContent = "Switching to microphone recording…";
-      }
-    };
-    recognition.onend = () => {
-      voiceIsListening = false;
-      if (voiceRecognition === recognition) voiceRecognition = null;
-      if (voiceModeActive && !voicePaused && !submitted && !busy && !voiceIsSpeaking) {
-        if (voiceRestartTimer) window.clearTimeout(voiceRestartTimer);
-        voiceRestartTimer = window.setTimeout(() => {
-          voiceRestartTimer = null;
-          startVoiceListening();
-        }, retryDelay);
-      }
-    };
-    try {
-      recognition.start();
-    } catch (_) {
-      voiceRecognition = null;
-      voiceIsListening = false;
-      voiceForceRecorder = true;
-      void startMediaRecording();
-    }
+    voiceForceRecorder = true;
+    void startMediaRecording();
   }
 
   function openVoiceMode() {
     if (!voiceUI.overlay) return;
     voiceModeActive = true;
     voicePaused = false;
-    voiceForceRecorder = !speechRecognitionConstructor();
+    voiceForceRecorder = true;
     voiceUI.overlay.hidden = false;
-    if (voiceUI.transcript) voiceUI.transcript.textContent = voiceForceRecorder
-      ? "Speak, then tap the mic to send your voice message."
-      : "Tap the microphone and start speaking.";
+    if (voiceUI.transcript) voiceUI.transcript.textContent = "Allow microphone access when your browser asks. Speak in any language; Mahi AI will detect it and reply aloud.";
     if (voiceUI.interim) voiceUI.interim.textContent = "";
     setVoiceStatus("Connecting to your microphone…", "idle");
     closeMobileSidebar();
@@ -1408,7 +1409,8 @@
     ui.input.focus();
     closeMobileSidebar();
   }
-  async function sendMessage(text) {
+  async function sendMessage(text, options) {
+    const sendOptions = options || {};
     if (busy || (!text.trim() && !pendingFiles.length)) return;
     setError("");
     const selectedFiles = pendingFiles.slice();
@@ -1420,7 +1422,7 @@
     updateCounter();
     showWelcome(false);
     currentMessages.push({ role: "user", content: userText });
-    addMessage("user", userText, { files: selectedFiles });
+    addMessage("user", sendOptions.displayText || userText, { files: selectedFiles });
     const typing = addMessage("assistant", "", { typing: true });
     setBusy(true);
     let uploadedAttachments = [];
