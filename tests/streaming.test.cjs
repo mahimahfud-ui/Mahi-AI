@@ -17,8 +17,8 @@ test("chat shows Thinking before session setup and ignores backend status text",
   const sessionIndex = send.indexOf("if (!session) await ensureSession()");
   assert.ok(thinkingIndex >= 0 && sessionIndex > thinkingIndex,
     "Thinking should render before session initialization");
-  assert.match(app, /heading\.className = "thinking-label"/);
-  assert.match(app, /heading\.textContent = "Thinking"/);
+  assert.ok(app.includes('<span class="thinking-label">Thinking</span>'),
+    "typing message must display the Thinking label");
   assert.doesNotMatch(app, /payload\.type === "status" && typeof payload\.message/);
   assert.match(app, /payload\.type === "reset"/);
 });
