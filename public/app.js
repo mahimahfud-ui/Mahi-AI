@@ -1930,6 +1930,7 @@
     client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
+    window.MAHI_AI_AUTH_CLIENT = client;
     client.auth.onAuthStateChange((_event, nextSession) => {
       session = nextSession;
       renderAccountStatus();

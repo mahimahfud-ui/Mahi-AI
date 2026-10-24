@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="./ui-overrides.css">
   <link rel="stylesheet" href="./claude-ui.css">
   <link rel="stylesheet" href="./settings-hub.css">
+  <link rel="stylesheet" href="./admin-control.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
@@ -27,6 +28,7 @@
   <script src="./motion-b.js" defer></script>
   <script src="./claude-features.js" defer></script>
   <script src="./settings-hub.js" defer></script>
+  <script src="./admin-control.js" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -278,6 +280,7 @@
                 <button class="settings-tab" id="settings-tab-accessibility" type="button" role="tab" data-settings-tab="accessibility" aria-controls="settings-page-accessibility" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">◎</span>Accessibility</button>
                 <button class="settings-tab" id="settings-tab-data" type="button" role="tab" data-settings-tab="data" aria-controls="settings-page-data" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">⌁</span>Data &amp; privacy</button>
                 <button class="settings-tab" id="settings-tab-shortcuts" type="button" role="tab" data-settings-tab="shortcuts" aria-controls="settings-page-shortcuts" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">⌘</span>Shortcuts</button>
+                <button class="settings-tab admin-tab" id="settings-tab-admin" type="button" role="tab" data-settings-tab="admin" aria-controls="settings-page-admin" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">✦</span>Admin control</button>
               </nav>
               <div class="settings-pages">
                 <section class="settings-page" id="settings-page-general" role="tabpanel" aria-labelledby="settings-tab-general" data-settings-page="general">
@@ -358,6 +361,41 @@
                     <div class="settings-shortcut"><span>Close this window</span><kbd><span>Esc</span></kbd></div>
                   </div>
                   <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">⌘</span><span>The send shortcut follows your choice in the AI &amp; chat tab. On systems with a Command key, ⌘ is the macOS equivalent of Ctrl.</span></div>
+                <section class="settings-page admin-settings-page" id="settings-page-admin" role="tabpanel" aria-labelledby="settings-tab-admin" data-settings-page="admin" hidden>
+                  <div class="settings-page-head"><h3>AI Control Centre</h3><p>Owner-only settings for global AI instructions, categories and subcategories. Saved instructions apply to new conversations for every user.</p></div>
+                  <div class="admin-lock-card" id="adminLoginView">
+                    <div class="admin-lock-art" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div>
+                    <div class="admin-lock-copy"><span class="admin-eyebrow">MAHICLOUD · RESTRICTED AREA</span><h4>Administrator sign-in</h4><p>Unlock the private control panel to manage the assistant's behavior and instruction library.</p></div>
+                    <form id="adminLoginForm" class="admin-login-form" autocomplete="on">
+                      <label for="adminPinInput">Admin passcode</label>
+                      <div class="admin-login-line"><input id="adminPinInput" name="admin-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="128" placeholder="Enter your passcode" required><button class="settings-action primary" id="adminLoginButton" type="submit">Unlock panel <span aria-hidden="true">↗</span></button></div>
+                      <p class="admin-inline-status" id="adminLoginStatus" role="status" aria-live="polite">Login is verified on the server. The passcode is never stored in this browser.</p>
+                    </form>
+                  </div>
+                  <div class="admin-console" id="adminConsole" hidden>
+                    <div class="admin-console-head">
+                      <div><span class="admin-eyebrow">MAHICLOUD · ROOT CONTROL</span><h4>Assistant configuration</h4><p>Manage the system's owner-defined response guidance. Provider secrets remain protected in Supabase.</p></div>
+                      <div class="admin-console-actions"><button class="settings-action" id="adminRefresh" type="button">↻ Refresh</button><button class="settings-action danger" id="adminLogout" type="button">Lock panel</button></div>
+                    </div>
+                    <div class="admin-status-cards">
+                      <div class="admin-status-card"><span class="admin-status-label">Instruction engine</span><strong id="adminEngineState">Enabled</strong><small>Applies to new requests</small></div>
+                      <div class="admin-status-card"><span class="admin-status-label">Instruction categories</span><strong id="adminCategoryCount">0</strong><small>Global and topic-specific rules</small></div>
+                      <div class="admin-status-card"><span class="admin-status-label">Storage</span><strong>Server-side</strong><small>Private Supabase database</small></div>
+                    </div>
+                    <div class="admin-workspace">
+                      <aside class="admin-category-rail" aria-label="Instruction categories">
+                        <div class="admin-rail-head"><span>CONFIGURATION</span><span id="adminRailCount">0</span></div>
+                        <button class="admin-category-item is-active" type="button" data-admin-select="global"><span class="admin-category-glyph">✦</span><span><strong>Global instructions</strong><small>Applied to all topics</small></span></button>
+                        <div class="admin-category-list" id="adminCategoryList"></div>
+                        <button class="admin-add-category" id="adminAddCategory" type="button"><span>＋</span> Add category</button>
+                        <p class="admin-rail-note">Use categories to organize topic-specific rules. The AI receives the whole library and chooses relevant instructions for each request.</p>
+                      </aside>
+                      <div class="admin-editor-pane" id="adminEditorPane"></div>
+                    </div>
+                    <div class="admin-save-bar"><p id="adminConsoleStatus" role="status" aria-live="polite">Changes are loaded from the server.</p><button class="settings-action primary admin-save-button" id="adminSave" type="button">Save AI controls <span aria-hidden="true">↗</span></button></div>
+                    <p class="admin-security-note"><strong>Important:</strong> Instructions guide the AI, but cannot override platform safety/security rules, privacy protections or honest answers. Never put API keys or passwords in custom instructions.</p>
+                  </div>
+                </section>
                 </section>
               </div>
             </div>

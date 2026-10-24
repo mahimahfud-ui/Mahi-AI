@@ -3,7 +3,7 @@ name: apply-upgrade
 on:
   push:
     branches: [claude/upgrade-engine]
-    paths: ["tools/**", "public/claude-ui.css", "public/claude-features.js", "public/settings-hub.css", "public/settings-hub.js", "public/index.html", "public/app.js", "supabase/functions/mahi-ai-chat/index.ts", ".github/workflows/apply-upgrade.yml"]
+    paths: ["tools/**", "public/claude-ui.css", "public/claude-features.js", "public/settings-hub.css", "public/settings-hub.js", "public/admin-control.css", "public/admin-control.js", "public/index.html", "public/app.js", "supabase/functions/mahi-ai-chat/index.ts", "supabase/migrations/**", ".github/workflows/apply-upgrade.yml"]
 permissions:
   contents: write
 jobs:
@@ -30,6 +30,7 @@ jobs:
           node --check public/app.js
           node --check public/claude-features.js
           node --check public/settings-hub.js
+          node --check public/admin-control.js
           git diff --check
       - name: Commit
         run: |

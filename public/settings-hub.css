@@ -12,7 +12,7 @@
   border:1px solid var(--line);border-radius:22px;background:var(--bg);color:var(--text);
   box-shadow:0 28px 100px rgba(0,0,0,.42);isolation:isolate;
 }
-.settings-dialog :is(button,input,select){font:inherit}
+.settings-dialog :is(button,input,select,textarea){font:inherit}
 .settings-dialog :is(button,input,select):focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .settings-header{
   display:flex;align-items:center;gap:16px;padding:22px 24px 18px;

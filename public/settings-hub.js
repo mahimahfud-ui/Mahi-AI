@@ -120,7 +120,7 @@
     }, 2400);
   }
   function focusables() {
-    return [...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),a[href],[tabindex="0"]')]
+    return [...dialog.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),a[href],[tabindex="0"]')]
       .filter((el) => !el.hidden && el.getAttribute("aria-hidden") !== "true" && el.getClientRects().length);
   }
   function openSettings() {
