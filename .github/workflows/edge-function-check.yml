@@ -16,6 +16,9 @@ on:
     paths:
       - "supabase/functions/mahi-ai-chat/**"
       - "supabase/migrations/**"
+      - "server.js"
+      - "public/app.js"
+      - "public/config.js"
       - ".github/workflows/edge-function-check.yml"
 
 permissions:
