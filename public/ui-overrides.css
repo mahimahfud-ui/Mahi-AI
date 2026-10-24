@@ -503,3 +503,28 @@ body {
     height: var(--app-height, 100vh);
   }
 }
+
+
+/* Message layout: one outer bubble, shrink-safe flex rows, bounded rich content. */
+.messages,
+.message,
+.message-body,
+.message-content {
+  min-width: 0;
+  max-width: 100%;
+}
+.message {
+  width: 100%;
+}
+.message-body,
+.message-content {
+  overflow-wrap: anywhere;
+}
+.message-content :is(pre, table) {
+  min-width: 0;
+  max-width: 100%;
+  overflow: auto;
+}
+.message-content :is(img, video, iframe) {
+  max-width: 100%;
+}
