@@ -10,10 +10,13 @@
     welcome: $("welcome"), messages: $("messages"), form: $("chatForm"),
     input: $("promptInput"), send: $("sendButton"), error: $("errorBanner"),
     session: $("sessionLabel"), charCount: $("charCount"),
-    fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList")
+    fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList"),
+    accountButton: $("accountButton"), accountModal: $("accountModal")
   };
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
+  let accountMethod = "email", accountMode = "register";
+  let phoneOtpPending = false, pendingPhone = "", phoneOtpType = "sms", accountReturnFocus = null;
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
   const MAX_HISTORY = 24;
   // Use the visible viewport height so mobile browser chrome and virtual keyboards
@@ -579,6 +582,343 @@
     session = result.data.session;
     return session;
   }
+  function isGuestAccount() {
+    const user = session && session.user;
+    if (!user) return true;
+    if (user.is_anonymous === true) return true;
+    return !user.email && !user.phone;
+  }
+
+  function setAccountStatus(message, kind) {
+    const status = $("accountStatus");
+    if (!status) return;
+    status.textContent = message || "";
+    status.hidden = !message;
+    status.className = "account-status" + (kind ? " is-" + kind : "");
+  }
+
+  function renderAccountStatus() {
+    const user = session && session.user;
+    const guest = isGuestAccount();
+    const label = $("accountButtonLabel");
+    if (label) label.textContent = guest ? "Sign in" : "My account";
+    if (ui.accountButton) {
+      ui.accountButton.setAttribute("aria-label", guest ? "Sign in or create an account" : "Manage your account");
+      ui.accountButton.setAttribute("title", guest ? "Sign in or create an account" : "Manage your account");
+    }
+    if (ui.session) ui.session.textContent = guest ? "Guest workspace" : (user.email || user.phone || "Account saved");
+    if (!guest && user.user_metadata && user.user_metadata.display_name) {
+      applyDisplayName(user.user_metadata.display_name, true);
+    }
+  }
+
+  function renderAccountModal() {
+    const guest = isGuestAccount();
+    const authPanel = $("accountAuthPanel");
+    const summary = $("accountSummary");
+    const title = $("accountDialogTitle");
+    const description = $("accountDialogDescription");
+    if (authPanel) authPanel.hidden = !guest;
+    if (summary) summary.hidden = guest;
+    if (title) title.textContent = guest
+      ? (accountMode === "register" ? "Save your chats" : "Welcome back")
+      : "Your account";
+    if (description) description.textContent = guest
+      ? "Use any valid email address or a phone number with its international country code."
+      : "Your conversations are linked to this account and can be opened on another device.";
+    const methodSwitch = $("accountMethodSwitch");
+    const modeSwitch = $("accountModeSwitch");
+    if (methodSwitch) methodSwitch.hidden = !guest;
+    if (modeSwitch) modeSwitch.hidden = !guest;
+    if (!guest) {
+      const user = session && session.user;
+      const identity = $("accountSummaryIdentity");
+      const display = $("accountSummaryName");
+      if (identity) identity.textContent = user ? (user.email || user.phone || "Signed-in account") : "Signed-in account";
+      if (display) display.textContent = user && user.user_metadata && user.user_metadata.display_name
+        ? user.user_metadata.display_name
+        : "Your chat history is saved to your account.";
+      return;
+    }
+
+    document.querySelectorAll("[data-account-method]").forEach((button) => {
+      const active = button.getAttribute("data-account-method") === accountMethod;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    document.querySelectorAll("[data-account-mode]").forEach((button) => {
+      const active = button.getAttribute("data-account-mode") === accountMode;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-pressed", String(active));
+    });
+    const emailFields = $("accountEmailFields");
+    const phoneFields = $("accountPhoneFields");
+    const passwordConfirmWrap = $("accountPasswordConfirmWrap");
+    const phoneOtpGroup = $("accountOtpGroup");
+    const emailInput = $("accountEmailInput");
+    const passwordInput = $("accountPasswordInput");
+    const confirmInput = $("accountPasswordConfirm");
+    const phoneInput = $("accountPhoneInput");
+    const otpInput = $("accountOtpInput");
+    const submit = $("accountSubmitButton");
+    const resend = $("accountResendCode");
+    const forgot = $("accountForgotPassword");
+
+    if (emailFields) emailFields.hidden = accountMethod !== "email";
+    if (phoneFields) phoneFields.hidden = accountMethod !== "phone";
+    if (passwordConfirmWrap) passwordConfirmWrap.hidden = accountMethod !== "email" || accountMode !== "register";
+    if (phoneOtpGroup) phoneOtpGroup.hidden = accountMethod !== "phone" || !phoneOtpPending;
+    if (emailInput) emailInput.required = accountMethod === "email";
+    if (passwordInput) passwordInput.required = accountMethod === "email";
+    if (confirmInput) confirmInput.required = accountMethod === "email" && accountMode === "register";
+    if (phoneInput) {
+      phoneInput.required = accountMethod === "phone";
+      phoneInput.readOnly = phoneOtpPending;
+      if (phoneOtpPending && pendingPhone) phoneInput.value = pendingPhone;
+    }
+    if (otpInput) otpInput.required = accountMethod === "phone" && phoneOtpPending;
+    if (resend) resend.hidden = accountMethod !== "phone" || !phoneOtpPending;
+    if (forgot) forgot.hidden = accountMethod !== "email" || accountMode !== "login";
+    if (submit) {
+      if (accountMethod === "phone") submit.textContent = phoneOtpPending
+        ? "Verify code"
+        : (accountMode === "register" ? "Send verification code" : "Send sign-in code");
+      else submit.textContent = accountMode === "register" ? "Create account" : "Sign in";
+    }
+  }
+
+  function openAccountModal() {
+    if (!ui.accountModal) return;
+    accountReturnFocus = document.activeElement;
+    phoneOtpPending = false;
+    pendingPhone = "";
+    phoneOtpType = "sms";
+    accountMethod = "email";
+    accountMode = isGuestAccount() ? "register" : "login";
+    setAccountStatus("", "");
+    renderAccountModal();
+    ui.accountModal.hidden = false;
+    const focusTarget = isGuestAccount() ? $("accountEmailInput") : $("accountSignOut");
+    if (focusTarget) window.setTimeout(() => focusTarget.focus(), 0);
+  }
+
+  function closeAccountModal() {
+    if (!ui.accountModal || ui.accountModal.hidden) return;
+    ui.accountModal.hidden = true;
+    if (accountReturnFocus && typeof accountReturnFocus.focus === "function") accountReturnFocus.focus();
+    else if (ui.accountButton) ui.accountButton.focus();
+  }
+
+  function setAccountMethod(method) {
+    accountMethod = method === "phone" ? "phone" : "email";
+    phoneOtpPending = false;
+    pendingPhone = "";
+    const otp = $("accountOtpInput");
+    const phone = $("accountPhoneInput");
+    if (otp) otp.value = "";
+    if (phone) phone.readOnly = false;
+    setAccountStatus("", "");
+    renderAccountModal();
+  }
+
+  function setAccountMode(mode) {
+    accountMode = mode === "login" ? "login" : "register";
+    phoneOtpPending = false;
+    pendingPhone = "";
+    const otp = $("accountOtpInput");
+    const phone = $("accountPhoneInput");
+    const password = $("accountPasswordInput");
+    const confirm = $("accountPasswordConfirm");
+    if (otp) otp.value = "";
+    if (phone) phone.readOnly = false;
+    if (password) password.value = "";
+    if (confirm) confirm.value = "";
+    setAccountStatus("", "");
+    renderAccountModal();
+  }
+
+  function normalizeInternationalPhone(value) {
+    let phone = String(value || "").trim().replace(/[\\s().-]/g, "");
+    if (phone.startsWith("00")) phone = "+" + phone.slice(2);
+    return /^\\+[1-9]\\d{7,14}$/.test(phone) ? phone : "";
+  }
+
+  function readableAuthError(error) {
+    const message = String(error && error.message || error || "");
+    const lower = message.toLowerCase();
+    if (/phone provider is not enabled|phone.*not enabled|sms.*not configured|sms provider|phone auth.*disabled|phone sign.?in.*disabled/.test(lower)) {
+      return "Phone verification is not configured yet. In Supabase, enable Phone under Authentication → Sign In / Providers and configure an SMS provider. Then try again.";
+    }
+    if (/invalid login credentials|invalid credentials/.test(lower)) {
+      return "That email/phone or password is incorrect. Check your details and try again.";
+    }
+    if (/user already registered|already been registered|phone number.*already/.test(lower)) {
+      return "This email or phone number is already linked to an account. Switch to Log in instead.";
+    }
+    if (/invalid.*otp|otp.*expired|token has expired|token is invalid/.test(lower)) {
+      return "That verification code is incorrect or expired. Check the latest code or choose Resend code.";
+    }
+    if (/email not confirmed/.test(lower)) {
+      return "Please confirm your email address from the verification message before signing in.";
+    }
+    return message || "Authentication failed. Please try again.";
+  }
+
+  async function loadAccountWorkspace(closeModalAfter) {
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
+    session = data.session;
+    renderAccountStatus();
+    const savedName = session && session.user && session.user.user_metadata && session.user.user_metadata.display_name;
+    if (savedName && !isGuestAccount()) applyDisplayName(savedName, true);
+    try {
+      await refreshConversations();
+      if (conversations.length) {
+        await loadConversation(conversations[0].id);
+      } else {
+        conversationId = null;
+        showWelcome(true);
+      }
+    } catch (error) {
+      setError(plainError(error));
+    }
+    if (closeModalAfter) closeAccountModal();
+  }
+
+  async function handleAccountSubmit(event) {
+    event.preventDefault();
+    if (!client) {
+      setAccountStatus("Mahi AI is still connecting. Please try again in a moment.", "error");
+      return;
+    }
+    const submit = $("accountSubmitButton");
+    if (submit) submit.disabled = true;
+    try {
+      if (accountMethod === "email") {
+        const email = String($("accountEmailInput").value || "").trim();
+        const password = String($("accountPasswordInput").value || "");
+        if (accountMode === "register") {
+          const confirmPassword = String($("accountPasswordConfirm").value || "");
+          if (password.length < 8) throw new Error("Choose a password with at least 8 characters.");
+          if (password !== confirmPassword) throw new Error("The passwords do not match.");
+          if (!isGuestAccount()) throw new Error("You are already signed in. Sign out first to create or use another account.");
+          const { data, error } = await client.auth.updateUser({
+            email,
+            password,
+            data: { display_name: getDisplayName() }
+          });
+          if (error) throw error;
+          await loadAccountWorkspace(false);
+          renderAccountModal();
+          if (data && data.user && data.user.email_confirmed_at) {
+            setAccountStatus("Your account is ready. Your existing chats are still attached to this account.", "success");
+          } else {
+            setAccountStatus("Check your inbox for the email confirmation link. Confirm the address before signing in on another device. Your existing chats remain attached to this account.", "success");
+          }
+        } else {
+          const { data, error } = await client.auth.signInWithPassword({ email, password });
+          if (error) throw error;
+          if (!data || !data.session) throw new Error("Sign-in succeeded but no session was returned. Please try again.");
+          session = data.session;
+          await loadAccountWorkspace(true);
+        }
+        return;
+      }
+
+      if (phoneOtpPending) {
+        const token = String($("accountOtpInput").value || "").trim().replace(/\\s/g, "");
+        if (!/^\\d{4,8}$/.test(token)) throw new Error("Enter the verification code from the SMS.");
+        const { data, error } = await client.auth.verifyOtp({
+          phone: pendingPhone,
+          token,
+          type: phoneOtpType
+        });
+        if (error) throw error;
+        session = data.session || null;
+        phoneOtpPending = false;
+        await loadAccountWorkspace(true);
+        return;
+      }
+
+      const phone = normalizeInternationalPhone($("accountPhoneInput").value);
+      if (!phone) throw new Error("Enter a full international phone number, including + and your country code (for example, +8801712345678).");
+      pendingPhone = phone;
+      if (accountMode === "register") {
+        if (!isGuestAccount()) throw new Error("You are already signed in. Sign out first to create or use another account.");
+        const { error } = await client.auth.updateUser({
+          phone,
+          data: { display_name: getDisplayName() }
+        });
+        if (error) throw error;
+        phoneOtpType = "phone_change";
+      } else {
+        const { error } = await client.auth.signInWithOtp({
+          phone,
+          options: { shouldCreateUser: false }
+        });
+        if (error) throw error;
+        phoneOtpType = "sms";
+      }
+      phoneOtpPending = true;
+      renderAccountModal();
+      setAccountStatus("A one-time verification code was requested for " + phone + ". Enter the latest code from your SMS.", "success");
+      const otp = $("accountOtpInput");
+      if (otp) otp.focus();
+    } catch (error) {
+      setAccountStatus(readableAuthError(error), "error");
+    } finally {
+      if (submit) submit.disabled = false;
+      renderAccountModal();
+    }
+  }
+
+  async function resendAccountPhoneCode() {
+    if (!phoneOtpPending || !pendingPhone || !client) return;
+    const resend = $("accountResendCode");
+    if (resend) resend.disabled = true;
+    try {
+      if (phoneOtpType === "phone_change") {
+        const { error } = await client.auth.updateUser({ phone: pendingPhone });
+        if (error) throw error;
+      } else {
+        const { error } = await client.auth.signInWithOtp({
+          phone: pendingPhone,
+          options: { shouldCreateUser: false }
+        });
+        if (error) throw error;
+      }
+      setAccountStatus("A fresh code was requested for " + pendingPhone + ". Use the newest SMS.", "success");
+    } catch (error) {
+      setAccountStatus(readableAuthError(error), "error");
+    } finally {
+      if (resend) resend.disabled = false;
+    }
+  }
+
+  async function signOutAndSwitchAccount() {
+    const button = $("accountSignOut");
+    if (button) button.disabled = true;
+    try {
+      const { error } = await client.auth.signOut();
+      if (error) throw error;
+      session = null;
+      await ensureSession();
+      accountMethod = "email";
+      accountMode = "login";
+      phoneOtpPending = false;
+      pendingPhone = "";
+      renderAccountStatus();
+      renderAccountModal();
+      setAccountStatus("You are signed out. Sign in with your email or phone number.", "success");
+      const email = $("accountEmailInput");
+      if (email) email.focus();
+    } catch (error) {
+      setAccountStatus(readableAuthError(error), "error");
+    } finally {
+      if (button) button.disabled = false;
+    }
+  }
+
   async function refreshConversations() {
     if (!session) return;
     const { data, error } = await client.from("mahi_ai_conversations")
@@ -1079,9 +1419,13 @@
     client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
+    client.auth.onAuthStateChange((_event, nextSession) => {
+      session = nextSession;
+      renderAccountStatus();
+    });
     try {
       await ensureSession();
-      ui.session.textContent = "Guest workspace";
+      renderAccountStatus();
       await refreshConversations();
       if (conversations.length) await loadConversation(conversations[0].id);
       else showWelcome(true);
@@ -1095,6 +1439,19 @@
     event.preventDefault();
     sendMessage(ui.input.value);
   });
+  if (ui.accountButton) ui.accountButton.addEventListener("click", openAccountModal);
+  if ($("accountForm")) $("accountForm").addEventListener("submit", handleAccountSubmit);
+  document.querySelectorAll("[data-account-method]").forEach((button) => {
+    button.addEventListener("click", () => setAccountMethod(button.getAttribute("data-account-method")));
+  });
+  document.querySelectorAll("[data-account-mode]").forEach((button) => {
+    button.addEventListener("click", () => setAccountMode(button.getAttribute("data-account-mode")));
+  });
+  document.querySelectorAll("[data-account-close]").forEach((el) => {
+    el.addEventListener("click", closeAccountModal);
+  });
+  if ($("accountSignOut")) $("accountSignOut").addEventListener("click", signOutAndSwitchAccount);
+  if ($("accountResendCode")) $("accountResendCode").addEventListener("click", resendAccountPhoneCode);
   ui.attachButton.addEventListener("click", () => ui.fileInput.click());
   ui.fileInput.addEventListener("change", () => {
     addPendingFiles(Array.from(ui.fileInput.files || []));
@@ -1138,7 +1495,7 @@
       event.preventDefault();
       beginNewChat();
     }
-    if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); }
+    if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); closeAccountModal(); }
   });
   window.addEventListener("online", () => { if (!busy) setError(""); });
   setupPreferences();
