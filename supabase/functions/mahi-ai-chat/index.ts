@@ -589,6 +589,7 @@ function flagEnabled(name: string): boolean {
 }
 
 function providerIsConfigured(name: string, task = "general"): boolean {
+  if (cachedMahiAIAdminConfig?.routing?.disabledProviders?.includes(name)) return false;
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   // A configured provider key is the explicit opt-in for this provider.
   if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
@@ -703,8 +704,17 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   }
 
-  // The order expresses the task routing preference. All other configured providers
-  // remain in the cascade, with attachment-incompatible providers excluded.
+  // Owner-configured task routes control ordinary provider priorities.
+  // Preserve the existing specialist lane for adult-sensitive and specified sensitive-social requests.
+  const adminRouting = activeMahiAIRouting();
+  if (adminRouting.enabled) {
+    const routeKey = hasInlineAttachments ? "multimodal" : (ADMIN_TASK_ROUTE_KEYS.includes(task) ? task : "general");
+    const configuredRoute = adminRouting.routes[routeKey] || adminRouting.routes.general;
+    const keepVeniceFirst = isAdultSensitivePrompt(prompt) ||
+      (shouldPreferVenice(prompt) && task !== "web_research" && task !== "code_execution");
+    preferred = keepVeniceFirst ? ["venice", ...configuredRoute.filter((name) => name !== "venice")] : [...configuredRoute];
+  }
+  // Other configured providers remain available as fallbacks when the owner permits it.
   const fallback = ["gemini", "groq", "openrouter", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])]
     .filter((name) => providerIsConfigured(name, task) &&
@@ -730,8 +740,9 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   };
   // If every configured provider is cooling down, permit an eventual retry rather than
   // leaving the user with no route at all.
-  return candidates.sort((a, b) => score(a) - score(b) ||
+  const ordered = candidates.sort((a, b) => score(a) - score(b) ||
     (preferredRank.get(a) ?? 99) - (preferredRank.get(b) ?? 99));
+  return adminRouting.enabled && !adminRouting.allowFallbacks ? ordered.slice(0, 1) : ordered;
 }
 
 function openRouterModel(task: string): string {
@@ -750,7 +761,78 @@ function openRouterModel(task: string): string {
 
 type MahiAIAdminSubcategory = { id: string; name: string; description: string; keywords: string[]; instructions: string; };
 type MahiAIAdminCategory = { id: string; name: string; description: string; keywords: string[]; instructions: string; subcategories: MahiAIAdminSubcategory[]; };
-type MahiAIAdminConfig = { enabled: boolean; globalInstructions: string; categories: MahiAIAdminCategory[]; };
+type MahiAIAdminRouting = {
+  enabled: boolean;
+  allowFallbacks: boolean;
+  routes: Record<string, string[]>;
+  models: Record<string, string>;
+  disabledProviders: string[];
+  temperature: number;
+  maxOutputTokens: number;
+};
+type MahiAIAdminConfig = { enabled: boolean; globalInstructions: string; categories: MahiAIAdminCategory[]; routing: MahiAIAdminRouting; };
+const ADMIN_PROVIDER_IDS = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+const ADMIN_TASK_ROUTE_KEYS = ["general", "coding", "web_research", "code_execution", "reasoning", "creative", "multimodal"];
+const DEFAULT_ADMIN_ROUTES: Record<string, string[]> = {
+  general: ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"],
+  coding: ["groq", "gemini", "openrouter", "openai", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic"],
+  web_research: ["gemini", "openrouter", "groq", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"],
+  code_execution: ["gemini", "openrouter", "groq", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"],
+  reasoning: ["gemini", "openrouter", "shannon", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"],
+  creative: ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"],
+  multimodal: ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"]
+};
+function defaultMahiAIRoutingConfig(): MahiAIAdminRouting {
+  return {
+    enabled: true, allowFallbacks: true,
+    routes: Object.fromEntries(ADMIN_TASK_ROUTE_KEYS.map((key) => [key, [...DEFAULT_ADMIN_ROUTES[key]]])),
+    models: {}, disabledProviders: [], temperature: 0.3, maxOutputTokens: 8192
+  };
+}
+function normalizeMahiAIRouting(value: unknown): MahiAIAdminRouting {
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const defaults = defaultMahiAIRoutingConfig();
+  const rawRoutes = raw.routes && typeof raw.routes === "object" && !Array.isArray(raw.routes) ? raw.routes as Record<string, unknown> : {};
+  const routes = Object.fromEntries(ADMIN_TASK_ROUTE_KEYS.map((key) => {
+    const names = Array.isArray(rawRoutes[key]) ? (rawRoutes[key] as unknown[]).map((name) => cleanAdminText(name, 40).toLowerCase()).filter((name) => ADMIN_PROVIDER_IDS.includes(name)) : [];
+    const unique = [...new Set(names)].slice(0, ADMIN_PROVIDER_IDS.length);
+    return [key, unique.length ? unique : [...defaults.routes[key]]];
+  }));
+  const rawModels = raw.models && typeof raw.models === "object" && !Array.isArray(raw.models) ? raw.models as Record<string, unknown> : {};
+  const models: Record<string, string> = {};
+  for (const provider of ADMIN_PROVIDER_IDS) {
+    const model = cleanAdminText(rawModels[provider], 120);
+    models[provider] = model && /^[A-Za-z0-9@._:/-]+$/.test(model) ? model : "";
+  }
+  const rawDisabled = Array.isArray(raw.disabledProviders) ? raw.disabledProviders : [];
+  const disabledProviders = [...new Set(rawDisabled.map((name) => cleanAdminText(name, 40).toLowerCase()).filter((name) => ADMIN_PROVIDER_IDS.includes(name)))];
+  const requestedTemperature = Number(raw.temperature);
+  const requestedTokens = Number(raw.maxOutputTokens);
+  return {
+    enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
+    allowFallbacks: typeof raw.allowFallbacks === "boolean" ? raw.allowFallbacks : true,
+    routes, models, disabledProviders,
+    temperature: Number.isFinite(requestedTemperature) ? Math.min(1, Math.max(0, requestedTemperature)) : defaults.temperature,
+    maxOutputTokens: Number.isFinite(requestedTokens) ? Math.round(Math.min(16384, Math.max(512, requestedTokens))) : defaults.maxOutputTokens
+  };
+}
+function activeMahiAIRouting(): MahiAIAdminRouting {
+  const config = cachedMahiAIAdminConfig?.routing;
+  return config ? normalizeMahiAIRouting(config) : defaultMahiAIRoutingConfig();
+}
+function activeMahiAIGenerationSettings(): { temperature: number; maxOutputTokens: number } {
+  const routing = activeMahiAIRouting();
+  return routing.enabled ? { temperature: routing.temperature, maxOutputTokens: routing.maxOutputTokens }
+    : { temperature: 0.3, maxOutputTokens: 8192 };
+}
+function adminModelForProvider(name: string, defaultModel: string): string {
+  const routing = activeMahiAIRouting();
+  if (!routing.enabled) return defaultModel;
+  const override = routing.models[name] || "";
+  if (!override) return defaultModel;
+  if (name === "openrouter" && !flagEnabled("ENABLE_PAID_FALLBACK") && override !== "openrouter/free" && !/:free$/i.test(override)) return defaultModel;
+  return override;
+}
 const ADMIN_CONFIG_ID = "global";
 const ADMIN_CONFIG_CACHE_TTL_MS = 10000;
 let cachedMahiAIAdminConfig: MahiAIAdminConfig | null = null;
@@ -766,7 +848,8 @@ function defaultMahiAIAdminConfig(): MahiAIAdminConfig {
       { id: "coding-development", name: "Coding & Development", description: "Programming, debugging and app development.", keywords: ["coding", "code", "programming", "website", "app", "bug"], instructions: "", subcategories: [] },
       { id: "research-facts", name: "Research & Facts", description: "Research, fact-checking and explanations.", keywords: ["research", "facts", "sources", "verify", "analysis"], instructions: "", subcategories: [] },
       { id: "writing-creativity", name: "Writing & Creativity", description: "Writing, editing, creative work and content.", keywords: ["writing", "story", "essay", "caption", "creative"], instructions: "", subcategories: [] }
-    ]
+    ],
+    routing: defaultMahiAIRoutingConfig()
   };
 }
 function cleanAdminText(value: unknown, maxLength: number): string {
@@ -785,6 +868,7 @@ function cleanAdminKeywords(value: unknown): string[] {
 function normalizeMahiAIAdminConfig(input: unknown): MahiAIAdminConfig {
   const raw = input && typeof input === "object" && !Array.isArray(input) ? input as Record<string, unknown> : {};
   const defaults = defaultMahiAIAdminConfig();
+  const routing = normalizeMahiAIRouting(raw.routing);
   const sourceCategories = Array.isArray(raw.categories) ? raw.categories.slice(0, 25) : defaults.categories;
   const usedIds = new Set<string>();
   let totalInstructionChars = cleanAdminText(raw.globalInstructions, 12000).length;
@@ -814,7 +898,7 @@ function normalizeMahiAIAdminConfig(input: unknown): MahiAIAdminConfig {
   });
   if (totalInstructionChars > 45000) throw new Error("The total custom instructions are too long. Shorten the instructions before saving.");
   return { enabled: typeof raw.enabled === "boolean" ? raw.enabled : true,
-    globalInstructions: cleanAdminText(raw.globalInstructions, 12000), categories };
+    globalInstructions: cleanAdminText(raw.globalInstructions, 12000), categories, routing };
 }
 async function readMahiAIAdminConfig(): Promise<MahiAIAdminConfig> {
   const response = await rest("mahi_ai_admin_config?select=config&id=eq." + encodeURIComponent(ADMIN_CONFIG_ID) + "&limit=1");
@@ -1486,14 +1570,16 @@ async function readProviderError(response: Response): Promise<string> {
   } catch (_) { return "Provider request failed with status " + response.status; }
 }
 async function openAICompatible(provider: string, url: string, key: string, model: string, messages: ChatMessage[], extraHeaders: Record<string, string> = {}, timeoutMs = 45000, systemOverride?: string): Promise<string> {
+  const generation = activeMahiAIGenerationSettings();
+  model = adminModelForProvider(provider, model);
   const response = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify({
       model,
       messages: [{ role: "system", content: systemOverride || systemPrompt(classifyTask(messages[messages.length - 1]?.content || "")) }, ...messages],
-      temperature: 0.4,
-      max_tokens: 8192,
+      temperature: generation.temperature,
+      max_tokens: generation.maxOutputTokens,
       stream: false
     })
   }, timeoutMs);
@@ -1505,9 +1591,10 @@ async function openAICompatible(provider: string, url: string, key: string, mode
   return text.trim();
 }
 async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<string> {
+  const generation = activeMahiAIGenerationSettings();
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
-  const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
+  const model = adminModelForProvider("gemini", envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite");
   const normalizedMessages = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
   const contents = normalizedMessages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
@@ -1521,7 +1608,7 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: systemOverride || systemPrompt(task) }] },
         contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
+        generationConfig: { temperature: generation.temperature, maxOutputTokens: generation.maxOutputTokens }
       })
     },
     timeoutMs
@@ -1537,31 +1624,31 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
   if (name === "shannon") {
     const key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
     if (!key) throw new Error("Not configured");
-    const model = envFirst(["SHANNON_MODEL"]) || "shannon-3";
+    const model = adminModelForProvider("shannon", envFirst(["SHANNON_MODEL"]) || "shannon-3");
     return { text: await openAICompatible(name, "https://api.shannon-ai.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "groq") {
     const key = envFirst(["GROQ_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://api.groq.com/openai/v1/chat/completions", key, envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b", messages, {}, timeoutMs, systemOverride), provider: name };
+    return { text: await openAICompatible(name, "https://api.groq.com/openai/v1/chat/completions", key, adminModelForProvider("groq", envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b"), messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "openrouter") {
     const key = envFirst(["OPENROUTER_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://openrouter.ai/api/v1/chat/completions", key, openRouterModel(task), messages, { "HTTP-Referer": "https://github.com/mahimahfud-ui/Mahi-AI", "X-Title": "Mahi AI" }, timeoutMs, systemOverride), provider: name };
+    return { text: await openAICompatible(name, "https://openrouter.ai/api/v1/chat/completions", key, adminModelForProvider("openrouter", openRouterModel(task)), messages, { "HTTP-Referer": "https://github.com/mahimahfud-ui/Mahi-AI", "X-Title": "Mahi AI" }, timeoutMs, systemOverride), provider: name };
   }
   if (name === "deepseek") {
     const key = envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
     if (!key) throw new Error("Not configured");
-    const model = envFirst(["DEEPSEEK_MODEL"]) || "deepseek-flash";
+    const model = adminModelForProvider("deepseek", envFirst(["DEEPSEEK_MODEL"]) || "deepseek-flash");
     return { text: await openAICompatible(name, "https://api.deepseek.com/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "nvidia") {
     const key = envFirst(["NVIDIA_API_KEY"]);
     if (!key) throw new Error("Not configured");
     const model = task === "coding"
-      ? envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct"
-      : envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b";
+      ? adminModelForProvider("nvidia", envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct")
+      : adminModelForProvider("nvidia", envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b");
     return { text: await openAICompatible(name, "https://integrate.api.nvidia.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "cloudflare") {
@@ -1569,24 +1656,24 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
     const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID", "CF_ACCOUNT_ID"]);
     if (!key || !accountId) throw new Error("Not configured");
     const url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
-    const model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+    const model = adminModelForProvider("cloudflare", envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast");
     return { text: await openAICompatible(name, url, key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "venice") {
     const key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
     if (!key) throw new Error("Not configured");
-    const model = envFirst(["VENICE_MODEL"]) || "zai-org-glm-5";
+    const model = adminModelForProvider("venice", envFirst(["VENICE_MODEL"]) || "zai-org-glm-5");
     return { text: await openAICompatible(name, "https://api.venice.ai/api/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "mistral") {
     const key = envFirst(["MISTRAL_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://api.mistral.ai/v1/chat/completions", key, envFirst(["MISTRAL_MODEL"]) || "mistral-small-latest", messages, {}, timeoutMs, systemOverride), provider: name };
+    return { text: await openAICompatible(name, "https://api.mistral.ai/v1/chat/completions", key, adminModelForProvider("mistral", envFirst(["MISTRAL_MODEL"]) || "mistral-small-latest"), messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "openai") {
     const key = envFirst(["OPENAI_API_KEY"]);
     if (!key) throw new Error("Not configured");
-    return { text: await openAICompatible(name, "https://api.openai.com/v1/chat/completions", key, envFirst(["OPENAI_MODEL"]) || "gpt-4.1-mini", messages, {}, timeoutMs, systemOverride), provider: name };
+    return { text: await openAICompatible(name, "https://api.openai.com/v1/chat/completions", key, adminModelForProvider("openai", envFirst(["OPENAI_MODEL"]) || "gpt-4.1-mini"), messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "anthropic") {
     const key = envFirst(["ANTHROPIC_API_KEY"]);
@@ -1595,8 +1682,9 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-6",
-        max_tokens: 8192,
+        model: adminModelForProvider("anthropic", envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-6"),
+        max_tokens: activeMahiAIGenerationSettings().maxOutputTokens,
+        temperature: activeMahiAIGenerationSettings().temperature,
         system: systemOverride || systemPrompt(task),
         messages: messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
       })
@@ -1844,6 +1932,7 @@ function providerFallbackModel(name: string, task: string): string | null {
 }
 
 async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = [], timeoutMs = 25000, systemOverride?: string): Promise<ProviderStream> {
+  const generation = activeMahiAIGenerationSettings();
   const controller = new AbortController();
   const totalTimer = setTimeout(() => controller.abort(), timeoutMs);
   const cleanup = () => { clearTimeout(totalTimer); controller.abort(); };
@@ -1860,7 +1949,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
   if (name === "gemini") {
     const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
     if (!key) { cleanup(); throw new Error("Not configured"); }
-    const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
+    const model = adminModelForProvider("gemini", envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite");
     const normalized = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
     const latestPrompt = [...normalized].reverse().find((m) => m.role === "user")?.content || "";
     const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
@@ -1894,7 +1983,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         }
         return { role: m.role === "assistant" ? "model" : "user", parts };
       }),
-      generationConfig: { temperature: 0.3, maxOutputTokens: 8192 },
+      generationConfig: { temperature: generation.temperature, maxOutputTokens: generation.maxOutputTokens },
       ...(geminiTools.length ? { tools: geminiTools } : {})
     };
     useGemini = true;
@@ -1905,8 +1994,9 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     headers["x-api-key"] = key;
     headers["anthropic-version"] = "2023-06-01";
     body = {
-      model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-6",
-      max_tokens: 8192,
+      model: adminModelForProvider("anthropic", envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-6"),
+      max_tokens: generation.maxOutputTokens,
+      temperature: generation.temperature,
       system: systemOverride || systemPrompt(task),
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
       stream: true
@@ -1952,6 +2042,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       ? envFirst(["NVIDIA_CODING_MODEL"]) || "qwen/qwen2.5-coder-32b-instruct"
       : envFirst(["NVIDIA_MODEL"]) || "openai/gpt-oss-20b";
     else if (name === "cloudflare") model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+    model = adminModelForProvider(name, model);
     if ((name === "openai" || name === "openrouter" || name === "deepseek") && attachments.some((item) =>
       item.inline && item.base64 && item.mimeType.startsWith("image/"))) {
       const lastUserIndex = chatMessages.map((message: any) => message.role).lastIndexOf("user");
@@ -1984,7 +2075,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       }
     ] : undefined;
     body = {
-      model, messages: chatMessages, temperature: 0.3, max_tokens: 8192, stream: true,
+      model, messages: chatMessages, temperature: generation.temperature, max_tokens: generation.maxOutputTokens, stream: true,
       ...(resourceTools ? {
         tools: resourceTools,
         stop_server_tools_when: [{ type: "step_count_is", step_count: 2 }]
