@@ -1,0 +1,50 @@
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+
+const app = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
+const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
+const edge = fs.readFileSync(
+  require.resolve("../supabase/functions/mahi-ai-chat/index.ts"),
+  "utf8"
+);
+
+test("chat UI wires search, export, temporary chat, stopping, and branching", () => {
+  for (const id of [
+    "chatSearch",
+    "exportMarkdownButton",
+    "exportJsonButton",
+    "temporaryChatButton",
+    "stopButton"
+  ]) assert.ok(html.includes('id="' + id + '"'), "missing " + id);
+  assert.match(app, /async function handleConversationSearch\(\)/);
+  assert.match(app, /\.ilike\("content", "%"\s*\+\s*query\s*\+\s*"%"\)/);
+  assert.match(app, /function exportConversation\(format\)/);
+  assert.match(app, /function beginBranchFromMessage\(index\)/);
+  assert.match(app, /branch_context: branchRequest/);
+  assert.match(app, /navigator\.share/);
+});
+
+test("saved answer feedback is device-local and message actions are available", () => {
+  assert.match(app, /mahicloud:feedback:/);
+  assert.match(app, /Mark this answer as helpful/);
+  assert.match(app, /Mark this answer as not helpful/);
+  assert.match(app, /function addMessageControls/);
+});
+
+test("temporary chats skip history and long-term memory, and branches preserve context", () => {
+  assert.match(edge, /const temporaryChat = input\?\.temporary_chat === true/);
+  assert.match(edge, /if \(temporaryChat\) \{\s*userMemoryContext = \{ enabled: false, memories: \[\], recent_messages: \[\] \}/);
+  assert.match(edge, /input\?\.temporary_chat === true/);
+  assert.match(edge, /const branchContext = input\?\.branch_context === true/);
+  assert.match(edge, /async function saveBranchHistory\(/);
+  assert.match(edge, /branchContext \? messages\.slice\(0, -1\) : \[\]/);
+});
+
+test("provider routing stays server-side and paid optional routes honor opt-in flags", () => {
+  assert.match(edge, /if \(name === "shannon"\) return flagEnabled\("ENABLE_SHANNON_FALLBACK"\)/);
+  assert.match(edge, /if \(name === "deepseek"\) return flagEnabled\("ENABLE_PAID_FALLBACK"\)/);
+  assert.match(edge, /if \(name === "cloudflare"\) return flagEnabled\("ENABLE_CLOUDFLARE_FALLBACK"\)/);
+  assert.match(edge, /if \(name === "openai"\) return \(task === "coding" \|\| flagEnabled\("ENABLE_PAID_FALLBACK"\)\)/);
+  assert.doesNotMatch(app, /GEMINI_API_KEY|OPENROUTER_API_KEY|GROQ_API_KEY/);
+});
