@@ -351,3 +351,6 @@ html[data-theme="light"] .message-attachment, html[data-theme="light"] .attachme
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .settings-trigger, .settings-chevron, .social-link { transition: none !important; }
 }
+
+/* Let compact devices scroll the drawer when expanded settings exceed the viewport. */
+.sidebar { overflow-y: auto; overscroll-behavior: contain; transition: margin-left .24s ease, transform .24s ease, opacity .18s ease; }
