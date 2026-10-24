@@ -33,6 +33,20 @@ Optional providers and opt-in flags:
 
 The router classifies the actual request intent (coding, reasoning, creative writing, or general use) instead of classifying every question that merely mentions HTML/API/Python as coding. It uses task-specific provider priority, whole-response failover, and short-lived failure cooldowns. OpenRouter defaults to `openrouter/free`; free model overrides remain allowed while paid fallback is off, and non-free model overrides require `ENABLE_PAID_FALLBACK=true`. The free router selects a model from the currently available free set and can change its selection over time. Provider names and keys stay server-side. Free API tiers have changing quotas and do not imply unlimited usage. Never add credentials to GitHub.
 
+## Long-term memory
+
+Mahi AI now has server-side, per-user cross-chat memory. For each authenticated guest/user, the Edge Function retrieves up to 12 recent messages from earlier conversations (excluding the currently open conversation) plus up to 15 saved notes. It adds only a bounded amount of context to the provider prompt. It also auto-saves clearly stated stable facts, response preferences, and current project context using simple patterns, without making an extra model call. It does not summarize or preserve every line of every old chat, so very old details are best saved explicitly.
+
+Users can control memory in chat:
+- `Remember that I prefer Banglish answers` — save a personal preference or note for future chats.
+- `Forget everything you remember` — clear saved notes and disable automatic cross-chat memory.
+- `Turn memory off` — stop injecting saved notes and old-chat excerpts; existing saved notes remain stored.
+- `Turn memory on` or `Remember my chats` — enable memory again.
+
+Passwords, API keys, access tokens, and selected sensitive personal details are not accepted as saved notes. Memory tables have RLS enabled and are inaccessible directly to `anon` and `authenticated`; only the server-side service-role Edge Function can read or write memory. The database function `mahi_ai_get_memory_context` is executable only by `service_role`.
+
+Guest-session limitation: memory is tied to the Supabase Auth user ID. Clearing browser site data, losing a guest session, or switching devices can create a different guest user, so old memories may not follow. Stable cross-device memory requires adding a persistent sign-in/link-account flow.
+
 ## Attachments and media routing
 
 - The composer accepts up to 5 files per message, any file type, up to 15 MB per file and 20 MB total.
