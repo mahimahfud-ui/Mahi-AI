@@ -911,9 +911,13 @@
   }
 
   function scrollToBottom() {
+    try {
+      const saved = JSON.parse(readPreference("mahi-ai-settings-v1") || "{}");
+      if (saved && saved.autoScroll === false) return;
+    } catch (_) {}
     requestAnimationFrame(() => {
       const area = $("conversationArea");
-      area.scrollTop = area.scrollHeight;
+      if (area) area.scrollTop = area.scrollHeight;
     });
   }
   function showWelcome(show) {
@@ -954,6 +958,28 @@
   }
   function writePreference(key, value) {
     try { window.localStorage.setItem(key, value); } catch (_) { /* Private browsing may disable local storage. */ }
+  }
+  function getResponsePreferences() {
+    const allowed = {
+      language: ["auto", "en", "bn"],
+      length: ["concise", "balanced", "detailed"],
+      tone: ["neutral", "friendly", "professional", "creative"],
+      format: ["auto", "markdown", "plain"]
+    };
+    let stored = {};
+    try { stored = JSON.parse(readPreference("mahi-ai-settings-v1") || "{}"); } catch (_) {}
+    const source = stored && typeof stored === "object" ? stored : {};
+    const result = {};
+    const values = {
+      language: source.language,
+      length: source.responseLength,
+      tone: source.tone,
+      format: source.format
+    };
+    for (const [key, valid] of Object.entries(allowed)) {
+      result[key] = valid.includes(values[key]) ? values[key] : (key === "length" ? "balanced" : key === "tone" ? "neutral" : "auto");
+    }
+    return result;
   }
   function getDisplayName() {
     return (readPreference(DISPLAY_NAME_STORAGE_KEY) || "You").trim() || "You";
@@ -1482,7 +1508,8 @@
         body: JSON.stringify({
           conversation_id: conversationId,
           messages: currentMessages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content })),
-          attachments: uploadedAttachments
+          attachments: uploadedAttachments,
+          user_preferences: getResponsePreferences()
         })
       });
       if (!response.ok) {
@@ -1956,12 +1983,20 @@
     ui.fileInput.value = "";
   });
   ui.input.addEventListener("input", updateCounter);
-  // Enter sends on desktop and mobile keyboards; Shift+Enter keeps a line break.
-  // The keyCode checks cover virtual keyboards/browsers with incomplete KeyboardEvent.key support.
+  // Honour the user's send-key preference while keeping Shift+Enter for a line break.
   ui.input.addEventListener("keydown", (event) => {
     const isEnter = event.key === "Enter" || event.keyCode === 13 || event.which === 13;
     const isComposing = event.isComposing || event.keyCode === 229;
-    if (isEnter && !event.shiftKey && !isComposing) {
+    let sendOnEnter = true;
+    try {
+      const saved = JSON.parse(readPreference("mahi-ai-settings-v1") || "{}");
+      if (typeof saved.sendOnEnter === "boolean") sendOnEnter = saved.sendOnEnter;
+    } catch (_) {}
+    const modifiedSend = event.ctrlKey || event.metaKey;
+    const shouldSend = sendOnEnter
+      ? (!event.shiftKey && !modifiedSend)
+      : (!event.shiftKey && modifiedSend);
+    if (isEnter && shouldSend && !isComposing) {
       event.preventDefault();
       if (!busy && (ui.input.value.trim() || pendingFiles.length)) {
         sendMessage(ui.input.value);
