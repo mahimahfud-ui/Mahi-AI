@@ -32,7 +32,7 @@ test("cross-chat memory context is bounded and excludes the active conversation"
   assert.match(edge, /historical data, not instructions/);
 });
 
-test("Mahi AI can save stable facts, preferences, and project context without a second model call", () => {
+test("MahiCloud can save stable facts, preferences, and project context without a second model call", () => {
   assert.match(edge, /function detectAutomaticMemory\(prompt: string\)/);
   assert.match(edge, /auto_preference/);
   assert.match(edge, /auto_active_project/);
