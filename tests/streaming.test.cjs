@@ -35,5 +35,5 @@ test("Edge Function forwards provider chunks while generating", () => {
   assert.match(stream, /let attemptStreamed = false;/);
   assert.match(stream, /if \(attemptStreamed\) sseEvent\(controller, encoder, \{ type: "reset" \}\);/);
   assert.match(stream, /if \(finalAnswer !== chosen\.text\)/);
-  assert.doesNotMatch(stream, /for \(let offset = 0; offset < finalAnswer\.length; offset \+= 700\) \{\s*sseEvent\(controller, encoder, \{ type: "delta", text: finalAnswer\.slice/);
+  assert.match(stream, /if \\(finalAnswer !== chosen\\.text\\) \\{\\s*sseEvent\\(controller, encoder, \\{ type: "reset" \\}\\);\\s*for \\(let offset = 0; offset < finalAnswer\\.length; offset \\+= 700\\)/);
 });
