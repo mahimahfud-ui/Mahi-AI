@@ -540,13 +540,17 @@
       del.addEventListener("click", async (event) => {
         event.stopPropagation();
         if (!confirm("Delete this conversation? This cannot be undone.")) return;
-        const { error } = await client.from("mahi_ai_conversations").delete().eq("id", conversation.id);
-        if (error) return setError("Could not delete that conversation. Please try again.");
-        if (conversationId === conversation.id) {
-          conversationId = null;
-          showWelcome(true);
+        try {
+          const { error } = await client.from("mahi_ai_conversations").delete().eq("id", conversation.id);
+          if (error) return setError("Could not delete that conversation. Please try again.");
+          if (conversationId === conversation.id) {
+            conversationId = null;
+            showWelcome(true);
+          }
+          await refreshConversations();
+        } catch (error) {
+          setError(plainError(error));
         }
-        await refreshConversations();
       });
       row.append(open, del);
       ui.chatList.appendChild(row);
