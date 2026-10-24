@@ -386,6 +386,7 @@ function providerIsConfigured(name: string): boolean {
   // Direct DeepSeek API requests may incur charges; require explicit opt-in.
   if (name === "deepseek") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
   if (name === "mistral") return configuredSecret(["MISTRAL_API_KEY"]);
+  if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
   if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
   if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") &&
     configuredSecret(["CLOUDFLARE_API_TOKEN"]) && configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
@@ -448,27 +449,28 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   if (hasInlineAttachments) {
     // Gemini handles multimodal and file inputs directly; OpenRouter's free router
     // is next and selects a free model with the needed feature when available.
-    preferred = ["gemini", "openrouter", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
-    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "web_research" || task === "code_execution") {
     // Gemini has native Google Search, URL Context, and code-execution tool support.
-    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "coding") {
     // Groq has been the fastest healthy coding route in production logs; put it first
     // so a stalled OpenRouter request cannot delay ordinary first responses by 30 seconds.
-    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "reasoning") {
-    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["gemini", "openrouter", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "creative") {
-    preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else {
-    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["groq", "gemini", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   }
 
   // OpenAI is the final fallback because its API can incur charges. Other optional
   // providers are eligible only when their server-side keys are configured.
-  const fallback = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
-  const configured = [...new Set([...preferred, ...fallback])].filter(providerIsConfigured);
+  const fallback = ["gemini", "groq", "openrouter", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+  const configured = [...new Set([...preferred, ...fallback])]
+    .filter((name) => providerIsConfigured(name) && !(hasInlineAttachments && name === "venice"));
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
   // Preserve task/capability preference as the baseline, then adjust within that order
   // using recent in-isolate latency and reliability. Opted-in paid fallback providers
@@ -1064,6 +1066,12 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
     const model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
     return { text: await openAICompatible(name, url, key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
+  if (name === "venice") {
+    const key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
+    if (!key) throw new Error("Not configured");
+    const model = envFirst(["VENICE_MODEL"]) || "zai-org-glm-5";
+    return { text: await openAICompatible(name, "https://api.venice.ai/api/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
+  }
   if (name === "mistral") {
     const key = envFirst(["MISTRAL_API_KEY"]);
     if (!key) throw new Error("Not configured");
@@ -1392,6 +1400,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     } else if (name === "deepseek") {
       key = envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
       url = "https://api.deepseek.com/chat/completions";
+    } else if (name === "venice") { key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]); url = "https://api.venice.ai/api/v1/chat/completions"; }
     } else if (name === "mistral") { key = envFirst(["MISTRAL_API_KEY"]); url = "https://api.mistral.ai/v1/chat/completions"; }
     else if (name === "openai") { key = envFirst(["OPENAI_API_KEY"]); url = "https://api.openai.com/v1/chat/completions"; }
     else if (name === "nvidia") {
@@ -1409,6 +1418,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     if (name === "groq") model = envFirst(["GROQ_MODEL"]) || "openai/gpt-oss-20b";
     else if (name === "openrouter") model = openRouterModel(task);
     else if (name === "deepseek") model = envFirst(["DEEPSEEK_MODEL"]) || "deepseek-flash";
+    else if (name === "venice") model = envFirst(["VENICE_MODEL"]) || "zai-org-glm-5";
     else if (name === "mistral") model = envFirst(["MISTRAL_MODEL"]) || "mistral-small-latest";
     else if (name === "openai") model = envFirst(["OPENAI_MODEL"]) || "gpt-4.1-mini";
     else if (name === "nvidia") model = task === "coding"
