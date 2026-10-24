@@ -674,10 +674,21 @@ async function fetchProviderWithGatewayFallback(
 ): Promise<Response> {
   const routedUrl = await cloudflareGatewayUrl(provider, directUrl);
   if (routedUrl === directUrl) return await fetchWithTimeout(directUrl, init, timeoutMs);
+
+  // Cloudflare BYOK only applies when the request does NOT include the provider's
+  // own auth header. Keep the original headers for the direct-provider fallback.
+  // Otherwise Cloudflare forwards the Supabase key and ignores the stored Gateway key.
+  const gatewayHeaders = new Headers(init.headers || {});
+  gatewayHeaders.delete("authorization");
+  gatewayHeaders.delete("x-api-key");
+  gatewayHeaders.delete("x-goog-api-key");
+  const gatewayInit: RequestInit = { ...init, headers: gatewayHeaders };
+
   try {
-    const gatewayResponse = await fetchWithTimeout(routedUrl, init, timeoutMs);
+    const gatewayResponse = await fetchWithTimeout(routedUrl, gatewayInit, timeoutMs);
     if (gatewayResponse.ok) return gatewayResponse;
-    // Retry the same provider directly if the gateway is unavailable or misconfigured.
+    // Retry directly with the original provider credentials if Gateway is unavailable,
+    // its BYOK key is invalid, or the provider endpoint rejects the request.
     await readProviderError(gatewayResponse);
   } catch (_) {
     // Preserve the existing direct-provider fallback below.
