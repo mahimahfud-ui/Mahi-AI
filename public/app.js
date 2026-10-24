@@ -1238,7 +1238,7 @@
       openCommandPalette();
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === "n") {
+    if (event.altKey && event.shiftKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "n") {
       event.preventDefault();
       beginNewChat();
       return;
