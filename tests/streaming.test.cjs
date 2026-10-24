@@ -72,7 +72,9 @@ test("coding uses a fast provider first and fallback attempts are bounded", () =
   const reasoningStart = edge.indexOf('} else if (task === "reasoning") {', codingStart);
   const coding = edge.slice(codingStart, reasoningStart);
   assert.ok(coding.includes('preferred = ["groq", "gemini", "openrouter"'));
-  assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 15000 : 12000;"));
+  assert.ok(edge.includes('const totalProviderBudgetMs = (task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 105000 : 60000;'));
+  assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 11000 : 8500;"));
+  assert.ok(edge.includes("const providerBudget = Math.max(5000, Math.min(maxAttemptMs, remaining - 6000));"));
   assert.ok(edge.includes(").slice(0, 3);"), "review retries up to three alternate providers");
   assert.ok(edge.includes("perReviewerTimeoutMs, reviewSystem"));
 });
