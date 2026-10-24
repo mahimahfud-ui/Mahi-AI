@@ -29,6 +29,7 @@
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let activeRequestController = null, pendingEdit = null, temporaryChatMode = false;
+  let chatSearchMatches = null, chatSearchSequence = 0;
   let accountMethod = "email", accountMode = "register";
   let phoneOtpPending = false, pendingPhone = "", phoneOtpType = "sms", accountReturnFocus = null;
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
@@ -501,6 +502,59 @@
       body.appendChild(actions);
       return;
     }
+    if (role === "assistant") {
+      const shareButton = addButton("Share", "Share this answer", async () => {
+        try {
+          if (typeof navigator.share === "function") {
+            await navigator.share({ title: "MahiCloud response", text: content });
+          } else {
+            const ok = await copyTextToClipboard(content);
+            if (!ok) throw new Error("copy_failed");
+            shareButton.textContent = "Copied";
+            shareButton.classList.add("is-complete");
+            window.setTimeout(() => { if (shareButton.isConnected) { shareButton.textContent = "Share"; shareButton.classList.remove("is-complete"); } }, 1500);
+          }
+        } catch (error) {
+          if (error && error.name === "AbortError") return;
+          try {
+            const ok = await copyTextToClipboard(content);
+            if (ok) {
+              shareButton.textContent = "Copied";
+              shareButton.classList.add("is-complete");
+              window.setTimeout(() => { if (shareButton.isConnected) { shareButton.textContent = "Share"; shareButton.classList.remove("is-complete"); } }, 1500);
+              return;
+            }
+          } catch (_) {}
+          setError("Could not share automatically. Copy the answer and share it manually.");
+        }
+      });
+      if (!temporaryChatMode && item.created_at) {
+        let storedVote = "";
+        const feedbackKey = "mahicloud:feedback:" + (conversationId || "conversation") + ":" + (item.id || item.created_at);
+        try { storedVote = localStorage.getItem(feedbackKey) || ""; } catch (_) {}
+        const addVote = (label, vote, title) => {
+          const button = addButton(label, title, () => {
+            const next = storedVote === vote ? "" : vote;
+            storedVote = next;
+            try {
+              if (next) localStorage.setItem(feedbackKey, next);
+              else localStorage.removeItem(feedbackKey);
+            } catch (_) {
+              setError("Feedback could not be saved on this device.");
+            }
+            up.classList.toggle("is-complete", next === "up");
+            down.classList.toggle("is-complete", next === "down");
+            up.setAttribute("aria-pressed", String(next === "up"));
+            down.setAttribute("aria-pressed", String(next === "down"));
+          });
+          button.setAttribute("aria-pressed", String(storedVote === vote));
+          if (storedVote === vote) button.classList.add("is-complete");
+          return button;
+        };
+        const up = addVote("👍", "up", "Mark this answer as helpful");
+        const down = addVote("👎", "down", "Mark this answer as not helpful");
+      }
+    }
     if (role === "user" && !temporaryChatMode && item.created_at && !isAttachmentTurn(item)) {
       addButton("Edit", "Edit this prompt and replace the following conversation", () => {
         if (busy) return;
@@ -586,6 +640,33 @@
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setError("");
+  }
+  async function handleConversationSearch() {
+    const query = ui.chatSearch ? ui.chatSearch.value.trim() : "";
+    const searchId = ++chatSearchSequence;
+    const normalized = query.toLocaleLowerCase();
+    chatSearchMatches = new Set(conversations
+      .filter((item) => String(item.title || "New chat").toLocaleLowerCase().includes(normalized))
+      .map((item) => item.id));
+    renderConversationList();
+    if (query.length < 2 || !session) return;
+    try {
+      const { data, error } = await client.from("mahi_ai_messages")
+        .select("conversation_id")
+        .ilike("content", "%" + query + "%")
+        .limit(500);
+      if (error) throw error;
+      if (searchId !== chatSearchSequence) return;
+      (data || []).forEach((row) => {
+        if (row && typeof row.conversation_id === "string") chatSearchMatches.add(row.conversation_id);
+      });
+      renderConversationList();
+    } catch (error) {
+      if (searchId === chatSearchSequence) {
+        // Keep title search usable when message search is unavailable.
+        console.warn("MahiCloud message search failed:", error instanceof Error ? error.message.slice(0, 120) : "Unknown error");
+      }
+    }
   }
   async function renameConversation(conversation) {
     const currentTitle = conversation.title || "New chat";
@@ -1565,7 +1646,10 @@
   function renderConversationList() {
     ui.chatList.replaceChildren();
     const query = ui.chatSearch ? ui.chatSearch.value.trim().toLocaleLowerCase() : "";
-    const visible = conversations.filter((conversation) => String(conversation.title || "New chat").toLocaleLowerCase().includes(query));
+    const visible = conversations.filter((conversation) =>
+      String(conversation.title || "New chat").toLocaleLowerCase().includes(query) ||
+      (chatSearchMatches && chatSearchMatches.has(conversation.id))
+    );
     if (!visible.length) {
       const empty = document.createElement("div");
       empty.className = "empty-history";
@@ -2169,7 +2253,7 @@
   if (ui.stop) ui.stop.addEventListener("click", () => {
     if (activeRequestController && busy) activeRequestController.abort();
   });
-  if (ui.chatSearch) ui.chatSearch.addEventListener("input", renderConversationList);
+  if (ui.chatSearch) ui.chatSearch.addEventListener("input", () => { void handleConversationSearch(); });
   if (ui.exportMarkdownButton) ui.exportMarkdownButton.addEventListener("click", () => exportConversation("md"));
   if (ui.exportJsonButton) ui.exportJsonButton.addEventListener("click", () => exportConversation("json"));
   if (ui.temporaryChatButton) ui.temporaryChatButton.addEventListener("click", () => {
