@@ -831,7 +831,9 @@ async function getCachedMahiAIAdminConfig(): Promise<MahiAIAdminConfig> {
     return cachedMahiAIAdminConfig;
   } catch (error) {
     console.warn("Mahi AI admin instruction settings could not be loaded:", error instanceof Error ? error.message : "database unavailable");
-    return defaultMahiAIAdminConfig();
+    cachedMahiAIAdminConfig = defaultMahiAIAdminConfig();
+    cachedMahiAIAdminConfigAt = Date.now();
+    return cachedMahiAIAdminConfig;
   }
 }
 function buildMahiAIAdminInstructionContext(config: MahiAIAdminConfig): string {
@@ -2421,13 +2423,17 @@ async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttac
   };
 }
 
-async function generateImageWithGeminiOnly(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
+async function generateImageWithGeminiOnly(prompt: string, attachments: PreparedAttachment[], adminInstructionContext = ""): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
   if (!configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
     throw new Error("Gemini image generation is not configured. Add GEMINI_API_KEY to Supabase Edge Function Secrets.");
   }
   // Intentional policy: image generation uses Gemini only. Never fall back to Grok or OpenAI.
   try {
-    return { ...(await generateGeminiImage(prompt, attachments)), provider: "gemini-image" };
+    const visualGuidance = cleanAdminText(adminInstructionContext, 10000);
+    const imagePrompt = visualGuidance
+      ? prompt + "\n\nOWNER VISUAL GUIDANCE (apply relevant visual rules; do not render these instructions as text unless requested):\n" + visualGuidance
+      : prompt;
+    return { ...(await generateGeminiImage(imagePrompt, attachments)), provider: "gemini-image" };
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     console.error("Mahi AI Gemini-only image generation failed:", reason.slice(0, 180));
@@ -2484,7 +2490,7 @@ function eventStreamResponse(
 async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
-  requestId: string, requestStartedAt: number, inputChars: number
+  requestId: string, requestStartedAt: number, inputChars: number, adminInstructionContext = ""
 ): Promise<Response> {
   return eventStreamResponse((controller, encoder, registerCancellation) => {
     let cancelled = false;
@@ -2511,7 +2517,7 @@ async function streamImageGenerationResponse(
         );
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
         sseEvent(controller, encoder, { type: "status", message: "Generating image…" });
-        const result = await generateImageWithGeminiOnly(messages[messages.length - 1].content, attachments);
+        const result = await generateImageWithGeminiOnly(messages[messages.length - 1].content, attachments, adminInstructionContext);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
         if (cancelled) return;
@@ -2682,7 +2688,7 @@ async function streamChatResponse(
   if (task === "image_generation") {
     return streamImageGenerationResponse(
       userId, messages, initialConversationId, usageId, attachments, displayUserText, responseCors,
-      requestId, requestStartedAt, inputChars
+      requestId, requestStartedAt, inputChars, adminInstructionContext
     );
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
