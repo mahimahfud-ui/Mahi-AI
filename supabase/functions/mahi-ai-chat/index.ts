@@ -495,6 +495,52 @@ async function saveChatTurn(userId: string, conversationId: string, userContent:
   });
 }
 
+// Turn replacement is restricted to a verified message inside the user's own conversation.
+// The API call is only made after a replacement response has been generated successfully.
+async function replaceChatTurnFromTimestamp(
+  userId: string, conversationId: string, createdAt: string, expectedUserContent: string,
+  newUserContent: string, assistantContent: string
+): Promise<void> {
+  const conversationFilter = "&conversation_id=eq." + encodeURIComponent(conversationId) +
+    "&user_id=eq." + encodeURIComponent(userId);
+  const found = await rest("mahi_ai_messages?select=id,role,content,created_at" + conversationFilter +
+    "&role=eq.user&created_at=eq." + encodeURIComponent(createdAt) + "&limit=1");
+  if (!found.ok) throw new Error("Could not verify the message being replaced");
+  const rows = await found.json();
+  const target = Array.isArray(rows) ? rows[0] : null;
+  if (!target || target.content !== expectedUserContent) {
+    throw new Error("The message being edited is no longer available. Refresh the chat and try again.");
+  }
+  const tailResponse = await rest("mahi_ai_messages?select=id,conversation_id,user_id,role,content,created_at" +
+    conversationFilter + "&created_at=gte." + encodeURIComponent(createdAt));
+  if (!tailResponse.ok) throw new Error("Could not snapshot the message history being replaced");
+  const tailRows = await tailResponse.json();
+  if (!Array.isArray(tailRows) || !tailRows.length) throw new Error("The message history being replaced is empty");
+  const removed = await rest("mahi_ai_messages?" + conversationFilter.slice(1) +
+    "&created_at=gte." + encodeURIComponent(createdAt), {
+      method: "DELETE",
+      headers: { Prefer: "return=minimal" }
+    });
+  if (!removed.ok) throw new Error("Could not replace the selected message history");
+  try {
+    await saveChatTurn(userId, conversationId, newUserContent, assistantContent);
+  } catch (error) {
+    // Restore the original turn and later history if the replacement insert fails.
+    await rest("mahi_ai_messages?" + conversationFilter.slice(1) +
+      "&created_at=gte." + encodeURIComponent(createdAt), {
+        method: "DELETE",
+        headers: { Prefer: "return=minimal" }
+      });
+    const restored = await rest("mahi_ai_messages", {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(tailRows)
+    });
+    if (!restored.ok) console.error("MahiCloud could not fully restore the previous message history after a replacement failure.");
+    throw error;
+  }
+}
+
 function shouldUseUrlContext(prompt: string): boolean {
   return /https:\/\/[^\s<>"']+/i.test(prompt);
 }
@@ -2168,7 +2214,8 @@ function eventStreamResponse(
 async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
-  requestId: string, requestStartedAt: number, inputChars: number
+  requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
+  editFromCreatedAt = "", editFromContent = ""
 ): Promise<Response> {
   return eventStreamResponse((controller, encoder, registerCancellation) => {
     let cancelled = false;
@@ -2190,16 +2237,24 @@ async function streamImageGenerationResponse(
     (async () => {
       let conversationId = initialConversationId;
       try {
-        conversationId = await createConversationIfNeeded(
-          userId, conversationId, displayUserText || messages[messages.length - 1].content
-        );
-        sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
+        if (persistConversation) {
+          conversationId = await createConversationIfNeeded(
+            userId, conversationId, displayUserText || messages[messages.length - 1].content
+          );
+          sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
+        }
         sseEvent(controller, encoder, { type: "status", message: "Generating image…" });
         const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
         if (cancelled) return;
-        await saveChatTurn(userId, conversationId, displayUserText, reply);
+        if (persistConversation) {
+          if (editFromCreatedAt) {
+            await replaceChatTurnFromTimestamp(userId, conversationId, editFromCreatedAt, editFromContent, displayUserText, reply);
+          } else {
+            await saveChatTurn(userId, conversationId, displayUserText, reply);
+          }
+        }
         await updateUsage(usageId, {
           success: true,
           provider: result.provider,
@@ -2220,7 +2275,9 @@ async function streamImageGenerationResponse(
           attachment_count: attachments.length
         });
         sseEvent(controller, encoder, { type: "delta", text: reply });
-        sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
+        sseEvent(controller, encoder, persistConversation
+          ? { type: "done", conversation_id: conversationId }
+          : { type: "done" });
       } catch (error) {
         if (cancelled) return;
         const reason = error instanceof Error ? error.message : String(error);
@@ -2370,12 +2427,13 @@ function allProvidersFailedMessage(prompt: string): string {
 async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
-  requestId: string, requestStartedAt: number, inputChars: number
+  requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
+  editFromCreatedAt = "", editFromContent = ""
 ): Promise<Response> {
   if (task === "image_generation") {
     return streamImageGenerationResponse(
       userId, messages, initialConversationId, usageId, attachments, displayUserText, responseCors,
-      requestId, requestStartedAt, inputChars
+      requestId, requestStartedAt, inputChars, persistConversation, editFromCreatedAt, editFromContent
     );
   }
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
@@ -2600,13 +2658,17 @@ async function streamChatResponse(
           output_chars: finalAnswer.length,
           attachment_count: attachments.length
         });
-        conversationId = await createConversationIfNeeded(
-          userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
-        );
-        await Promise.all([
-          saveChatTurn(userId, conversationId, displayUserText, finalAnswer),
-          usageUpdate
-        ]);
+        if (persistConversation) {
+          conversationId = await createConversationIfNeeded(
+            userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
+          );
+          if (editFromCreatedAt) {
+            await replaceChatTurnFromTimestamp(userId, conversationId, editFromCreatedAt, editFromContent, displayUserText, finalAnswer);
+          } else {
+            await saveChatTurn(userId, conversationId, displayUserText, finalAnswer);
+          }
+        }
+        await usageUpdate;
         logStructured("info", "request_completed", {
           request_id: requestId,
           task_type: task,
@@ -2617,8 +2679,10 @@ async function streamChatResponse(
           output_chars: finalAnswer.length,
           attachment_count: attachments.length
         });
-        sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
-        sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
+        if (persistConversation) sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
+        sseEvent(controller, encoder, persistConversation
+          ? { type: "done", conversation_id: conversationId }
+          : { type: "done" });
       } catch (error) {
         if (cancelled) return;
         const reason = error instanceof Error ? error.message : String(error);
@@ -2696,6 +2760,10 @@ Deno.serve(async (req: Request) => {
     }
     return json(400, { error: "Invalid request." }, responseCors);
   }
+  const temporaryChat = input?.temporary_chat === true;
+  const editFromCreatedAt = typeof input?.edit_from_created_at === "string" ? input.edit_from_created_at.slice(0, 80) : "";
+  const editFromContent = typeof input?.edit_from_content === "string" ? input.edit_from_content.slice(0, 60000) : "";
+  const replacementRequested = !!editFromCreatedAt;
   const incoming = Array.isArray(input?.messages) ? input.messages : [];
   const messages: ChatMessage[] = incoming
     .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
@@ -2761,6 +2829,13 @@ Deno.serve(async (req: Request) => {
     : shouldUseCodeExecution(displayPrompt) ? "code_execution"
     : classifyTask(displayPrompt);
   let conversationId = typeof input?.conversation_id === "string" ? input.conversation_id : "";
+  if ((replacementRequested && (temporaryChat || !conversationId || !editFromContent || !Number.isFinite(Date.parse(editFromCreatedAt))))) {
+    await updateUsage(usageId, { success: false, error_code: "invalid_message_replacement" });
+    return json(400, { error: "That edit or regeneration request is no longer valid. Refresh the conversation and try again." }, responseCors);
+  }
+  if (temporaryChat && conversationId) {
+    return json(400, { error: "Temporary chats cannot modify a saved conversation." }, responseCors);
+  }
   if (conversationId) {
     try {
       const ok = await getConversation(user.id, conversationId);
@@ -2774,8 +2849,10 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  let memoryActionNotice = "";
-  const memoryCommand = parseMemoryCommand(displayPrompt);
+  let memoryActionNotice = temporaryChat
+    ? "Temporary chat is active. Do not read, save, clear, enable, or disable long-term memory, and do not claim this conversation was saved."
+    : "";
+  const memoryCommand = temporaryChat ? null : parseMemoryCommand(displayPrompt);
   if (memoryCommand) {
     try {
       if (memoryCommand.action === "save") {
@@ -2804,29 +2881,33 @@ Deno.serve(async (req: Request) => {
     }
   }
   let userMemoryContext: UserMemoryContext | null = null;
-  try {
-    userMemoryContext = await loadUserMemoryContext(user.id, conversationId);
-    if (!memoryCommand && userMemoryContext.enabled) {
-      const automaticMemory = detectAutomaticMemory(displayPrompt);
-      if (automaticMemory) {
-        try {
-          await saveExplicitUserMemory(user.id, conversationId, automaticMemory.value, automaticMemory.key);
-          userMemoryContext = await loadUserMemoryContext(user.id, conversationId);
-          logStructured("info", "user_memory_auto_saved", {
-            request_id: requestId,
-            memory_key: automaticMemory.key
-          });
-        } catch (_) {
-          logStructured("warn", "user_memory_auto_save_failed", {
-            request_id: requestId,
-            memory_key: automaticMemory.key
-          });
+  if (temporaryChat) {
+    userMemoryContext = { enabled: false, memories: [], recent_messages: [] };
+  } else {
+    try {
+      userMemoryContext = await loadUserMemoryContext(user.id, conversationId);
+      if (!memoryCommand && userMemoryContext.enabled) {
+        const automaticMemory = detectAutomaticMemory(displayPrompt);
+        if (automaticMemory) {
+          try {
+            await saveExplicitUserMemory(user.id, conversationId, automaticMemory.value, automaticMemory.key);
+            userMemoryContext = await loadUserMemoryContext(user.id, conversationId);
+            logStructured("info", "user_memory_auto_saved", {
+              request_id: requestId,
+              memory_key: automaticMemory.key
+            });
+          } catch (_) {
+            logStructured("warn", "user_memory_auto_save_failed", {
+              request_id: requestId,
+              memory_key: automaticMemory.key
+            });
+          }
         }
       }
+    } catch (_) {
+      logStructured("warn", "user_memory_context_unavailable", { request_id: requestId });
+      if (!memoryActionNotice) memoryActionNotice = "Long-term memory could not be loaded for this request. Do not claim past chats were accessed.";
     }
-  } catch (_) {
-    logStructured("warn", "user_memory_context_unavailable", { request_id: requestId });
-    if (!memoryActionNotice) memoryActionNotice = "Long-term memory could not be loaded for this request. Do not claim past chats were accessed.";
   }
   const inputChars = contextualMessages.reduce((sum, message) => sum + message.content.length, 0);
   void updateUsage(usageId, {
@@ -2884,6 +2965,6 @@ Deno.serve(async (req: Request) => {
   }
   return await streamChatResponse(
     user.id, messagesForProvider, task, conversationId, usageId, attachments, displayUserText,
-    responseCors, requestId, requestStartedAt, inputChars
+    responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent
   );
 });
