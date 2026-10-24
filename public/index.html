@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="./motion-b.css">
   <link rel="stylesheet" href="./ui-overrides.css?v=20261024settings3">
   <link rel="stylesheet" href="./code-blocks.css?v=20261025">
+  <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
@@ -27,6 +28,7 @@
   <script src="./layout.js?v=20261024v2"></script>
   <script src="./motion.js" defer></script>
   <script src="./app.js" defer></script>
+  <script src="./admin-control.js?v=20261025admin1" defer></script>
   <script src="./code-blocks.js?v=20261025" defer></script>
   <script src="./motion-b.js" defer></script>
 </head>
@@ -123,7 +125,14 @@
               <button class="setting-action-button" id="resetChatPreferences" type="button">Reset chat preferences</button>
             </div>
           </section>
-        </div>
+                   <section class="settings-group admin-launch-group" aria-labelledby="adminControlLaunchTitle">
+             <h3 class="settings-group-title" id="adminControlLaunchTitle">Administration</h3>
+             <div class="setting-row admin-launch-row">
+               <div class="setting-copy"><span class="setting-title">AI Control Centre</span><small>Manage global AI instructions and topic-specific rules.</small></div>
+               <button class="setting-action-button admin-launch-button" id="openAdminControl" type="button">Admin Login <span aria-hidden="true">↗</span></button>
+             </div>
+           </section>
+</div>
       </section>
       <section class="sidebar-social" aria-label="Social and contact links">
         <div class="sidebar-social-title">Social &amp; contact</div>
@@ -321,6 +330,52 @@
         <p>Community-maintained catalogue. Individual APIs have their own limits, terms, and key requirements. Never paste private API keys into chat.</p>
         <a href="https://github.com/public-apis/public-apis" target="_blank" rel="noopener noreferrer">Source repository <span aria-hidden="true">↗</span></a>
       </footer>
+    </section>
+  </div>
+  <div class="admin-overlay" id="adminControlOverlay" hidden>
+    <div class="admin-overlay-backdrop" data-admin-close aria-hidden="true"></div>
+    <section class="admin-overlay-dialog" role="dialog" aria-modal="true" aria-labelledby="adminOverlayTitle" tabindex="-1">
+      <header class="admin-overlay-header">
+        <div class="admin-overlay-brand"><span class="admin-eyebrow">MAHICLOUD · PRIVATE WORKSPACE</span><h2 id="adminOverlayTitle">Admin Control Centre</h2><p>Secure access to owner-managed AI instructions.</p></div>
+        <button type="button" class="admin-overlay-close" id="adminCloseOverlay" aria-label="Close admin control centre" title="Close admin control centre">×</button>
+      </header>
+      <div class="admin-overlay-scroll">
+        <div class="admin-settings-page" id="adminSettingsContent">
+                          <div class="settings-page-head"><h3>AI Control Centre</h3><p>Owner-only settings for global AI instructions, categories and subcategories. Saved instructions apply to new conversations for every user.</p></div>
+                          <div class="admin-lock-card" id="adminLoginView">
+                            <div class="admin-lock-art" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div>
+                            <div class="admin-lock-copy"><span class="admin-eyebrow">MAHICLOUD · RESTRICTED AREA</span><h4>Administrator sign-in</h4><p>Unlock the private control panel to manage the assistant's behavior and instruction library.</p></div>
+                            <form id="adminLoginForm" class="admin-login-form" autocomplete="on">
+                              <label for="adminPinInput">Admin passcode</label>
+                              <div class="admin-login-line"><input id="adminPinInput" name="admin-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="128" placeholder="Enter your passcode" required><button class="settings-action primary" id="adminLoginButton" type="submit">Unlock panel <span aria-hidden="true">↗</span></button></div>
+                              <p class="admin-inline-status" id="adminLoginStatus" role="status" aria-live="polite">Login is verified on the server. The passcode is never stored in this browser.</p>
+                            </form>
+                          </div>
+                          <div class="admin-console" id="adminConsole" hidden>
+                            <div class="admin-console-head">
+                              <div><span class="admin-eyebrow">MAHICLOUD · ROOT CONTROL</span><h4>Assistant configuration</h4><p>Manage the system's owner-defined response guidance. Provider secrets remain protected in Supabase.</p></div>
+                              <div class="admin-console-actions"><button class="settings-action" id="adminRefresh" type="button">↻ Refresh</button><button class="settings-action danger" id="adminLogout" type="button">Lock panel</button></div>
+                            </div>
+                            <div class="admin-status-cards">
+                              <div class="admin-status-card"><span class="admin-status-label">Instruction engine</span><strong id="adminEngineState">Enabled</strong><small>Applies to new requests</small></div>
+                              <div class="admin-status-card"><span class="admin-status-label">Instruction categories</span><strong id="adminCategoryCount">0</strong><small>Global and topic-specific rules</small></div>
+                              <div class="admin-status-card"><span class="admin-status-label">Storage</span><strong>Server-side</strong><small>Private Supabase database</small></div>
+                            </div>
+                            <div class="admin-workspace">
+                              <aside class="admin-category-rail" aria-label="Instruction categories">
+                                <div class="admin-rail-head"><span>CONFIGURATION</span><span id="adminRailCount">0</span></div>
+                                <button class="admin-category-item is-active" type="button" data-admin-select="global"><span class="admin-category-glyph">✦</span><span><strong>Global instructions</strong><small>Applied to all topics</small></span></button>
+                                <div class="admin-category-list" id="adminCategoryList"></div>
+                                <button class="admin-add-category" id="adminAddCategory" type="button"><span>＋</span> Add category</button>
+                                <p class="admin-rail-note">Use categories to organize topic-specific rules. The AI receives the whole library and chooses relevant instructions for each request.</p>
+                              </aside>
+                              <div class="admin-editor-pane" id="adminEditorPane"></div>
+                            </div>
+                            <div class="admin-save-bar"><p id="adminConsoleStatus" role="status" aria-live="polite">Changes are loaded from the server.</p><button class="settings-action primary admin-save-button" id="adminSave" type="button">Save AI controls <span aria-hidden="true">↗</span></button></div>
+                            <p class="admin-security-note"><strong>Important:</strong> Instructions guide the AI, but cannot override platform safety/security rules, privacy protections or honest answers. Never put API keys or passwords in custom instructions.</p>
+                          </div>
+                        </div>
+      </div>
     </section>
   </div>
 </body>
