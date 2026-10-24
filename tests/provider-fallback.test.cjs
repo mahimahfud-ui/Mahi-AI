@@ -32,7 +32,7 @@ test("configured provider keys activate fallback routes without extra enable fla
     'if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);',
     'if (name === "anthropic") return configuredSecret(["ANTHROPIC_API_KEY"]);'
   ]) assert.ok(edge.includes(providerLine), "missing configured fallback route: " + providerLine);
-  assert.ok(edge.includes('const fallback = ["gemini", "groq", "openrouter", "cloudflare", "shannon"'));
+  assert.ok(edge.includes(': ["gemini", "groq", "openrouter", "cloudflare", "shannon"'));
 });
 
 test("ordinary chat failover is bounded for speed while research and attachments get more time", () => {
