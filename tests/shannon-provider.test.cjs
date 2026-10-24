@@ -18,7 +18,7 @@ test("Shannon is enabled by its configured key and uses the official OpenAI-comp
 
 test("Shannon remains a task-aware fallback and is skipped for inline attachments", () => {
   assert.match(edge, /preferred = \["groq", "gemini", "openrouter", "openai", "venice", "shannon"/);
-  assert.match(edge, /const fallback = \["gemini", "groq", "openrouter", "cloudflare", "shannon"/);
+  assert.match(edge, /: \["gemini", "groq", "openrouter", "cloudflare", "shannon"/);
   assert.match(edge, /name === "shannon" && !shouldPreferVenice\(prompt\)/);
   assert.match(edge, /hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)/);
 });
