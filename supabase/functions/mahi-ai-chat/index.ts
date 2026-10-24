@@ -2487,6 +2487,7 @@ async function streamChatResponse(
       let conversationId = initialConversationId;
       const failures: string[] = [];
       let chosen: { provider: string; text: string; reviewer: string | null } | null = null;
+      let bestDraft: { provider: string; text: string } | null = null;
       let liveStreamText = "";
       const startedAt = Date.now();
       const totalProviderBudgetMs = 115000;
@@ -2548,6 +2549,9 @@ async function streamChatResponse(
             if (cancelled) return;
             if (!completeText.trim()) throw new Error("Provider returned an empty response");
             const candidateText = completeText.trim();
+            if (!bestDraft || candidateText.length > bestDraft.text.length) {
+              bestDraft = { provider, text: candidateText };
+            }
             const generationMs = Date.now() - providerStartedAt;
 
             rememberProviderSuccess(provider);
@@ -2629,6 +2633,19 @@ async function streamChatResponse(
           }
         }
         if (cancelled) return;
+        // A reviewer rejection is not the same as every model being down.
+        // For ordinary chats, show the best real draft instead of a dead-end apology.
+        // High-impact topics (medical, legal, money, emergency, weapons) still fail closed.
+        if (!chosen && bestDraft && bestDraft.text.trim().length >= 20 && !shouldFailClosedWhenReviewUnavailable(originalPrompt)) {
+          chosen = { provider: bestDraft.provider, text: bestDraft.text, reviewer: null };
+          logStructured("warn", "provider_answer_used_unverified", {
+            request_id: requestId,
+            task_type: task,
+            provider: bestDraft.provider,
+            output_chars: bestDraft.text.length,
+            reason: "review_rejected_or_unavailable_using_best_draft"
+          });
+        }
         if (!chosen) {
           const durationMs = Date.now() - requestStartedAt;
           await updateUsage(usageId, {
