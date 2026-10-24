@@ -3,7 +3,7 @@ name: apply-upgrade
 on:
   push:
     branches: [claude/upgrade-engine]
-    paths: ["tools/**", "public/claude-ui.css", "public/claude-features.js", ".github/workflows/apply-upgrade.yml"]
+    paths: ["tools/**", "public/claude-ui.css", "public/claude-features.js", "public/settings-hub.css", "public/settings-hub.js", "public/index.html", "public/app.js", "supabase/functions/mahi-ai-chat/index.ts", ".github/workflows/apply-upgrade.yml"]
 permissions:
   contents: write
 jobs:
@@ -29,6 +29,8 @@ jobs:
           npx --yes esbuild supabase/functions/mahi-ai-chat/index.ts --log-level=error --outfile=/tmp/chk.js
           node --check public/app.js
           node --check public/claude-features.js
+          node --check public/settings-hub.js
+          git diff --check
       - name: Commit
         run: |
           git config user.name "mahi-upgrade-bot"
