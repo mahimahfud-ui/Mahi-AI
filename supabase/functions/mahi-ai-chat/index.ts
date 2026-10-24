@@ -1401,7 +1401,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       key = envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
       url = "https://api.deepseek.com/chat/completions";
     } else if (name === "venice") { key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]); url = "https://api.venice.ai/api/v1/chat/completions"; }
-    } else if (name === "mistral") { key = envFirst(["MISTRAL_API_KEY"]); url = "https://api.mistral.ai/v1/chat/completions"; }
+    else if (name === "mistral") { key = envFirst(["MISTRAL_API_KEY"]); url = "https://api.mistral.ai/v1/chat/completions"; }
     else if (name === "openai") { key = envFirst(["OPENAI_API_KEY"]); url = "https://api.openai.com/v1/chat/completions"; }
     else if (name === "nvidia") {
       key = envFirst(["NVIDIA_API_KEY"]);
