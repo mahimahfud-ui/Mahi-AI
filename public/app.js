@@ -586,6 +586,15 @@
     voicePaused = false;
     try {
       await sendMessage(instruction, { displayText: "🎙️ Voice message — language detected automatically" });
+      // Do not automatically re-send the same failed recording on the next listening cycle.
+      if (ui.error && !ui.error.hidden && pendingFiles.includes(audioFile)) {
+        pendingFiles = pendingFiles.filter((file) => file !== audioFile);
+        renderAttachmentList();
+        updateCounter();
+        voicePaused = true;
+        setVoiceStatus("Voice reply failed", "error");
+        if (voiceUI.transcript) voiceUI.transcript.textContent = "I couldn’t reach Mahi AI for that turn. Check your connection, then tap the mic to try again.";
+      }
     } catch (_) {
       voicePaused = true;
     }
