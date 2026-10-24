@@ -24,7 +24,7 @@ test("chat shows Thinking before session setup and ignores backend status text",
 
 test("Edge Function verifies provider answers before streaming the accepted answer", () => {
   const start = edge.indexOf("async function streamChatResponse(");
-  const end = edge.indexOf("\nDeno.serve", start);
+  const end = edge.indexOf("\\nDeno.serve", start);
   const stream = edge.slice(start, end);
   assert.ok(start >= 0 && end > start, "streamChatResponse must exist");
   const loop = stream.indexOf("while (!cancelled)");
@@ -35,12 +35,12 @@ test("Edge Function verifies provider answers before streaming the accepted answ
   assert.ok(loop >= 0 && buffer > loop, "candidate answer must be buffered from the provider");
   assert.ok(qualityCheck > buffer && accepted > qualityCheck, "candidate must pass an independent model check before selection");
   assert.ok(answerDelta > accepted, "only the accepted answer is sent to the client");
-  assert.doesNotMatch(stream, /sseEvent\\(controller, encoder, \\{ type: "delta", text: next\\.value \\}\\)/,
+  assert.ok(!stream.includes('sseEvent(controller, encoder, { type: "delta", text: next.value });'),
     "unverified provider tokens must not stream to users");
-  assert.match(edge, /\\["keep", "correct", "retry"\\]/);
-  assert.match(edge, /provider_answer_rejected/);
-  assert.match(edge, /provider_answer_accepted/);
-  assert.match(edge, /allProvidersFailedMessage\\(displayUserText\\)/);
+  assert.ok(edge.includes('["keep", "correct", "retry"]'), "reviewer can reject an answer and trigger fallback");
+  assert.ok(edge.includes("provider_answer_rejected"));
+  assert.ok(edge.includes("provider_answer_accepted"));
+  assert.ok(edge.includes("allProvidersFailedMessage(displayUserText)"));
 });
 
 test("a delivered reply survives a conversation-history refresh error", () => {
