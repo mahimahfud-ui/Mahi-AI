@@ -1286,7 +1286,7 @@
       fontSize: ["small", "default", "large"].includes(input.fontSize) ? input.fontSize : "default",
       responseStyle: responseStyles.includes(input.responseStyle) ? input.responseStyle : "default",
       customInstructions: typeof input.customInstructions === "string"
-        ? input.customInstructions.replace(/[\\u0000-\\u0008\\u000b\\u000c\\u000e-\\u001f\\u007f]/g, "").slice(0, 3000)
+        ? input.customInstructions.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "").slice(0, 3000)
         : "",
       autoReadAloud: input.autoReadAloud === true
     };
@@ -2469,7 +2469,7 @@
     const isEnter = event.key === "Enter" || event.keyCode === 13 || event.which === 13;
     const isComposing = event.isComposing || event.keyCode === 229;
     const sendShortcut = event.ctrlKey || event.metaKey;
-    const shouldSend = chatPreferences.enterToSend ? !event.shiftKey && !sendShortcut ? true : sendShortcut && !event.shiftKey : sendShortcut && !event.shiftKey;
+    const shouldSend = !event.shiftKey && (chatPreferences.enterToSend || sendShortcut);
     if (isEnter && shouldSend && !isComposing) {
       event.preventDefault();
       if (!busy && (ui.input.value.trim() || pendingFiles.length)) sendMessage(ui.input.value);
