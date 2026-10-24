@@ -1370,7 +1370,9 @@
         setWidth(maxWidth(), true);
       }
     });
-    window.addEventListener("resize", () => setWidth(ui.sidebar.getBoundingClientRect().width, false), { passive: true });
+    window.addEventListener("resize", () => {
+      if (!window.matchMedia("(max-width: 760px)").matches) setWidth(ui.sidebar.getBoundingClientRect().width, false);
+    }, { passive: true });
   }
   function setupPreferences() {
     const sidebarButton = $("openSidebar");
