@@ -33,6 +33,12 @@ Optional providers and opt-in flags:
 
 The router classifies the actual request intent (coding, reasoning, creative writing, or general use) instead of classifying every question that merely mentions HTML/API/Python as coding. It uses task-specific provider priority, whole-response failover, and short-lived failure cooldowns. OpenRouter defaults to `openrouter/free`; free model overrides remain allowed while paid fallback is off, and non-free model overrides require `ENABLE_PAID_FALLBACK=true`. The free router selects a model from the currently available free set and can change its selection over time. Provider names and keys stay server-side. Free API tiers have changing quotas and do not imply unlimited usage. Never add credentials to GitHub.
 
+## Friendly conversation style and owner profile
+
+Mahi AI uses a relaxed, friendly tone for ordinary casual conversation and may use a few emojis when the moment is playful or cheerful. It avoids forced emojis and keeps coding, serious, sensitive, and professional requests focused.
+
+The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner of Mahi-AI. When responding to insults or negative factual claims about the owner, Mahi AI should be confident and assertive but civil: correct unsupported or false claims using known public facts and project information, distinguish opinion from verifiable fact, acknowledge fair criticism when warranted, and never invent evidence, achievements, or personal details or answer with harassment.
+
 ## Long-term memory
 
 Mahi AI now has server-side, per-user cross-chat memory. For each authenticated guest/user, the Edge Function retrieves up to 12 recent messages from earlier conversations (excluding the currently open conversation) plus up to 15 saved notes. It adds only a bounded amount of context to the provider prompt. It also auto-saves clearly stated stable facts, response preferences, and current project context using simple patterns, without making an extra model call. It does not summarize or preserve every line of every old chat, so very old details are best saved explicitly.
