@@ -98,7 +98,7 @@
 .settings-footer strong{color:var(--text);font-weight:650}
 html[data-theme="light"] .settings-dialog{box-shadow:0 28px 100px rgba(21,24,38,.2)}
 html[data-theme="light"] .settings-panel{background:rgba(26,29,40,.3)}
-html[data-theme="high-contrast="true"] .settings-dialog{border-width:2px}
+html[data-high-contrast="true"] .settings-dialog{border-width:2px}
 html[data-high-contrast="true"]{--line:rgba(255,255,255,.32);--muted:color-mix(in srgb,var(--text) 70%,transparent)}
 html[data-theme="light"][data-high-contrast="true"]{--line:rgba(0,0,0,.32);--muted:#454545}
 html[data-accent="terracotta"]{--accent:#d97757;--accent2:#c6613f}
