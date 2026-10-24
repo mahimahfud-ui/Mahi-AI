@@ -590,22 +590,22 @@ function flagEnabled(name: string): boolean {
 
 function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
-  if (name === "shannon") return flagEnabled("ENABLE_SHANNON_FALLBACK") &&
-    configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+  // A configured provider key is the explicit opt-in for this provider.
+  if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
   if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
   if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
-  // Direct DeepSeek API requests may incur charges; require explicit opt-in.
-  if (name === "deepseek") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
+  // A configured DeepSeek key explicitly enables this provider in the fallback cascade.
+  if (name === "deepseek") return configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
   if (name === "mistral") return configuredSecret(["MISTRAL_API_KEY"]);
   if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
-  if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
-  if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") &&
-    configuredSecret(["CLOUDFLARE_API_TOKEN"]) && configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
-  // The user explicitly assigns programming/debugging requests to OpenAI. Permit
-  // that task-specific route when its API key exists, without enabling OpenAI for
-  // unrelated requests; other paid fallback usage still requires global opt-in.
-  if (name === "openai") return (task === "coding" || flagEnabled("ENABLE_PAID_FALLBACK")) && configuredSecret(["OPENAI_API_KEY"]);
-  if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
+  if (name === "nvidia") return configuredSecret(["NVIDIA_API_KEY"]);
+  // Cloudflare requires both an API token and the correct account ID.
+  if (name === "cloudflare") return configuredSecret(["CLOUDFLARE_API_TOKEN"]) &&
+    configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
+  // Adding a provider-specific key is the user-controlled opt-in to that route.
+  // These providers may incur charges under their respective plans and quotas.
+  if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);
+  if (name === "anthropic") return configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
 type ProviderHealthSample = {
@@ -2326,8 +2326,10 @@ async function independentlyReviewAnswer(
   const reviewers = available.filter((name) =>
     providerIsConfigured(name, task) && !providerIsCoolingDown(name)
   ).slice(0, 3);
+  // Review is a quality enhancement, never a hard dependency for completing a task.
+  // Without a second provider (or enough review budget), preserve the valid candidate.
   if (!reviewers.length || draft.length > 30000 || reviewBudgetMs < 1200) {
-    return { answer: "", reviewer: null, verdict: "retry" };
+    return { answer: draft, reviewer: null, verdict: "keep" };
   }
   const reviewSystem = qualityReviewSystem();
   const hasInlineAudioContext = /\[Attached media:[^\]]+\| audio\/(?:mpeg|mp3|wav|ogg|opus|webm|flac|aac|mp4|m4a|3gpp)/i.test(contextText);
@@ -2343,16 +2345,19 @@ async function independentlyReviewAnswer(
   ].filter(Boolean).join("\n\n---\n\n");
   const perReviewerTimeoutMs = Math.max(1200, Math.min(4500, Math.floor(reviewBudgetMs / reviewers.length)));
   let lastReviewer: string | null = null;
+  let explicitRetryCount = 0;
+  let reviewUnavailable = false;
   for (const reviewer of reviewers) {
     lastReviewer = reviewer;
     try {
       const result = await callProvider(reviewer, [{ role: "user", content: reviewMessage }], task, perReviewerTimeoutMs, reviewSystem);
       rememberProviderSuccess(reviewer);
       const parsed = parseReviewedAnswer(result.text);
-      if (!parsed) continue;
+      if (!parsed) { reviewUnavailable = true; continue; }
       if (parsed.verdict === "retry") {
         // One reviewer rejecting a draft is not the end of validation. Try the
         // next independent checker before rejecting this candidate entirely.
+        explicitRetryCount++;
         continue;
       }
       if (parsed.verdict === "keep") {
@@ -2363,20 +2368,28 @@ async function independentlyReviewAnswer(
       return { answer: corrected, reviewer, verdict: "correct" };
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
+      reviewUnavailable = true;
       rememberProviderFailure(reviewer, reason);
       console.warn("Mahi AI answer-check provider failed; trying another:", reviewer, reason.slice(0, 120));
     }
   }
-  return { answer: "", reviewer: lastReviewer, verdict: "retry" };
+  // Reject only when every review provider returned an explicit retry verdict.
+  // A reviewer outage, malformed review output, or single-review disagreement must
+  // not cause an otherwise usable answer to be discarded.
+  if (explicitRetryCount === reviewers.length && !reviewUnavailable) {
+    return { answer: "", reviewer: lastReviewer, verdict: "retry" };
+  }
+  console.warn("Mahi AI answer review was unavailable or inconclusive; preserving the generated answer.");
+  return { answer: draft, reviewer: null, verdict: "keep" };
 }
 
 function allProvidersFailedMessage(prompt: string): string {
   const source = String(prompt || "");
   const banglish = /\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbo|parbe|hobe|nai|lagbe|kibhabe|keno|bujhte|bolo|dao|daw|ache|hoy|hocche|chai|jante chai)\b/i.test(source);
   if (/[\u0980-\u09FF]/.test(source) || banglish) {
-    return "দুঃখিত, প্রশ্নটির নির্ভরযোগ্য উত্তর তৈরি ও যাচাই করতে পারিনি। অনুমান করে ভুল তথ্য দেওয়ার বদলে থামছি। প্রশ্নটি একটু অন্যভাবে লিখে আবার চেষ্টা করো।";
+    return "তোমার task reject করা হয়নি—এই মুহূর্তে configured AI provider-গুলো উত্তর দিতে পারেনি। API key/permission, model access, quota/billing ও Supabase logs পরীক্ষা করে আবার চেষ্টা করো।";
   }
-  return "Sorry, I couldn't produce and verify a reliable answer after trying the available AI models. I don't want to guess and risk misleading you. Please rephrase the question or try again.";
+  return "Your task wasn't rejected. The configured AI providers could not complete this request right now. Check provider API keys and permissions, model access, quotas/billing, and the Supabase function logs, then retry.";
 }
 
 async function streamChatResponse(
