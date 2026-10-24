@@ -889,7 +889,10 @@ async function verifyMahiAIAdminTokenSignature(token: string, userId: string): P
   if (pieces.length !== 2 || !pieces[0] || !pieces[1]) return null;
   try {
     const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["verify"]);
-    if (!await crypto.subtle.verify("HMAC", key, base64UrlToBytes(pieces[1]), new TextEncoder().encode(pieces[0]))) return null;
+    const signatureBytes = base64UrlToBytes(pieces[1]);
+    const signatureBuffer = new ArrayBuffer(signatureBytes.byteLength);
+    new Uint8Array(signatureBuffer).set(signatureBytes);
+    if (!await crypto.subtle.verify("HMAC", key, signatureBuffer, new TextEncoder().encode(pieces[0]))) return null;
     const payload = JSON.parse(new TextDecoder().decode(base64UrlToBytes(pieces[0])));
     if (payload?.sub !== "mahi-ai-admin" || payload?.uid !== userId || typeof payload.sid !== "string" ||
         typeof payload.exp !== "number" || payload.exp <= Math.floor(Date.now() / 1000) || payload.v !== 1) return null;
