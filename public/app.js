@@ -29,6 +29,7 @@
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let activeRequestController = null, pendingEdit = null, temporaryChatMode = false;
+  let branchSeedMessages = null, branchOrigin = null;
   let chatSearchMatches = null, chatSearchSequence = 0;
   let accountMethod = "email", accountMode = "register";
   let phoneOtpPending = false, pendingPhone = "", phoneOtpType = "sms", accountReturnFocus = null;
@@ -555,19 +556,26 @@
         const down = addVote("👎", "down", "Mark this answer as not helpful");
       }
     }
-    if (role === "user" && !temporaryChatMode && item.created_at && !isAttachmentTurn(item)) {
+    if (role === "assistant" && !temporaryChatMode && !branchSeedMessages && item.created_at) {
+      addButton("Branch", "Continue this conversation in a separate chat", () => beginBranchFromMessage(index));
+    }
+    if (role === "user" && !temporaryChatMode && !branchSeedMessages && item.created_at && !isAttachmentTurn(item)) {
       addButton("Edit", "Edit this prompt and replace the following conversation", () => {
         if (busy) return;
         pendingEdit = { index, createdAt: item.created_at, content: item.content, previousMessages: currentMessages.slice() };
         ui.input.value = item.content;
-        if (ui.draftNotice) ui.draftNotice.hidden = false;
+        if (ui.draftNotice) {
+          const notice = ui.draftNotice.querySelector("span");
+          if (notice) notice.textContent = "Editing a previous message. Sending replaces that turn and the conversation after it.";
+          ui.draftNotice.hidden = false;
+        }
         updateCounter();
         ui.input.focus();
         const composer = document.querySelector(".composer-wrap");
         if (composer) composer.scrollIntoView({ behavior: "smooth", block: "end" });
       });
     }
-    if (role === "assistant" && !temporaryChatMode && item.created_at && index === currentMessages.length - 1) {
+    if (role === "assistant" && !temporaryChatMode && !branchSeedMessages && item.created_at && index === currentMessages.length - 1) {
       let userIndex = index - 1;
       while (userIndex >= 0 && currentMessages[userIndex].role !== "user") userIndex--;
       const userMessage = currentMessages[userIndex];
@@ -703,9 +711,39 @@
     });
     refreshMessageControls();
   }
+  function beginBranchFromMessage(index) {
+    if (busy || temporaryChatMode || branchSeedMessages || !Number.isInteger(index)) return;
+    if (index < 0 || index >= currentMessages.length || currentMessages[index]?.role !== "assistant") return;
+    branchOrigin = { conversationId, messages: currentMessages.slice() };
+    branchSeedMessages = currentMessages.slice(0, index + 1).map((message) => ({ ...message }));
+    conversationId = null;
+    currentMessages = branchSeedMessages.slice();
+    pendingEdit = null;
+    ui.input.value = "";
+    if (ui.draftNotice) {
+      const notice = ui.draftNotice.querySelector("span");
+      if (notice) notice.textContent = "Separate branch: send a message to save this context as a new conversation. The original chat stays unchanged.";
+      ui.draftNotice.hidden = false;
+    }
+    updateCounter();
+    renderCurrentMessages();
+    renderConversationList();
+    setError("");
+    ui.input.focus();
+  }
   function cancelPendingEdit() {
+    if (branchSeedMessages && branchOrigin) {
+      conversationId = branchOrigin.conversationId;
+      currentMessages = branchOrigin.messages;
+      branchSeedMessages = null;
+      branchOrigin = null;
+      renderCurrentMessages();
+      renderConversationList();
+    }
     pendingEdit = null;
     if (ui.draftNotice) ui.draftNotice.hidden = true;
+    const notice = ui.draftNotice && ui.draftNotice.querySelector("span");
+    if (notice) notice.textContent = "Editing a previous message. Sending replaces that turn and the conversation after it.";
     ui.input.value = "";
     updateCounter();
   }
@@ -1731,6 +1769,8 @@
     if (busy) return;
     conversationId = null;
     pendingEdit = null;
+    branchSeedMessages = null;
+    branchOrigin = null;
     if (ui.draftNotice) ui.draftNotice.hidden = true;
     ui.input.value = "";
     updateCounter();
@@ -1746,6 +1786,7 @@
     const rollbackMessages = editRequest
       ? (sendOptions.previousMessages || pendingEdit?.previousMessages || currentMessages.slice())
       : null;
+    const branchRequest = !!branchSeedMessages;
     const typedText = String(text == null ? "" : text);
     if (busy || (!typedText.trim() && !pendingFiles.length)) return;
     if (editRequest && pendingFiles.length) {
@@ -1797,6 +1838,7 @@
         body: JSON.stringify({
           conversation_id: temporaryChatMode ? null : conversationId,
           temporary_chat: temporaryChatMode,
+          branch_context: branchRequest,
           ...(editRequest ? {
             edit_from_created_at: editRequest.createdAt,
             edit_from_content: editRequest.content
@@ -1883,6 +1925,8 @@
       addSpeechActions(typing, fullText);
       currentMessages.push({ role: "assistant", content: fullText });
       typing.dataset.messageIndex = String(currentMessages.length - 1);
+      branchSeedMessages = null;
+      branchOrigin = null;
       addMessageControls(typing, "assistant", fullText, currentMessages.length - 1);
       pendingEdit = null;
       if (ui.draftNotice) ui.draftNotice.hidden = true;
@@ -1922,6 +1966,8 @@
           currentMessages.push({ role: "assistant", content: fullText });
         }
         typing.dataset.messageIndex = String(currentMessages.length - 1);
+        branchSeedMessages = null;
+        branchOrigin = null;
         addMessageControls(typing, "assistant", fullText, currentMessages.length - 1);
         pendingEdit = null;
         if (ui.draftNotice) ui.draftNotice.hidden = true;
