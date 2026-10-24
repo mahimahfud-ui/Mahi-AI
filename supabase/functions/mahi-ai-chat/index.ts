@@ -1,3 +1,5 @@
+import { isImageGenerationTask } from "./image-intent.ts";
+
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -383,14 +385,6 @@ function isGeminiInlineMime(mimeType: string): boolean {
     /^audio\/(mpeg|mp3|wav|ogg|opus|webm|flac|aac|mp4|m4a|3gpp)$/i.test(mimeType) ||
     /^video\/(mp4|mpeg|quicktime|webm|x-msvideo|x-flv|3gpp|x-ms-wmv)$/i.test(mimeType);
 }
-function isImageGenerationTask(prompt: string): boolean {
-  const text = prompt.toLowerCase();
-  const visual = /(?:image|picture|photo|pic|img|illustration|poster|logo|wallpaper|thumbnail|artwork|visual|graphic|icon|banner|chobi|chhobi|chobi-ta|imagen|foto|ilustraci[oó]n|cartel|logotipo|imagem|cartaz|bild|immagine|изображение|картинк[ауи]|صورة|छवि|तस्वीर|चित्र|تصویر|عکس|图片|图像|照片|画像|写真|이미지|사진|resim|fotoğraf|gambar|ilustrasi|ảnh|hình|ছবি|ইমেজ|লোগো|পোস্টার|ওয়ালপেপার|ওয়ালপেপার|থাম্বনেইল)/i.test(text);
-  const create = /(?:generat|genarate|gen(?:e|a)rate|creat|draw|mak(?:e|ing)|design|illustrat|render|produc|dibuja|dibujar|diseñ|genera|crear|crea|haz\b|hacer|créer|génér|dessine|dessiner|concevoir|erstelle|generiere|zeichne|gestalte|creare|disegna|gerar|cria|desenha|сгенерируй|создай|создать|нарисуй|нарисовать|сделай|изобрази|أنشئ|اصنع|ارسم|صمم|ولّد|انشئ|बनाओ|बनाएं|बनाना|तैयार करो|खींचो|ڈیزائن|بناؤ|بنائیں|画像生成|画像を作|写真を作|生成して|描いて|设计|生成|制作|画一张|画|만들어|생성|그려|디자인|oluştur|çiz|tasarla|buat|ciptakan|tạo|vẽ|thiết kế|তৈরি|বানাও|আঁক|জেনারেট|banao|banaw|banai|baniye|toiri|koro|kor|kore\s+dao|dao|bana\s+do|bana\s+de|banake\s+do)/i.test(text);
-  const edit = /(?:edit|remove|replace|change|modify|retouch|cambia|cambiar|editar|modifica|modifier|ändern|bearbeiten|измен|удали|замени|عدّل|عدل|غيّر|غير|تعديل|बदल|संपादित|बदलें|編集|修正|改变|修改|编辑|편집|수정|değiştir|ubah|sửa|পরিবর্তন|এডিট|change\s+kore\s+dao|edit\s+kore\s+dao)/i.test(text);
-  return (create && visual) || (edit && visual);
-}
-
 async function prepareAttachments(userId: string, values: unknown): Promise<PreparedAttachment[]> {
   if (!Array.isArray(values)) return [];
   if (values.length > 5) throw new Error("Please attach no more than 5 files per message.");
