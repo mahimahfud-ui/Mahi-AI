@@ -626,6 +626,65 @@ async function resolveCloudflareAccountId(token: string): Promise<string> {
   return await cloudflareAccountIdLookup;
 }
 
+// Route supported provider requests through the existing Cloudflare AI Gateway when
+// Cloudflare credentials are configured. Provider keys remain server-side in Supabase
+// unless the owner separately enables Cloudflare BYOK in the dashboard.
+async function cloudflareGatewayUrl(provider: string, directUrl: string): Promise<string> {
+  const gatewayRoutes: Record<string, { slug: string; path: (url: URL) => string | null }> = {
+    gemini: { slug: "google-ai-studio", path: (url) => {
+      const match = url.pathname.match(/^\/v1beta\/models\/(.+)$/);
+      return match ? "/google-ai-studio/v1/models/" + match[1] + url.search : null;
+    } },
+    groq: { slug: "groq", path: (url) => url.pathname.startsWith("/openai/v1/")
+      ? "/groq/" + url.pathname.slice("/openai/v1/".length) + url.search : null },
+    openrouter: { slug: "openrouter", path: (url) => url.pathname.startsWith("/api/v1/")
+      ? "/openrouter" + url.pathname + url.search : null },
+    deepseek: { slug: "deepseek", path: (url) => url.pathname.startsWith("/")
+      ? "/deepseek" + url.pathname + url.search : null },
+    mistral: { slug: "mistral", path: (url) => url.pathname.startsWith("/v1/")
+      ? "/mistral" + url.pathname + url.search : null },
+    openai: { slug: "openai", path: (url) => url.pathname.startsWith("/v1/")
+      ? "/openai" + url.pathname + url.search : null },
+    anthropic: { slug: "anthropic", path: (url) => url.pathname.startsWith("/v1/")
+      ? "/anthropic" + url.pathname + url.search : null }
+  };
+  const route = gatewayRoutes[provider];
+  const token = cloudflareApiToken();
+  if (!route || !token) return directUrl;
+  try {
+    const accountId = await resolveCloudflareAccountId(token);
+    const gatewayId = (envFirst(["CLOUDFLARE_AI_GATEWAY_ID"]) || "mahicloud").trim();
+    if (!/^[a-z0-9_]+(?:-[a-z0-9_]+)*$/.test(gatewayId)) return directUrl;
+    const parsed = new URL(directUrl);
+    const suffix = route.path(parsed);
+    if (!suffix) return directUrl;
+    return "https://gateway.ai.cloudflare.com/v1/" + encodeURIComponent(accountId) + "/" +
+      encodeURIComponent(gatewayId) + suffix;
+  } catch (_) {
+    // Gateway configuration must never take down an otherwise-working direct provider route.
+    return directUrl;
+  }
+}
+
+async function fetchProviderWithGatewayFallback(
+  provider: string,
+  directUrl: string,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const routedUrl = await cloudflareGatewayUrl(provider, directUrl);
+  if (routedUrl === directUrl) return await fetchWithTimeout(directUrl, init, timeoutMs);
+  try {
+    const gatewayResponse = await fetchWithTimeout(routedUrl, init, timeoutMs);
+    if (gatewayResponse.ok) return gatewayResponse;
+    // Retry the same provider directly if the gateway is unavailable or misconfigured.
+    await readProviderError(gatewayResponse);
+  } catch (_) {
+    // Preserve the existing direct-provider fallback below.
+  }
+  return await fetchWithTimeout(directUrl, init, timeoutMs);
+}
+
 function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
@@ -1293,7 +1352,7 @@ async function readProviderError(response: Response): Promise<string> {
   } catch (_) { return "Provider request failed with status " + response.status; }
 }
 async function openAICompatible(provider: string, url: string, key: string, model: string, messages: ChatMessage[], extraHeaders: Record<string, string> = {}, timeoutMs = 45000, systemOverride?: string): Promise<string> {
-  const response = await fetchWithTimeout(url, {
+  const response = await fetchProviderWithGatewayFallback(provider, url, {
     method: "POST",
     headers: { "Authorization": "Bearer " + key, "Content-Type": "application/json", ...extraHeaders },
     body: JSON.stringify({
@@ -1320,19 +1379,16 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }]
   }));
-  const response = await fetchWithTimeout(
-    "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key),
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemOverride || systemPrompt(task) }] },
-        contents,
-        generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
-      })
-    },
-    timeoutMs
-  );
+  const directUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent?key=" + encodeURIComponent(key);
+  const response = await fetchProviderWithGatewayFallback("gemini", directUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: systemOverride || systemPrompt(task) }] },
+      contents,
+      generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
+    })
+  }, timeoutMs);
   if (!response.ok) throw new Error(await readProviderError(response));
   const result = await response.json();
   const text = (result?.candidates?.[0]?.content?.parts || []).map((part: any) => part.text || "").join("");
@@ -1377,7 +1433,7 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
     const accountId = await resolveCloudflareAccountId(key);
     const url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
     const model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
-    return { text: await openAICompatible(name, url, key, model, messages, {}, timeoutMs, systemOverride), provider: name };
+    return { text: await openAICompatible(name, url, key, model, messages, { "cf-aig-gateway-id": (envFirst(["CLOUDFLARE_AI_GATEWAY_ID"]) || "mahicloud") }, timeoutMs, systemOverride), provider: name };
   }
   if (name === "venice") {
     const key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"]);
@@ -1728,6 +1784,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         try {
           const accountId = await resolveCloudflareAccountId(key);
           url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
+          headers["cf-aig-gateway-id"] = (envFirst(["CLOUDFLARE_AI_GATEWAY_ID"]) || "mahicloud");
         } catch (error) {
           cleanup();
           throw error;
@@ -1790,9 +1847,11 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
 
   let headerTimer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const request = fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
-    const response = await Promise.race([
-      request,
+    const directUrl = url;
+    const routedUrl = await cloudflareGatewayUrl(name, directUrl);
+    const request = (targetUrl: string) => fetch(targetUrl, { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
+    let response = await Promise.race([
+      request(routedUrl),
       new Promise<Response>((_, reject) => {
         headerTimer = setTimeout(() => {
           controller.abort();
@@ -1801,6 +1860,20 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       })
     ]);
     if (headerTimer) clearTimeout(headerTimer);
+    if (!response.ok && routedUrl !== directUrl) {
+      await readProviderError(response);
+      // The Cloudflare route is optional: retry direct so a gateway issue does not break chat.
+      const fallbackController = new AbortController();
+      const fallbackTimer = setTimeout(() => fallbackController.abort(), Math.min(8000, timeoutMs));
+      try {
+        response = await Promise.race([
+          fetch(directUrl, { method: "POST", headers, body: JSON.stringify(body), signal: fallbackController.signal }),
+          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error("Provider connection timeout")), Math.min(8000, timeoutMs)))
+        ]);
+      } finally {
+        clearTimeout(fallbackTimer);
+      }
+    }
     if (!response.ok) {
       const reason = await readProviderError(response);
       cleanup();
