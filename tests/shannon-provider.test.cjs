@@ -28,4 +28,5 @@ test("Shannon documentation covers opt-in, pricing, and text-only support", () =
   assert.match(readme, /configured key enables Shannon as a later fallback/);
   assert.match(readme, /Shannon usage may be billed, so check pricing and account balance first/);
   assert.match(readme, /current integration is text-only/);
+  assert.match(readme, /attachment requests continue through other eligible providers/);
 });
