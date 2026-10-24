@@ -2079,7 +2079,7 @@ function shouldRequireIndependentReview(task: string, prompt: string): boolean {
 
 async function independentlyReviewAnswer(
   available: string[], originalPrompt: string, contextText: string, draft: string, task: string,
-  reviewBudgetMs = 9000
+  reviewBudgetMs = 9000, candidateProviderCanInspectInlineAudio = false
 ): Promise<{ answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" }> {
   const reviewers = available.filter((name) =>
     providerIsConfigured(name, task) && !providerIsCoolingDown(name)
@@ -2089,7 +2089,7 @@ async function independentlyReviewAnswer(
   }
   const reviewSystem = qualityReviewSystem();
   const hasInlineAudioContext = /\[Attached media:[^\]]+\| audio\/(?:mpeg|mp3|wav|ogg|opus|webm|flac|aac|mp4|m4a|3gpp)/i.test(contextText);
-  const modalityNote = hasInlineAudioContext
+  const modalityNote = hasInlineAudioContext && candidateProviderCanInspectInlineAudio
     ? "MULTIMODAL AUDIO REVIEW NOTE: The candidate-generation model received the attached audio as inline binary and could listen to it; you may only see the attachment name/type. Do not reject an otherwise coherent, direct answer only because you cannot independently hear the audio. Check that the candidate responds to the stated task, does not claim unavailable tool results, and expresses uncertainty if the recording was unclear. Do not invent or certify an exact transcript you cannot verify."
     : "";
   const reviewMessage = [
@@ -2260,7 +2260,9 @@ async function streamChatResponse(
                     contextText,
                     candidateText,
                     task,
-                    reviewBudgetMs
+                    reviewBudgetMs,
+                    provider === "gemini" && attachments.some((item) =>
+                      item.inline && item.base64 && item.mimeType.startsWith("audio/"))
                   )
                 : { answer: candidateText, reviewer: null, verdict: "keep" };
             if (cancelled) return;
