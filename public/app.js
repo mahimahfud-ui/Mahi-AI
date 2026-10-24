@@ -207,7 +207,7 @@
     const article = document.createElement("div");
     article.className = "message-content";
     if (opts.typing) {
-      article.innerHTML = '<div class="typing-dots" aria-label="Thinking"><span></span><span></span><span></span></div>';
+      article.innerHTML = '<span class="thinking-label">Thinking</span><span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
       node.dataset.typing = "true";
     } else if (role === "user") {
       if (Array.isArray(opts.files) && opts.files.length) {
@@ -577,9 +577,6 @@
   }
   async function sendMessage(text) {
     if (busy || (!text.trim() && !pendingFiles.length)) return;
-    if (!session) {
-      try { await ensureSession(); } catch (error) { setError(plainError(error)); return; }
-    }
     setError("");
     const selectedFiles = pendingFiles.slice();
     const userText = text.trim() || (selectedFiles.length === 1
@@ -595,6 +592,7 @@
     setBusy(true);
     let uploadedAttachments = [];
     try {
+      if (!session) await ensureSession();
       uploadedAttachments = await uploadPendingAttachments(selectedFiles);
       const { data: authData, error: authError } = await client.auth.getSession();
       if (authError) throw authError;
@@ -639,8 +637,9 @@
         try { payload = JSON.parse(payloadLines.join("\n")); } catch (_) { return; }
         if (payload.type === "meta" && payload.conversation_id) {
           conversationId = payload.conversation_id;
-        } else if (payload.type === "status" && typeof payload.message === "string") {
-          messageContent.textContent = payload.message;
+        } else if (payload.type === "reset") {
+          fullText = "";
+          messageContent.textContent = "Thinking";
         } else if (payload.type === "delta" && typeof payload.text === "string") {
           if (!fullText) messageContent.textContent = "";
           fullText += payload.text;
@@ -671,6 +670,7 @@
         throw new Error("Mahi AI: The connection ended before the answer finished. Please try again.");
       }
       if (!fullText.trim()) throw new Error("Mahi AI: No response was returned. Please try again.");
+      fullText = fullText.trim();
       messageContent.classList.remove("streaming-text");
       const resolvedReply = await resolveStoredImageMarkers(fullText);
       messageContent.innerHTML = safeMarkdown(resolvedReply);
