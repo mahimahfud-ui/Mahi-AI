@@ -26,6 +26,6 @@ test("Shannon remains a task-aware fallback and is skipped for inline attachment
 test("Shannon documentation covers opt-in, pricing, and text-only support", () => {
   assert.match(readme, /SHANNON_API_KEY/);
   assert.match(readme, /configured key enables Shannon as a later fallback/);
-  assert.match(readme, /checking Shannon's pricing and account balance/);
+  assert.match(readme, /Shannon usage may be billed, so check pricing and account balance first/);
   assert.match(readme, /current integration is text-only/);
 });
