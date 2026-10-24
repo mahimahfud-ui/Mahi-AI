@@ -796,6 +796,8 @@ async function* readGeminiEventStream(response: Response): AsyncGenerator<string
       const event = JSON.parse(raw);
       const candidate = event?.candidates?.[0];
       captureSources(candidate);
+      // URL Context metadata is returned at the response level in some Gemini versions.
+      captureSources(event);
       if (candidate?.finishReason === "MAX_TOKENS") throw new Error("Gemini response was truncated at its output limit");
       const text = (candidate?.content?.parts || []).map((p: any) => p?.text || "").join("");
       if (text) yield text;
