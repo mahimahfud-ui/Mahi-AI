@@ -42,7 +42,7 @@ test("API catalogue discovery does not dynamically execute returned arbitrary AP
   assert.match(edge, /Mahi AI Public API Library \(public-apis community README\)/);
   assert.match(edge, /parsedUrl\.protocol !== "https:" \|\| !PUBLIC_API_ALLOWED_HOSTS\.has\(parsedUrl\.hostname\)/);
   assert.match(edge, /raw\.githubusercontent\.com\/public-apis\/public-apis\/master\/README\.md/);
-  assert.match(edge, /Only fixed HTTPS hosts in the server-side allowlist are callable/);
+  assert.match(edge, /homepage_or_api_url: entry\.url/);
   assert.doesNotMatch(edge, /fetch\(entry\.baseUrl/);
   assert.doesNotMatch(edge, /fetch\(data\.baseUrl/);
 });
