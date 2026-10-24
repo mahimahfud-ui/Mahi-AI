@@ -16,11 +16,22 @@ function isAllowedOrigin(origin: string): boolean {
   try {
     const parsed = new URL(origin);
     if (parsed.origin !== origin || !["https:", "http:"].includes(parsed.protocol)) return false;
+
+    // Development servers commonly use arbitrary local ports.
+    if (["localhost", "127.0.0.1", "[::1]"].includes(parsed.hostname)) return true;
+
+    // Permit this app's Render service/preview hostnames, not every onrender.com site.
+    if (
+      parsed.protocol === "https:" &&
+      /^mahi-ai(?:-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)?\.onrender\.com$/i.test(parsed.hostname)
+    ) return true;
+
     const configured = envFirst(["MAHI_AI_ALLOWED_ORIGINS"]);
-    const allowed = configured
+    const customOrigins = configured
       ? configured.split(",").map((value) => value.trim()).filter(Boolean)
-      : DEFAULT_ALLOWED_ORIGINS;
-    return allowed.includes(origin);
+      : [];
+    // Custom origins extend the safe defaults instead of accidentally replacing them.
+    return [...DEFAULT_ALLOWED_ORIGINS, ...customOrigins].includes(origin);
   } catch (_) {
     return false;
   }
@@ -29,6 +40,25 @@ function isAllowedOrigin(origin: string): boolean {
 function corsHeadersFor(origin: string | null): Record<string, string> {
   const headers = { ...corsHeaders };
   if (origin && isAllowedOrigin(origin)) headers["Access-Control-Allow-Origin"] = origin;
+  return headers;
+}
+
+// Used only for a rejected-origin error response. It lets browser clients read the
+// explicit rejection JSON; it does not authorize any API operation.
+function corsHeadersForRejectedOrigin(origin: string | null, requestId: string): Record<string, string> {
+  const headers = {
+    ...corsHeaders,
+    "Vary": "Origin",
+    "X-Request-ID": requestId,
+    "Access-Control-Expose-Headers": "X-Request-ID"
+  };
+  if (!origin) return headers;
+  try {
+    const parsed = new URL(origin);
+    if (parsed.origin === origin && ["https:", "http:"].includes(parsed.protocol)) {
+      headers["Access-Control-Allow-Origin"] = origin;
+    }
+  } catch (_) {}
   return headers;
 }
 
@@ -1658,9 +1688,14 @@ Deno.serve(async (req: Request) => {
       request_id: requestId,
       origin: origin.slice(0, 200)
     });
+    const rejectionHeaders = corsHeadersForRejectedOrigin(origin, requestId);
+
+    // Allow the preflight to reach the real POST rejection, so the client can read
+    // the explicit 403 JSON. The POST is still rejected before auth or database work.
+    if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: rejectionHeaders });
     return new Response(JSON.stringify({ error: "Origin not allowed.", request_id: requestId }), {
       status: 403,
-      headers: { "Content-Type": "application/json; charset=utf-8", "Vary": "Origin" }
+      headers: rejectionHeaders
     });
   }
   const responseCors = {
