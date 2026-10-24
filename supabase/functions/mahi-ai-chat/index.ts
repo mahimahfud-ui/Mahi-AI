@@ -104,15 +104,18 @@ function adminHeaders(extra: Record<string, string> = {}): HeadersInit {
   return { apikey: serviceKey, Authorization: "Bearer " + serviceKey, "Content-Type": "application/json", ...extra };
 }
 async function rest(path: string, init: RequestInit = {}): Promise<Response> {
-  return fetch(baseUrl + "/rest/v1/" + path, { ...init, headers: adminHeaders((init.headers || {}) as Record<string, string>) });
+  return fetchWithTimeout(baseUrl + "/rest/v1/" + path, {
+    ...init,
+    headers: adminHeaders((init.headers || {}) as Record<string, string>)
+  }, 8000);
 }
 async function verifyUser(req: Request): Promise<{ id: string } | null> {
   const authorization = req.headers.get("authorization") || "";
   const token = authorization.replace(/^Bearer\s+/i, "").trim();
   if (!token || !baseUrl || !anonKey) return null;
-  const response = await fetch(baseUrl + "/auth/v1/user", {
+  const response = await fetchWithTimeout(baseUrl + "/auth/v1/user", {
     headers: { apikey: anonKey, Authorization: "Bearer " + token }
-  });
+  }, 6000);
   if (!response.ok) return null;
   const user = await response.json();
   return typeof user.id === "string" ? { id: user.id } : null;
@@ -187,9 +190,9 @@ async function prepareAttachments(userId: string, values: unknown): Promise<Prep
     totalBytes += declared;
     if (totalBytes > 20 * 1024 * 1024) throw new Error("All attachments together must be 20 MB or smaller.");
     const encodedPath = item.path.split("/").map(encodeURIComponent).join("/");
-    const response = await fetch(baseUrl + "/storage/v1/object/mahi-ai-attachments/" + encodedPath, {
+    const response = await fetchWithTimeout(baseUrl + "/storage/v1/object/mahi-ai-attachments/" + encodedPath, {
       headers: adminHeaders()
-    });
+    }, 12000);
     if (!response.ok) throw new Error("Could not read attachment " + item.name + ". Please remove it and upload again.");
     const buffer = new Uint8Array(await response.arrayBuffer());
     if (buffer.byteLength > 15 * 1024 * 1024) throw new Error("Each attachment must be 15 MB or smaller.");
