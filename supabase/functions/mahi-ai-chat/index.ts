@@ -760,21 +760,23 @@ async function fetchProviderWithGatewayFallback(
 }
 
 function providerIsConfigured(name: string, task = "general"): boolean {
+  // A configured API key is explicit opt-in to include that provider in the
+  // fallback cascade. Preferred providers are tried first; additional providers
+  // are only attempted when earlier routes fail, time out, or are cooling down.
+  // This avoids silently ignoring keys because a separate ENABLE_* flag was absent.
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
-  if (name === "shannon") return flagEnabled("ENABLE_SHANNON_FALLBACK") && configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
   if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
   if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
-  // Direct DeepSeek API requests may incur charges; require explicit opt-in.
-  if (name === "deepseek") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
+  if (name === "cloudflare") return configuredSecret(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY", "Cloudflare"]);
+  if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
+  if (name === "deepseek") return configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
   if (name === "mistral") return configuredSecret(["MISTRAL_API_KEY"]);
+  if (name === "nvidia") return configuredSecret(["NVIDIA_API_KEY"]);
   if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"]);
-  if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
-  if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") && configuredSecret(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY", "Cloudflare"]);
-  // The user explicitly assigns programming/debugging requests to OpenAI. Permit
-  // that task-specific route when its API key exists, without enabling OpenAI for
-  // unrelated requests; other paid fallback usage still requires global opt-in.
-  if (name === "openai") return (task === "coding" || flagEnabled("ENABLE_PAID_FALLBACK")) && configuredSecret(["OPENAI_API_KEY"]);
-  if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
+  // Configured OpenAI and Anthropic keys are available as late fallbacks for
+  // ordinary chats as well as coding tasks, rather than being coding-only or flag-gated.
+  if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);
+  if (name === "anthropic") return configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
 type ProviderHealthSample = {
@@ -843,7 +845,7 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     // Gemini handles multimodal and file inputs directly; OpenRouter's free router
     // is next and selects a free model with the needed feature when available.
     preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
-    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "coding") {
     // Start coding requests with the fast Groq route; configured alternatives remain available.
     // OpenAI still remains a fallback when the paid-fallback opt-in is enabled.
@@ -858,14 +860,14 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   } else if (task === "reasoning") {
     preferred = ["gemini", "openrouter", "shannon", "groq", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "creative") {
-    preferred = ["gemini", "groq", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   } else {
-    preferred = ["groq", "gemini", "openrouter", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
+    preferred = ["groq", "gemini", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   }
 
   // The order expresses the task routing preference. All other configured providers
   // remain in the cascade, with attachment-incompatible providers excluded.
-  const fallback = ["gemini", "groq", "openrouter", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+  const fallback = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])]
     .filter((name) => providerIsConfigured(name, task) &&
       !(hasInlineAttachments && (name === "venice" || name === "shannon")));
@@ -2611,7 +2613,7 @@ async function streamChatResponse(
       let bestDraft: { provider: string; text: string } | null = null;
       let liveStreamText = "";
       const startedAt = Date.now();
-      const totalProviderBudgetMs = 115000;
+      const totalProviderBudgetMs = (task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 105000 : 60000;
       const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
       const providerMessages = messages.map((message) => ({ ...message }));
       const styleInstructions: Record<string, string> = {
@@ -2647,8 +2649,8 @@ async function streamChatResponse(
           // for the provider to ingest an attachment before generating an answer.
           const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution" || hasInlineAttachments;
           // Keep tool-heavy and multimodal work patient, but move on quickly from normal chat/coding routes.
-          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 15000 : 12000;
-          const providerBudget = Math.max(6000, Math.min(maxAttemptMs, Math.floor(remaining / providersLeft)));
+          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 11000 : 8500;
+          const providerBudget = Math.max(5000, Math.min(maxAttemptMs, remaining - 6000));
           const provider = available[index];
           const providerStartedAt = Date.now();
           let attemptStreamed = false;
