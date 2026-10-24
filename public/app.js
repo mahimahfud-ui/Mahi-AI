@@ -104,7 +104,7 @@
     if (ui.temporaryChatButton) ui.temporaryChatButton.disabled = value;
     ui.send.innerHTML = value
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h8v8H8z"/></svg>'
-      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5.5"/></svg>';
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>';
   }
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (c) => ({
@@ -608,10 +608,10 @@
     const { data, error } = await client.from("mahi_ai_messages")
       .select("id,role,content,created_at")
       .eq("conversation_id", conversationId)
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(500);
     if (error) throw error;
-    const rows = data || [];
+    const rows = (data || []).slice().reverse();
     const offset = Math.max(0, rows.length - currentMessages.length);
     currentMessages.forEach((message, index) => {
       const row = rows[offset + index];
@@ -1624,12 +1624,14 @@
       if (error) throw error;
       const { data, error: messageError } = await client.from("mahi_ai_messages")
         .select("id,role,content,created_at").eq("conversation_id", id)
-        .order("created_at", { ascending: true }).limit(200);
+        .order("created_at", { ascending: false }).limit(200);
       if (messageError) throw messageError;
       conversationId = rows.id;
       pendingEdit = null;
       if (ui.draftNotice) ui.draftNotice.hidden = true;
-      currentMessages = (data || []).map((m) => ({ id: m.id, role: m.role, content: m.content, created_at: m.created_at }));
+      ui.input.value = "";
+      updateCounter();
+      currentMessages = (data || []).slice().reverse().map((m) => ({ id: m.id, role: m.role, content: m.content, created_at: m.created_at }));
       ui.messages.replaceChildren();
       ui.welcome.hidden = true;
       ui.messages.hidden = false;
