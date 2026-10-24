@@ -22,20 +22,25 @@ test("chat shows Thinking before session setup and ignores backend status text",
   assert.match(app, /payload\.type === "reset"/);
 });
 
-test("Edge Function forwards provider chunks while generating", () => {
+test("Edge Function verifies provider answers before streaming the accepted answer", () => {
   const start = edge.indexOf("async function streamChatResponse(");
   const end = edge.indexOf("\nDeno.serve", start);
   const stream = edge.slice(start, end);
   assert.ok(start >= 0 && end > start, "streamChatResponse must exist");
   const loop = stream.indexOf("while (!cancelled)");
-  const delta = stream.indexOf('sseEvent(controller, encoder, { type: "delta", text: next.value });');
-  const success = stream.indexOf('if (!completeText.trim()) throw new Error("Provider returned an empty response");');
-  assert.ok(loop >= 0 && delta > loop && delta < success,
-    "provider deltas must be sent inside the generation loop");
-  assert.match(stream, /let attemptStreamed = false;/);
-  assert.match(stream, /if \(attemptStreamed\) sseEvent\(controller, encoder, \{ type: "reset" \}\);/);
-  assert.match(stream, /if \(finalAnswer !== chosen\.text\)/);
-  assert.ok(stream.includes('if (finalAnswer !== chosen.text) {') && stream.includes('for (let offset = 0; offset < finalAnswer.length; offset += 700)'), "only send a replacement if review changes the draft");
+  const buffer = stream.indexOf("completeText += next.value;");
+  const qualityCheck = stream.indexOf("const review = await independentlyReviewAnswer(");
+  const accepted = stream.indexOf("chosen = { provider, text: review.answer, reviewer: review.reviewer };");
+  const answerDelta = stream.indexOf('sseEvent(controller, encoder, { type: "delta", text: finalAnswer.slice(offset, offset + 700) });');
+  assert.ok(loop >= 0 && buffer > loop, "candidate answer must be buffered from the provider");
+  assert.ok(qualityCheck > buffer && accepted > qualityCheck, "candidate must pass an independent model check before selection");
+  assert.ok(answerDelta > accepted, "only the accepted answer is sent to the client");
+  assert.doesNotMatch(stream, /sseEvent\\(controller, encoder, \\{ type: "delta", text: next\\.value \\}\\)/,
+    "unverified provider tokens must not stream to users");
+  assert.match(edge, /\\["keep", "correct", "retry"\\]/);
+  assert.match(edge, /provider_answer_rejected/);
+  assert.match(edge, /provider_answer_accepted/);
+  assert.match(edge, /allProvidersFailedMessage\\(displayUserText\\)/);
 });
 
 test("a delivered reply survives a conversation-history refresh error", () => {
@@ -54,6 +59,6 @@ test("coding uses a fast provider first and fallback attempts are bounded", () =
   const coding = edge.slice(codingStart, reasoningStart);
   assert.ok(coding.includes('preferred = ["groq", "gemini", "openrouter"'));
   assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 14000 : 9000;"));
-  assert.ok(edge.includes(").slice(0, 1);"), "review is limited to one alternate provider");
-  assert.ok(edge.includes("task, 4500, reviewSystem"));
+  assert.ok(edge.includes(").slice(0, 3);"), "review retries up to three alternate providers");
+  assert.ok(edge.includes("perReviewerTimeoutMs, reviewSystem"));
 });
