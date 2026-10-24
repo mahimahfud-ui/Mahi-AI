@@ -283,18 +283,18 @@
   }
   function speechTextFromMarkdown(value) {
     return String(value || "")
-      .replace(/!\\[([^\\]]*)\\]\\(mahi-storage:\\/\\/[^)]+\\)/gi, "$1")
-      .replace(/!\\[([^\\]]*)\\]\\([^)]*\\)/g, "$1")
-      .replace(/\\x60{3}[\\s\\S]*?\\x60{3}/g, "Code is included in the chat.")
-      .replace(/\\[([^\\]]+)\\]\\((https?:\\/\\/[^)]+)\\)/g, "$1")
-      .replace(/https?:\\/\\/\\S+/g, "link")
-      .replace(/\\x60([^\\x60]+)\\x60/g, "$1")
-      .replace(/^\\s{0,3}#{1,6}\\s+/gm, "")
-      .replace(/^\\s*[-*+]\\s+/gm, "")
-      .replace(/^\\s*\\d+\\.\\s+/gm, "")
+      .replace(/!\[([^\]]*)\]\(mahi-storage:\/\/[^)]+\)/gi, "$1")
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, "$1")
+      .replace(/\x60{3}[\s\S]*?\x60{3}/g, "Code is included in the chat.")
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "link")
+      .replace(/\x60([^\x60]+)\x60/g, "$1")
+      .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+      .replace(/^\s*[-*+]\s+/gm, "")
+      .replace(/^\s*\d+\.\s+/gm, "")
       .replace(/[>*_~|]/g, "")
-      .replace(/\\bmahi-storage:\\/\\/[^\\s)]+/gi, "")
-      .replace(/\\n{3,}/g, "\\n\\n")
+      .replace(/\bmahi-storage:\/\/[^\s)]+/gi, "")
+      .replace(/\n{3,}/g, "\n\n")
       .trim();
   }
   function spokenLanguage(text) {
