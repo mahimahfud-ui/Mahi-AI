@@ -1,17 +1,15 @@
--- Provider health shared across Edge Function isolates
+-- Shared AI-provider health so every Edge Function instance sees the same
+-- failure counts, latency and cooldowns. Only the service role touches this table.
 create table if not exists public.provider_health (
   provider text primary key,
-  successes int not null default 0,
-  failures int not null default 0,
-  avg_latency_ms double precision not null default 0,
+  successes integer not null default 0,
+  failures integer not null default 0,
+  avg_latency_ms integer not null default 0,
   cooldown_until_ms bigint not null default 0,
   last_error text,
   updated_at timestamptz not null default now()
 );
 
 alter table public.provider_health enable row level security;
-
--- Only service role (Edge Function) should read/write
-drop policy if exists provider_health_service on public.provider_health;
-create policy provider_health_service on public.provider_health
-  for all using (false) with check (false);
+-- No policies on purpose: anon/authenticated users get no access; the service role bypasses RLS.
+revoke all on public.provider_health from anon, authenticated;
