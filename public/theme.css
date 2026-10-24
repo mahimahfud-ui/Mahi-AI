@@ -125,7 +125,8 @@ html[data-theme="light"]{color-scheme:light;
  :root:root body{
   .sidebar{width:min(300px,86vw);background:var(--m-side)}
   .topbar{height:52px;padding:0 10px}
-  .header-tool-button,.secure-label,.temporary-chat-button span{display:none}
+  .secure-label,.temporary-chat-button span{display:none}
+  .header-tool-button{display:inline-grid;width:30px;height:30px}
   .temporary-chat-button{width:34px;padding:0;display:grid;place-items:center}
   .conversation-area{padding:14px 14px 8px}
   .welcome h1{font-size:28px}
