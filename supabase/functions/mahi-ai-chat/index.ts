@@ -1903,7 +1903,7 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
 function shouldRequireIndependentReview(task: string, prompt: string): boolean {
   if (["coding", "reasoning", "web_research", "code_execution"].includes(task)) return true;
   if (isAdultSensitivePrompt(prompt) || shouldPreferVenice(prompt)) return true;
-  return /\\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(prompt);
+  return /\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(prompt);
 }
 
 async function independentlyReviewAnswer(
