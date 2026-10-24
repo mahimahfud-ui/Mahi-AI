@@ -14,6 +14,7 @@ test("Gemini quota failures try alternate stable free-tier models for normal and
   assert.ok(edge.includes('logStructured("warn", "gemini_model_fallback"'));
   assert.ok(edge.includes('const fallbackUrl = "https://generativelanguage.googleapis.com/v1beta/models/"'));
   assert.ok(edge.includes("if (useGemini && canRetryGeminiModel(reason))"));
+  assert.ok(edge.includes("The runtime does not currently record which Gemini model succeeded"));
 });
 
 test("Gemini model retries do not mask invalid credentials and daily limits are cooled down", () => {
