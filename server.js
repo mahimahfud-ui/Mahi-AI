@@ -1,4 +1,4 @@
-// Mahi AI static server for Node 18+ hosting (including Render).
+// MahiCloud static server for Node 18+ hosting (including Render).
 // AI requests go directly to the authenticated Supabase Edge Function.
 // Never put AI-provider credentials in this server or in public/ files.
 const http = require("http");
@@ -87,4 +87,4 @@ server.headersTimeout = 10000;
 server.keepAliveTimeout = 5000;
 server.maxHeadersCount = 100;
 
-server.listen(PORT, "0.0.0.0", () => console.log("Mahi AI web server listening on port " + PORT));
+server.listen(PORT, "0.0.0.0", () => console.log("MahiCloud web server listening on port " + PORT));
