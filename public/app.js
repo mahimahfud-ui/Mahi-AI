@@ -2,6 +2,9 @@
   "use strict";
   const cfg = window.MAHI_AI_CONFIG;
   const $ = (id) => document.getElementById(id);
+  const OFFICIAL_LOGO_URL = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
+  const THEME_STORAGE_KEY = "mahi-ai-theme";
+  const DISPLAY_NAME_STORAGE_KEY = "mahi-ai-display-name";
   const ui = {
     sidebar: $("sidebar"), scrim: $("mobileScrim"), chatList: $("chatList"),
     welcome: $("welcome"), messages: $("messages"), form: $("chatForm"),
@@ -197,13 +200,22 @@
     node.className = "message " + (role === "user" ? "user" : "assistant");
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
-    avatar.textContent = role === "user" ? "M" : "✦";
+    if (role === "user") {
+      avatar.textContent = "M";
+    } else {
+      const logo = document.createElement("img");
+      logo.className = "message-logo";
+      logo.src = OFFICIAL_LOGO_URL;
+      logo.alt = "";
+      logo.decoding = "async";
+      avatar.appendChild(logo);
+    }
     avatar.setAttribute("aria-hidden", "true");
     const body = document.createElement("div");
     body.className = "message-body";
     const heading = document.createElement("div");
     heading.className = "message-heading";
-    heading.textContent = role === "user" ? "You" : "Mahi AI";
+    heading.textContent = role === "user" ? getDisplayName() : "Mahi AI";
     const article = document.createElement("div");
     article.className = "message-content";
     if (opts.typing) {
@@ -477,6 +489,70 @@
   function openMobileSidebar() {
     ui.sidebar.classList.add("open");
     ui.scrim.classList.add("show");
+  }
+  function toggleSidebar() {
+    if (window.matchMedia("(max-width: 760px)").matches) {
+      if (ui.sidebar.classList.contains("open")) closeMobileSidebar();
+      else openMobileSidebar();
+      return;
+    }
+    const shell = document.querySelector(".app-shell");
+    if (shell) shell.classList.toggle("sidebar-collapsed");
+  }
+  function readPreference(key) {
+    try { return window.localStorage.getItem(key); } catch (_) { return null; }
+  }
+  function writePreference(key, value) {
+    try { window.localStorage.setItem(key, value); } catch (_) { /* Private browsing may disable local storage. */ }
+  }
+  function getDisplayName() {
+    return (readPreference(DISPLAY_NAME_STORAGE_KEY) || "You").trim() || "You";
+  }
+  function applyDisplayName(value, persist) {
+    const clean = String(value || "").replace(/[\\u0000-\\u001f\\u007f]/g, "").replace(/\\s+/g, " ").trim().slice(0, 32) || "You";
+    if (persist !== false) writePreference(DISPLAY_NAME_STORAGE_KEY, clean);
+    const input = $("displayNameInput");
+    if (input && input.value !== clean) input.value = clean;
+    const profile = $("profileDisplayName");
+    if (profile) profile.textContent = clean;
+    const avatar = $("profileAvatar");
+    if (avatar) avatar.textContent = clean === "You" ? "Y" : Array.from(clean)[0].toLocaleUpperCase();
+    document.querySelectorAll(".message.user .message-heading").forEach((heading) => { heading.textContent = clean; });
+  }
+  function applyTheme(theme, persist) {
+    const value = theme === "light" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", value);
+    if (persist !== false) writePreference(THEME_STORAGE_KEY, value);
+    const toggle = $("themeToggle");
+    if (toggle) toggle.setAttribute("aria-checked", String(value === "light"));
+    const label = $("themeToggleLabel");
+    if (label) label.textContent = value === "light" ? "Light" : "Dark";
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) metaTheme.setAttribute("content", value === "light" ? "#f7f8fc" : "#090b10");
+  }
+  function setupPreferences() {
+    const settingsButton = $("toggleSettings");
+    const settingsPanel = $("settingsPanel");
+    if (settingsButton && settingsPanel) {
+      settingsButton.addEventListener("click", () => {
+        const opening = settingsPanel.hidden;
+        settingsPanel.hidden = !opening;
+        settingsButton.setAttribute("aria-expanded", String(opening));
+      });
+    }
+    const themeToggle = $("themeToggle");
+    if (themeToggle) themeToggle.addEventListener("click", () => {
+      applyTheme(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+    });
+    const nameForm = $("displayNameForm");
+    if (nameForm) nameForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      applyDisplayName($("displayNameInput") ? $("displayNameInput").value : "You", true);
+      const status = $("nameSaveStatus");
+      if (status) status.textContent = "Saved on this device.";
+    });
+    applyTheme(readPreference(THEME_STORAGE_KEY) === "light" ? "light" : "dark", false);
+    applyDisplayName(readPreference(DISPLAY_NAME_STORAGE_KEY) || "You", false);
   }
   function shortTitle(value) {
     return String(value || "New chat").replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
@@ -1031,7 +1107,7 @@
   if (apiUi.more) apiUi.more.addEventListener("click", () => { apiVisibleCount += API_PAGE_SIZE; renderApiDirectory(); });
   $("newChat").addEventListener("click", beginNewChat);
   $("refreshChats").addEventListener("click", () => refreshConversations().catch((e) => setError(plainError(e))));
-  $("openSidebar").addEventListener("click", openMobileSidebar);
+  $("openSidebar").addEventListener("click", toggleSidebar);
   $("closeSidebar").addEventListener("click", closeMobileSidebar);
   ui.scrim.addEventListener("click", closeMobileSidebar);
   document.querySelectorAll("[data-prompt]").forEach((button) => {
@@ -1049,5 +1125,6 @@
     if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); }
   });
   window.addEventListener("online", () => { if (!busy) setError(""); });
+  setupPreferences();
   boot();
 })();
