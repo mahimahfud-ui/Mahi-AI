@@ -638,9 +638,11 @@ function recordProviderOutcomeLocal(name: string, success: boolean, elapsedMs: n
 
 function providerCooldownMs(reason: string): number {
   const message = reason.toLowerCase();
-  if (/\b401\b|\b403\b|invalid api key|authentication failed|rejected the api key/.test(message)) return 30 * 60_000;
+  // Keep configuration-error cooldowns short so a rotated key or repaired model
+  // can recover quickly without waiting for the old persisted circuit breaker.
+  if (/\b401\b|\b403\b|invalid api key|authentication failed|rejected the api key/.test(message)) return 30_000;
   if (/\b429\b|quota|rate limit|too many requests/.test(message)) return 90_000;
-  if (/\b404\b|model not found|model .*unavailable/.test(message)) return 5 * 60_000;
+  if (/\b404\b|model not found|model .*unavailable/.test(message)) return 60_000;
   if (/\b5\d\d\b|timeout|network error|temporarily unavailable|connection timeout/.test(message)) return 30_000;
   return 0;
 }
@@ -1305,8 +1307,8 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
     return { text: await openAICompatible(name, "https://integrate.api.nvidia.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "cloudflare") {
-    const key = envFirst(["CLOUDFLARE_API_TOKEN"]);
-    const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
+    const key = envFirst(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY"]);
+    const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID", "CF_ACCOUNT_ID"]);
     if (!key || !accountId) throw new Error("Not configured");
     const url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
     const model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
@@ -1335,7 +1337,7 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
       method: "POST",
       headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-5",
+        model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-6",
         max_tokens: 8192,
         system: systemOverride || systemPrompt(task),
         messages: messages.map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content }))
@@ -1566,6 +1568,23 @@ async function* readAnthropicEventStream(response: Response): AsyncGenerator<str
   }
 }
 
+function providerFallbackModel(name: string, task: string): string | null {
+  // These fallbacks are known API model IDs; user overrides remain first choice.
+  // If an override was retired or not enabled on the account, retry the same provider.
+  if (name === "gemini") return "gemini-3.5-flash-lite";
+  if (name === "groq") return "openai/gpt-oss-20b";
+  if (name === "openrouter") return "openrouter/free";
+  if (name === "deepseek") return "deepseek-flash";
+  if (name === "nvidia") return "openai/gpt-oss-20b";
+  if (name === "cloudflare") return "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
+  if (name === "venice") return "zai-org-glm-5";
+  if (name === "mistral") return "mistral-small-latest";
+  if (name === "openai") return "gpt-4.1-mini";
+  if (name === "anthropic") return "claude-sonnet-4-6";
+  if (name === "shannon") return "shannon-3";
+  return null;
+}
+
 async function startProviderStream(name: string, messages: ChatMessage[], task: string, attachments: PreparedAttachment[] = [], timeoutMs = 25000): Promise<ProviderStream> {
   const controller = new AbortController();
   const totalTimer = setTimeout(() => controller.abort(), timeoutMs);
@@ -1628,7 +1647,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     headers["x-api-key"] = key;
     headers["anthropic-version"] = "2023-06-01";
     body = {
-      model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-5",
+      model: envFirst(["ANTHROPIC_MODEL"]) || "claude-sonnet-4-6",
       max_tokens: 8192,
       system: systemPrompt(task),
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
@@ -1656,8 +1675,8 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       key = envFirst(["NVIDIA_API_KEY"]);
       url = "https://integrate.api.nvidia.com/v1/chat/completions";
     } else if (name === "cloudflare") {
-      key = envFirst(["CLOUDFLARE_API_TOKEN"]);
-      const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
+      key = envFirst(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY"]);
+      const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID", "CF_ACCOUNT_ID"]);
       if (key && accountId) url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
       else key = "";
     }
@@ -1716,9 +1735,9 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
   }
 
   let headerTimer: ReturnType<typeof setTimeout> | undefined;
-  try {
+  const sendRequest = async (): Promise<Response> => {
     const request = fetch(url, { method: "POST", headers, body: JSON.stringify(body), signal: controller.signal });
-    const response = await Promise.race([
+    return await Promise.race([
       request,
       new Promise<Response>((_, reject) => {
         headerTimer = setTimeout(() => {
@@ -1727,11 +1746,38 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
         }, Math.min(8000, timeoutMs));
       })
     ]);
+  };
+  try {
+    let response = await sendRequest();
     if (headerTimer) clearTimeout(headerTimer);
     if (!response.ok) {
+      const status = response.status;
       const reason = await readProviderError(response);
-      cleanup();
-      throw new Error(reason);
+      const modelError = /model[_ ]?(?:not found|unavailable|does not exist|not available)|unknown model|invalid model|model.*(?:not found|unavailable|does not exist)/i.test(reason);
+      const fallbackModel = providerFallbackModel(name, task);
+      let currentModel = typeof body.model === "string" ? body.model : "";
+      if (useGemini) {
+        const match = url.match(/\/models\/([^:]+):/);
+        currentModel = match ? decodeURIComponent(match[1]) : currentModel;
+      }
+      if ([400, 404, 422].includes(status) && modelError && fallbackModel && fallbackModel !== currentModel) {
+        console.warn("Mahi AI model override was rejected; retrying the same provider with its default model:", name);
+        if (useGemini) {
+          url = url.replace("/models/" + encodeURIComponent(currentModel) + ":", "/models/" + encodeURIComponent(fallbackModel) + ":");
+        } else {
+          body.model = fallbackModel;
+        }
+        response = await sendRequest();
+        if (headerTimer) clearTimeout(headerTimer);
+        if (!response.ok) {
+          const retryReason = await readProviderError(response);
+          cleanup();
+          throw new Error(retryReason);
+        }
+      } else {
+        cleanup();
+        throw new Error(reason);
+      }
     }
     const iterator = useGemini ? readGeminiEventStream(response)
       : useAnthropic ? readAnthropicEventStream(response)
