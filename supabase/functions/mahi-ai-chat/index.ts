@@ -983,7 +983,13 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
 }
 
 function sseEvent(controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder, value: Record<string, unknown>) {
-  controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
+  // A client may close the connection while a provider is still finishing.
+  // Never turn a disconnected reader into an unhandled enqueue exception.
+  try {
+    controller.enqueue(encoder.encode("data: " + JSON.stringify(value) + "\n\n"));
+  } catch (_) {
+    // The stream was already cancelled or closed.
+  }
 }
 
 function prepareImagePrompt(rawPrompt: string): string {
@@ -1204,11 +1210,23 @@ async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: 
 }
 
 function eventStreamResponse(
-  onStart: (controller: ReadableStreamDefaultController<Uint8Array>, encoder: TextEncoder) => void,
+  onStart: (
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    encoder: TextEncoder,
+    registerCancellation: (handler: () => void) => void
+  ) => void,
   responseCors: Record<string, string> = corsHeaders
 ): Response {
+  let cancellationHandler: (() => void) | null = null;
   const stream = new ReadableStream<Uint8Array>({
-    start(controller) { onStart(controller, new TextEncoder()); }
+    start(controller) {
+      onStart(controller, new TextEncoder(), (handler) => {
+        cancellationHandler = handler;
+      });
+    },
+    cancel() {
+      try { cancellationHandler?.(); } catch (_) {}
+    }
   });
   return new Response(stream, {
     status: 200,
@@ -1326,7 +1344,13 @@ async function streamChatResponse(
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
   const available = providerOrder(task, hasInlineAttachments, hasInlineImages);
-  return eventStreamResponse((controller, encoder) => {
+  return eventStreamResponse((controller, encoder, registerCancellation) => {
+    let cancelled = false;
+    let activeCandidate: ProviderStream | null = null;
+    registerCancellation(() => {
+      cancelled = true;
+      try { activeCandidate?.cleanup(); } catch (_) {}
+    });
     (async () => {
       let conversationId = initialConversationId;
       const failures: string[] = [];
@@ -1335,6 +1359,7 @@ async function streamChatResponse(
       const totalProviderBudgetMs = 115000;
       try {
         for (let index = 0; index < available.length; index++) {
+          if (cancelled) return;
           const remaining = totalProviderBudgetMs - (Date.now() - startedAt);
           if (remaining < 7000) {
             failures.push("remaining_provider_budget_exhausted");
@@ -1355,14 +1380,22 @@ async function streamChatResponse(
           let candidate: ProviderStream | null = null;
           try {
             candidate = await startProviderStream(provider, messages, task, attachments, providerBudget);
+            activeCandidate = candidate;
+            if (cancelled) {
+              candidate.cleanup();
+              activeCandidate = null;
+              return;
+            }
             let completeText = "";
-            while (true) {
+            while (!cancelled) {
               const next = await candidate.iterator.next();
               if (next.done) break;
               if (next.value) completeText += next.value;
               if (completeText.length > 180000) throw new Error("Provider response exceeded the supported response size");
             }
             candidate.cleanup();
+            activeCandidate = null;
+            if (cancelled) return;
             if (!completeText.trim()) throw new Error("Provider returned an empty response");
             chosen = { provider, text: completeText.trim() };
             rememberProviderSuccess(provider);
@@ -1370,6 +1403,8 @@ async function streamChatResponse(
             break;
           } catch (error) {
             if (candidate) candidate.cleanup();
+            if (activeCandidate === candidate) activeCandidate = null;
+            if (cancelled) return;
             const reason = error instanceof Error ? error.message : String(error);
             recordProviderOutcome(provider, false, Date.now() - providerStartedAt);
             failures.push(provider + ":" + reason.slice(0, 100));
@@ -1377,6 +1412,7 @@ async function streamChatResponse(
             if (reason !== "Not configured") console.warn("Mahi AI full-response provider attempt failed:", provider, reason.slice(0, 180));
           }
         }
+        if (cancelled) return;
         if (!chosen) {
           await updateUsage(usageId, { success: false, error_code: "all_providers_failed" });
           console.error("All Mahi AI providers failed:", failures.join(" | ").slice(0, 1400));
@@ -1391,13 +1427,14 @@ async function streamChatResponse(
         const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
         const contextText = messages[messages.length - 1]?.content || originalPrompt;
         const reviewProviders = available.filter((name) => name !== chosen!.provider && name !== "openai" && name !== "anthropic");
-        if (reviewProviders.length && task !== "web_research" && task !== "code_execution" &&
+        if (!cancelled && reviewProviders.length && task !== "web_research" && task !== "code_execution" &&
             !hasInlineAttachments && chosen.text.length <= 30000) {
           sseEvent(controller, encoder, { type: "status", message: "Checking the answer for accuracy and completeness…" });
           const review = await independentlyReviewAnswer(reviewProviders, originalPrompt, contextText, chosen.text, task);
           finalAnswer = review.answer;
           reviewer = review.reviewer;
         }
+        if (cancelled) return;
         conversationId = await createConversationIfNeeded(
           userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
         );
@@ -1409,6 +1446,7 @@ async function streamChatResponse(
         }
         sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
       } catch (error) {
+        if (cancelled) return;
         const reason = error instanceof Error ? error.message : String(error);
         console.error("Mahi AI response handling failed:", reason.slice(0, 200));
         await updateUsage(usageId, { success: false, error_code: "response_save_failed" });
@@ -1417,6 +1455,7 @@ async function streamChatResponse(
           message: "Mahi AI could not finish or save the response. Please try again."
         });
       } finally {
+        try { activeCandidate?.cleanup(); } catch (_) {}
         try { controller.close(); } catch (_) {}
       }
     })();
