@@ -2447,7 +2447,8 @@ async function streamChatResponse(
   userId: string, messages: ChatMessage[], task: string, initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
-  editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = []
+  editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = [],
+  customInstructions = "", responseStyle = "default"
 ): Promise<Response> {
   if (task === "image_generation") {
     return streamImageGenerationResponse(
