@@ -60,112 +60,6 @@
           <span>Settings &amp; preferences</span>
           <svg class="settings-chevron ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
         </button>
-        <div class="settings-panel" id="settingsPanel" hidden>
-          <div class="settings-scrim" data-settings-close aria-hidden="true"></div>
-          <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
-            <header class="settings-header">
-              <div class="settings-heading">
-                <div class="settings-kicker">MAHICLOUD · YOUR WORKSPACE</div>
-                <h2 id="settingsTitle">Settings</h2>
-                <p>Make the workspace feel right for you.</p>
-              </div>
-              <span class="settings-save-state" id="settingsSaveState" role="status" aria-live="polite">Saved on this device</span>
-              <button class="settings-close" id="closeSettings" type="button" data-settings-close aria-label="Close settings" title="Close settings">×</button>
-            </header>
-            <div class="settings-layout">
-              <nav class="settings-tabs" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
-                <button class="settings-tab" id="settings-tab-general" type="button" role="tab" data-settings-tab="general" aria-controls="settings-page-general" aria-selected="true"><span class="settings-tab-icon" aria-hidden="true">⌂</span>General</button>
-                <button class="settings-tab" id="settings-tab-appearance" type="button" role="tab" data-settings-tab="appearance" aria-controls="settings-page-appearance" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">◐</span>Appearance</button>
-                <button class="settings-tab" id="settings-tab-conversation" type="button" role="tab" data-settings-tab="conversation" aria-controls="settings-page-conversation" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">✳</span>AI &amp; chat</button>
-                <button class="settings-tab" id="settings-tab-accessibility" type="button" role="tab" data-settings-tab="accessibility" aria-controls="settings-page-accessibility" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">◎</span>Accessibility</button>
-                <button class="settings-tab" id="settings-tab-data" type="button" role="tab" data-settings-tab="data" aria-controls="settings-page-data" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">⌁</span>Data &amp; privacy</button>
-                <button class="settings-tab" id="settings-tab-shortcuts" type="button" role="tab" data-settings-tab="shortcuts" aria-controls="settings-page-shortcuts" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">⌘</span>Shortcuts</button>
-              </nav>
-              <div class="settings-pages">
-                <section class="settings-page" id="settings-page-general" role="tabpanel" aria-labelledby="settings-tab-general" data-settings-page="general">
-                  <div class="settings-page-head"><h3>Your workspace</h3><p>Personalize how MahiCloud looks and how it addresses you. Preferences are saved in this browser.</p></div>
-                  <fieldset class="settings-group">
-                    <legend class="settings-group-title">Profile</legend>
-                    <form class="name-setting-form" id="displayNameForm">
-                      <label class="settings-field-title" for="displayNameInput">Display name</label>
-                      <div class="name-setting-control settings-name-control"><input id="displayNameInput" type="text" maxlength="32" autocomplete="nickname" placeholder="e.g. Mahi"><button type="submit" class="settings-action primary">Save name</button></div>
-                      <p class="setting-status" id="nameSaveStatus" role="status">Stored in this browser only.</p>
-                    </form>
-                  </fieldset>
-                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">✦</span><span><strong>Automatic AI routing stays on.</strong> MahiCloud chooses a suitable available provider and model for each request. These settings adjust response style, not the routing system.</span></div>
-                </section>
-
-                <section class="settings-page" id="settings-page-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance" data-settings-page="appearance" hidden>
-                  <div class="settings-page-head"><h3>Appearance</h3><p>Fine-tune color, reading comfort and the conversation layout. Changes apply immediately.</p></div>
-                  <fieldset class="settings-group">
-                    <legend class="settings-group-title">Workspace</legend>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Theme</span><span class="settings-field-help">Follow your device or choose a fixed theme.</span></span><select class="settings-control" data-pref="theme"><option value="system">System default</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
-                    <div class="settings-field"><div class="settings-field-copy"><span class="settings-field-title">Accent color</span><span class="settings-field-help">Choose the highlight color for buttons and focus states.</span></div><div class="settings-choice-list" role="group" aria-label="Accent color"><button type="button" class="settings-choice" data-setting-choice="accent" data-value="terracotta" aria-pressed="true"><span class="settings-swatch" style="--swatch:#d97757"></span>Clay</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="violet" aria-pressed="false"><span class="settings-swatch" style="--swatch:#a896ff"></span>Violet</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="blue" aria-pressed="false"><span class="settings-swatch" style="--swatch:#6aa9ff"></span>Blue</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="green" aria-pressed="false"><span class="settings-swatch" style="--swatch:#57c99a"></span>Green</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="rose" aria-pressed="false"><span class="settings-swatch" style="--swatch:#f17ca2"></span>Rose</button></div></div>
-                  </fieldset>
-                  <fieldset class="settings-group">
-                    <legend class="settings-group-title">Reading</legend>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Text size</span><span class="settings-field-help">Set a comfortable size for conversation content.</span></span><select class="settings-control" data-pref="textSize"><option value="small">Small</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Response typeface</span><span class="settings-field-help">Choose a softer reading face or a clean sans-serif.</span></span><select class="settings-control" data-pref="font"><option value="serif">Serif · editorial</option><option value="sans">Sans-serif · clean</option></select></label>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Conversation width</span><span class="settings-field-help">Widen long answers and code explanations.</span></span><select class="settings-control" data-pref="contentWidth"><option value="standard">Standard</option><option value="wide">Wide</option></select></label>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Message spacing</span><span class="settings-field-help">Compact fits more on screen; comfortable adds breathing room.</span></span><select class="settings-control" data-pref="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
-                  </fieldset>
-                </section>
-
-                <section class="settings-page" id="settings-page-conversation" role="tabpanel" aria-labelledby="settings-tab-conversation" data-settings-page="conversation" hidden>
-                  <div class="settings-page-head"><h3>AI &amp; chat</h3><p>Set your default response preferences. MahiCloud follows your request if you explicitly ask for a different style or language.</p></div>
-                  <fieldset class="settings-group">
-                    <legend class="settings-group-title">Default answer</legend>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Response language</span><span class="settings-field-help">Automatic follows your message; choose Bengali or English to set a default.</span></span><select class="settings-control" data-pref="language"><option value="auto">Automatic · follow my message</option><option value="bn">Bengali · বাংলা</option><option value="en">English</option></select></label>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Answer length</span><span class="settings-field-help">A default preference, not a hard limit.</span></span><select class="settings-control" data-pref="responseLength"><option value="concise">Concise</option><option value="balanced">Balanced</option><option value="detailed">Detailed</option></select></label>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Tone</span><span class="settings-field-help">Choose how the assistant usually communicates.</span></span><select class="settings-control" data-pref="tone"><option value="neutral">Neutral</option><option value="friendly">Friendly</option><option value="professional">Professional</option><option value="creative">Creative</option></select></label>
-                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Formatting</span><span class="settings-field-help">Use Markdown for readable structure or plain text when preferred.</span></span><select class="settings-control" data-pref="format"><option value="auto">Automatic</option><option value="markdown">Prefer Markdown</option><option value="plain">Prefer plain text</option></select></label>
-                  </fieldset>
-                  <fieldset class="settings-group">
-                    <legend class="settings-group-title">Composer &amp; behaviour</legend>
-                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Enter sends the message</span><span class="settings-field-help">When off, use Ctrl/⌘ + Enter to send. Shift + Enter keeps a new line.</span></span><span class="settings-switch"><input type="checkbox" data-pref="sendOnEnter" aria-label="Enter sends the message"><span class="settings-switch-track"></span></span></label>
-                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Automatically follow new output</span><span class="settings-field-help">Turn off to read earlier content without the view jumping down.</span></span><span class="settings-switch"><input type="checkbox" data-pref="autoScroll" aria-label="Automatically follow new output"><span class="settings-switch-track"></span></span></label>
-                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Show character counter</span><span class="settings-field-help">Display the message length beside the send controls.</span></span><span class="settings-switch"><input type="checkbox" data-pref="showCharCount" aria-label="Show character counter"><span class="settings-switch-track"></span></span></label>
-                  </fieldset>
-                </section>
-
-                <section class="settings-page" id="settings-page-accessibility" role="tabpanel" aria-labelledby="settings-tab-accessibility" data-settings-page="accessibility" hidden>
-                  <div class="settings-page-head"><h3>Accessibility</h3><p>Reduce motion and strengthen visual contrast to make the interface easier to use.</p></div>
-                  <fieldset class="settings-group">
-                    <legend class="settings-group-title">Comfort &amp; clarity</legend>
-                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Reduce animations</span><span class="settings-field-help">Minimize interface transitions and animated effects.</span></span><span class="settings-switch"><input type="checkbox" data-pref="reduceMotion" aria-label="Reduce animations"><span class="settings-switch-track"></span></span></label>
-                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Higher contrast</span><span class="settings-field-help">Increase separation between text, borders and controls.</span></span><span class="settings-switch"><input type="checkbox" data-pref="highContrast" aria-label="Higher contrast"><span class="settings-switch-track"></span></span></label>
-                  </fieldset>
-                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">ⓘ</span><span><strong>Keyboard-friendly by design.</strong> Settings tabs support arrow keys, the dialog traps focus while open, and Escape closes this window.</span></div>
-                </section>
-
-                <section class="settings-page" id="settings-page-data" role="tabpanel" aria-labelledby="settings-tab-data" data-settings-page="data" hidden>
-                  <div class="settings-page-head"><h3>Data &amp; privacy</h3><p>Manage the preferences stored by this browser. Export a copy to move your setup to another device.</p></div>
-                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">◈</span><span><strong>Local preferences.</strong> Appearance, accessibility and default response preferences are stored in this browser. Response preferences are included with chat requests. Exporting settings does not include your conversations, account credentials or API keys.</span></div>
-                  <div class="settings-action-row"><button class="settings-action primary" id="exportSettings" type="button">↓ Export settings</button><button class="settings-action" id="importSettings" type="button">↑ Import settings</button><input id="settingsImportFile" type="file" accept="application/json,.json" hidden></div>
-                  <p class="settings-status" id="settingsStatus" role="status" aria-live="polite">Your chat history is managed separately. These actions do not delete conversations or your account.</p>
-                  <fieldset class="settings-group" style="margin-top:25px">
-                    <legend class="settings-group-title">Reset</legend>
-                    <div class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Restore defaults</span><span class="settings-field-help">Reset preferences and your display name on this device. Chats and account data remain unchanged.</span></span><button class="settings-action danger" id="resetSettings" type="button">Restore defaults</button></div>
-                  </fieldset>
-                </section>
-
-                <section class="settings-page" id="settings-page-shortcuts" role="tabpanel" aria-labelledby="settings-tab-shortcuts" data-settings-page="shortcuts" hidden>
-                  <div class="settings-page-head"><h3>Keyboard shortcuts</h3><p>Small shortcuts that make everyday use faster.</p></div>
-                  <div class="settings-shortcut-list">
-                    <div class="settings-shortcut"><span>Open settings</span><kbd><span>Ctrl</span><span>,</span> / <span>⌘</span><span>,</span></kbd></div>
-                    <div class="settings-shortcut"><span>Start a new chat</span><kbd><span>Ctrl</span><span>K</span> / <span>⌘</span><span>K</span></kbd></div>
-                    <div class="settings-shortcut"><span>Focus the message box</span><kbd><span>/</span></kbd></div>
-                    <div class="settings-shortcut"><span>Send message (default)</span><kbd><span>Enter</span></kbd></div>
-                    <div class="settings-shortcut"><span>Insert a line break</span><kbd><span>Shift</span><span>Enter</span></kbd></div>
-                    <div class="settings-shortcut"><span>Close this window</span><kbd><span>Esc</span></kbd></div>
-                  </div>
-                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">⌘</span><span>The send shortcut follows your choice in the AI &amp; chat tab. On systems with a Command key, ⌘ is the macOS equivalent of Ctrl.</span></div>
-                </section>
-              </div>
-            </div>
-            <footer class="settings-footer"><span><strong>MahiCloud settings</strong> · Changes save automatically.</span><span>AI routing remains automatic.</span></footer>
-          </section>
-        </div>
       </section>
       <section class="sidebar-social" aria-label="Social and contact links">
         <div class="sidebar-social-title">Social &amp; contact</div>
@@ -364,5 +258,111 @@
       </footer>
     </section>
   </div>
+  <div class="settings-panel" id="settingsPanel" hidden>
+          <div class="settings-scrim" data-settings-close aria-hidden="true"></div>
+          <section class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" tabindex="-1">
+            <header class="settings-header">
+              <div class="settings-heading">
+                <div class="settings-kicker">MAHICLOUD · YOUR WORKSPACE</div>
+                <h2 id="settingsTitle">Settings</h2>
+                <p>Make the workspace feel right for you.</p>
+              </div>
+              <span class="settings-save-state" id="settingsSaveState" role="status" aria-live="polite">Saved on this device</span>
+              <button class="settings-close" id="closeSettings" type="button" data-settings-close aria-label="Close settings" title="Close settings">×</button>
+            </header>
+            <div class="settings-layout">
+              <nav class="settings-tabs" role="tablist" aria-label="Settings categories" aria-orientation="vertical">
+                <button class="settings-tab" id="settings-tab-general" type="button" role="tab" data-settings-tab="general" aria-controls="settings-page-general" aria-selected="true"><span class="settings-tab-icon" aria-hidden="true">⌂</span>General</button>
+                <button class="settings-tab" id="settings-tab-appearance" type="button" role="tab" data-settings-tab="appearance" aria-controls="settings-page-appearance" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">◐</span>Appearance</button>
+                <button class="settings-tab" id="settings-tab-conversation" type="button" role="tab" data-settings-tab="conversation" aria-controls="settings-page-conversation" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">✳</span>AI &amp; chat</button>
+                <button class="settings-tab" id="settings-tab-accessibility" type="button" role="tab" data-settings-tab="accessibility" aria-controls="settings-page-accessibility" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">◎</span>Accessibility</button>
+                <button class="settings-tab" id="settings-tab-data" type="button" role="tab" data-settings-tab="data" aria-controls="settings-page-data" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">⌁</span>Data &amp; privacy</button>
+                <button class="settings-tab" id="settings-tab-shortcuts" type="button" role="tab" data-settings-tab="shortcuts" aria-controls="settings-page-shortcuts" aria-selected="false"><span class="settings-tab-icon" aria-hidden="true">⌘</span>Shortcuts</button>
+              </nav>
+              <div class="settings-pages">
+                <section class="settings-page" id="settings-page-general" role="tabpanel" aria-labelledby="settings-tab-general" data-settings-page="general">
+                  <div class="settings-page-head"><h3>Your workspace</h3><p>Personalize how MahiCloud looks and how it addresses you. Preferences are saved in this browser.</p></div>
+                  <fieldset class="settings-group">
+                    <legend class="settings-group-title">Profile</legend>
+                    <form class="name-setting-form" id="displayNameForm">
+                      <label class="settings-field-title" for="displayNameInput">Display name</label>
+                      <div class="name-setting-control settings-name-control"><input id="displayNameInput" type="text" maxlength="32" autocomplete="nickname" placeholder="e.g. Mahi"><button type="submit" class="settings-action primary">Save name</button></div>
+                      <p class="setting-status" id="nameSaveStatus" role="status">Stored in this browser only.</p>
+                    </form>
+                  </fieldset>
+                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">✦</span><span><strong>Automatic AI routing stays on.</strong> MahiCloud chooses a suitable available provider and model for each request. These settings adjust response style, not the routing system.</span></div>
+                </section>
+
+                <section class="settings-page" id="settings-page-appearance" role="tabpanel" aria-labelledby="settings-tab-appearance" data-settings-page="appearance" hidden>
+                  <div class="settings-page-head"><h3>Appearance</h3><p>Fine-tune color, reading comfort and the conversation layout. Changes apply immediately.</p></div>
+                  <fieldset class="settings-group">
+                    <legend class="settings-group-title">Workspace</legend>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Theme</span><span class="settings-field-help">Follow your device or choose a fixed theme.</span></span><select class="settings-control" data-pref="theme"><option value="system">System default</option><option value="dark">Dark</option><option value="light">Light</option></select></label>
+                    <div class="settings-field"><div class="settings-field-copy"><span class="settings-field-title">Accent color</span><span class="settings-field-help">Choose the highlight color for buttons and focus states.</span></div><div class="settings-choice-list" role="group" aria-label="Accent color"><button type="button" class="settings-choice" data-setting-choice="accent" data-value="terracotta" aria-pressed="true"><span class="settings-swatch" style="--swatch:#d97757"></span>Clay</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="violet" aria-pressed="false"><span class="settings-swatch" style="--swatch:#a896ff"></span>Violet</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="blue" aria-pressed="false"><span class="settings-swatch" style="--swatch:#6aa9ff"></span>Blue</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="green" aria-pressed="false"><span class="settings-swatch" style="--swatch:#57c99a"></span>Green</button><button type="button" class="settings-choice" data-setting-choice="accent" data-value="rose" aria-pressed="false"><span class="settings-swatch" style="--swatch:#f17ca2"></span>Rose</button></div></div>
+                  </fieldset>
+                  <fieldset class="settings-group">
+                    <legend class="settings-group-title">Reading</legend>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Text size</span><span class="settings-field-help">Set a comfortable size for conversation content.</span></span><select class="settings-control" data-pref="textSize"><option value="small">Small</option><option value="standard">Standard</option><option value="large">Large</option></select></label>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Response typeface</span><span class="settings-field-help">Choose a softer reading face or a clean sans-serif.</span></span><select class="settings-control" data-pref="font"><option value="serif">Serif · editorial</option><option value="sans">Sans-serif · clean</option></select></label>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Conversation width</span><span class="settings-field-help">Widen long answers and code explanations.</span></span><select class="settings-control" data-pref="contentWidth"><option value="standard">Standard</option><option value="wide">Wide</option></select></label>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Message spacing</span><span class="settings-field-help">Compact fits more on screen; comfortable adds breathing room.</span></span><select class="settings-control" data-pref="density"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label>
+                  </fieldset>
+                </section>
+
+                <section class="settings-page" id="settings-page-conversation" role="tabpanel" aria-labelledby="settings-tab-conversation" data-settings-page="conversation" hidden>
+                  <div class="settings-page-head"><h3>AI &amp; chat</h3><p>Set your default response preferences. MahiCloud follows your request if you explicitly ask for a different style or language.</p></div>
+                  <fieldset class="settings-group">
+                    <legend class="settings-group-title">Default answer</legend>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Response language</span><span class="settings-field-help">Automatic follows your message; choose Bengali or English to set a default.</span></span><select class="settings-control" data-pref="language"><option value="auto">Automatic · follow my message</option><option value="bn">Bengali · বাংলা</option><option value="en">English</option></select></label>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Answer length</span><span class="settings-field-help">A default preference, not a hard limit.</span></span><select class="settings-control" data-pref="responseLength"><option value="concise">Concise</option><option value="balanced">Balanced</option><option value="detailed">Detailed</option></select></label>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Tone</span><span class="settings-field-help">Choose how the assistant usually communicates.</span></span><select class="settings-control" data-pref="tone"><option value="neutral">Neutral</option><option value="friendly">Friendly</option><option value="professional">Professional</option><option value="creative">Creative</option></select></label>
+                    <label class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Formatting</span><span class="settings-field-help">Use Markdown for readable structure or plain text when preferred.</span></span><select class="settings-control" data-pref="format"><option value="auto">Automatic</option><option value="markdown">Prefer Markdown</option><option value="plain">Prefer plain text</option></select></label>
+                  </fieldset>
+                  <fieldset class="settings-group">
+                    <legend class="settings-group-title">Composer &amp; behaviour</legend>
+                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Enter sends the message</span><span class="settings-field-help">When off, use Ctrl/⌘ + Enter to send. Shift + Enter keeps a new line.</span></span><span class="settings-switch"><input type="checkbox" data-pref="sendOnEnter" aria-label="Enter sends the message"><span class="settings-switch-track"></span></span></label>
+                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Automatically follow new output</span><span class="settings-field-help">Turn off to read earlier content without the view jumping down.</span></span><span class="settings-switch"><input type="checkbox" data-pref="autoScroll" aria-label="Automatically follow new output"><span class="settings-switch-track"></span></span></label>
+                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Show character counter</span><span class="settings-field-help">Display the message length beside the send controls.</span></span><span class="settings-switch"><input type="checkbox" data-pref="showCharCount" aria-label="Show character counter"><span class="settings-switch-track"></span></span></label>
+                  </fieldset>
+                </section>
+
+                <section class="settings-page" id="settings-page-accessibility" role="tabpanel" aria-labelledby="settings-tab-accessibility" data-settings-page="accessibility" hidden>
+                  <div class="settings-page-head"><h3>Accessibility</h3><p>Reduce motion and strengthen visual contrast to make the interface easier to use.</p></div>
+                  <fieldset class="settings-group">
+                    <legend class="settings-group-title">Comfort &amp; clarity</legend>
+                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Reduce animations</span><span class="settings-field-help">Minimize interface transitions and animated effects.</span></span><span class="settings-switch"><input type="checkbox" data-pref="reduceMotion" aria-label="Reduce animations"><span class="settings-switch-track"></span></span></label>
+                    <label class="settings-toggle-row"><span class="settings-toggle-copy"><span class="settings-field-title">Higher contrast</span><span class="settings-field-help">Increase separation between text, borders and controls.</span></span><span class="settings-switch"><input type="checkbox" data-pref="highContrast" aria-label="Higher contrast"><span class="settings-switch-track"></span></span></label>
+                  </fieldset>
+                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">ⓘ</span><span><strong>Keyboard-friendly by design.</strong> Settings tabs support arrow keys, the dialog traps focus while open, and Escape closes this window.</span></div>
+                </section>
+
+                <section class="settings-page" id="settings-page-data" role="tabpanel" aria-labelledby="settings-tab-data" data-settings-page="data" hidden>
+                  <div class="settings-page-head"><h3>Data &amp; privacy</h3><p>Manage the preferences stored by this browser. Export a copy to move your setup to another device.</p></div>
+                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">◈</span><span><strong>Local preferences.</strong> Appearance, accessibility and default response preferences are stored in this browser. Response preferences are included with chat requests. Exporting settings does not include your conversations, account credentials or API keys.</span></div>
+                  <div class="settings-action-row"><button class="settings-action primary" id="exportSettings" type="button">↓ Export settings</button><button class="settings-action" id="importSettings" type="button">↑ Import settings</button><input id="settingsImportFile" type="file" accept="application/json,.json" hidden></div>
+                  <p class="settings-status" id="settingsStatus" role="status" aria-live="polite">Your chat history is managed separately. These actions do not delete conversations or your account.</p>
+                  <fieldset class="settings-group" style="margin-top:25px">
+                    <legend class="settings-group-title">Reset</legend>
+                    <div class="settings-field"><span class="settings-field-copy"><span class="settings-field-title">Restore defaults</span><span class="settings-field-help">Reset preferences and your display name on this device. Chats and account data remain unchanged.</span></span><button class="settings-action danger" id="resetSettings" type="button">Restore defaults</button></div>
+                  </fieldset>
+                </section>
+
+                <section class="settings-page" id="settings-page-shortcuts" role="tabpanel" aria-labelledby="settings-tab-shortcuts" data-settings-page="shortcuts" hidden>
+                  <div class="settings-page-head"><h3>Keyboard shortcuts</h3><p>Small shortcuts that make everyday use faster.</p></div>
+                  <div class="settings-shortcut-list">
+                    <div class="settings-shortcut"><span>Open settings</span><kbd><span>Ctrl</span><span>,</span> / <span>⌘</span><span>,</span></kbd></div>
+                    <div class="settings-shortcut"><span>Start a new chat</span><kbd><span>Ctrl</span><span>K</span> / <span>⌘</span><span>K</span></kbd></div>
+                    <div class="settings-shortcut"><span>Focus the message box</span><kbd><span>/</span></kbd></div>
+                    <div class="settings-shortcut"><span>Send message (default)</span><kbd><span>Enter</span></kbd></div>
+                    <div class="settings-shortcut"><span>Insert a line break</span><kbd><span>Shift</span><span>Enter</span></kbd></div>
+                    <div class="settings-shortcut"><span>Close this window</span><kbd><span>Esc</span></kbd></div>
+                  </div>
+                  <div class="settings-note"><span class="settings-note-icon" aria-hidden="true">⌘</span><span>The send shortcut follows your choice in the AI &amp; chat tab. On systems with a Command key, ⌘ is the macOS equivalent of Ctrl.</span></div>
+                </section>
+              </div>
+            </div>
+            <footer class="settings-footer"><span><strong>MahiCloud settings</strong> · Changes save automatically.</span><span>AI routing remains automatic.</span></footer>
+          </section>
+        </div>
 </body>
 </html>
