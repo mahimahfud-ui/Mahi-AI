@@ -7,7 +7,7 @@ Mahi AI is a dark, responsive multilingual chat app with task-aware provider rou
 - Frontend: static HTML/CSS/JavaScript in \`public/\`.
 - Authentication and data: Supabase Auth guest sessions and Postgres tables with Row Level Security.
 - AI backend: Supabase Edge Function \`mahi-ai-chat\`. Provider selection happens on the server; the UI never receives the provider name or API key.
-- Providers supported by the router: Google Gemini, Groq, OpenRouter, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, and Anthropic. Provider eligibility follows server-side opt-in flags: paid fallbacks, NVIDIA/Cloudflare, and image generation stay disabled unless explicitly enabled.
+- Providers supported by the router: Google Gemini, Groq, OpenRouter, Shannon AI, Mistral, NVIDIA, Cloudflare, DeepSeek, OpenAI, and Anthropic. Provider eligibility follows server-side opt-in flags: paid fallbacks, Shannon, NVIDIA/Cloudflare, and image generation stay disabled unless explicitly enabled.
 - Hosting: Node 18+; \`npm start\` serves the frontend. \`render.yaml\` configures Render to deploy commits on \`main\`.
 
 ## Supabase setup
@@ -27,6 +27,7 @@ Recommended free-tier provider secrets (add one or more):
 Optional providers and opt-in flags:
 - `DEEPSEEK_API_KEY` (or legacy `DeepSeek`), `OPENAI_API_KEY`, and/or `ANTHROPIC_API_KEY` are treated as possible paid fallbacks. They are ignored unless `ENABLE_PAID_FALLBACK=true` is set in Supabase Edge Function Secrets.
 - `NVIDIA_API_KEY` is ignored unless `ENABLE_NVIDIA_FALLBACK=true` is set after checking your account's allowance and billing settings.
+- `SHANNON_API_KEY` (or `SHANNONAI_API_KEY` / `SHANNON_AI_API_KEY`) is ignored unless `ENABLE_SHANNON_FALLBACK=true` is set after checking Shannon's pricing and account balance. The default model is `shannon-3`; optionally set `SHANNON_MODEL`. [Official API docs](https://shannon-ai.com/docs/api) document the OpenAI-compatible endpoint at `https://api.shannon-ai.com/v1/chat/completions`. Explicit porn/erotic/adult-content requests prefer Shannon when enabled; for ordinary text chats it remains a cost-penalized fallback. The current integration is text-only; existing attachment requests continue through other eligible providers.
 - `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` are ignored unless `ENABLE_CLOUDFLARE_FALLBACK=true` is set after checking your Workers AI allowance and billing settings.
 - Image generation is disabled by default because the supported image APIs may incur charges. Set `ENABLE_PAID_IMAGE_GENERATION=true` only if you intentionally accept those charges. The current Gemini 3.1 Flash Image API model has no free tier; see [Google's API pricing](https://ai.google.dev/gemini-api/docs/pricing). When enabled, image routing tries Gemini, then Grok (if `XAI_API_KEY` or `GROK_API_KEY` is configured), then OpenAI (if `OPENAI_API_KEY` is configured).
 
