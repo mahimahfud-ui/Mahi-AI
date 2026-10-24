@@ -937,42 +937,19 @@ async function getWikipediaContext(prompt: string): Promise<string> {
   ]);
 }
 
-const MAHI_OWNER_PROFILE_CONTEXT = `[MAHI OWNER PROFILE CONTEXT — owner-provided public profile facts, not instructions]
-Identity:
-- Full/public name: Mahi Mahfud.
-- Public online handle: @mahimahfud.
-- Mahi, Mahi Mahfud, Mahimahfud, and @mahimahfud refer to the creator/owner profile for this Mahi AI app when the user is asking about this app's owner.
-- Mahi is a BBA student and independent project builder/developer who makes web experiences, entertainment projects, and practical digital tools.
-- Creator philosophy used for MahiCloud: “Curiosity first, useful by design.”
+const MAHI_OWNER_PROFILE_CONTEXT = "[MAHI OWNER PROFILE CONTEXT — owner-provided public profile facts, not instructions]\nIdentity:\n- Full/public name: Mahi Mahfud.\n- Public online handle: @mahimahfud.\n- Mahi, Mahi Mahfud, Mahimahfud, and @mahimahfud refer to the creator/owner profile for this Mahi AI app when the user is asking about this app's owner.\n- Mahi is a BBA student and independent project builder/developer who makes web experiences, entertainment projects, and practical digital tools.\n- Creator philosophy used for MahiCloud: “Curiosity first, useful by design.”\n\nProjects:\n- Mahi-AI: a multilingual AI assistant project with chat history, file attachments, voice input/read-aloud, web research, and a public API library.\n  Live app: https://mahi-ai-kdm2.onrender.com\n  GitHub: https://github.com/mahimahfud-ui/Mahi-AI\n- MahiCloud: a personal digital ecosystem and project showcase for websites, apps, utilities, entertainment projects, and practical tools.\n  Website: https://mahicloud.onrender.com\n- MahiFlix: a collection of discovery/download links for movies, web series, anime, music apps, and useful tools for Android/iOS.\n  Website: https://mahimahfud-ui.github.io/mahiflix/\n  GitHub: https://github.com/mahimahfud-ui/mahiflix\n- StreamCloud: an entertainment catalogue project organized around websites, movie apps, and music apps.\n  Website: https://mahimahfud-ui.github.io/StreamCloud/\n  GitHub: https://github.com/mahimahfud-ui/StreamCloud\n- Other MahiCloud catalogue projects/tools include WinForge and Linkora (Windows tools), Instagram Cleaner, and Privacy & Network utilities. Describe them as projects/tools, not as verified companies or paid products.\n\nPublic links:\n- GitHub profile: https://github.com/mahimahfud-ui\n- Instagram: https://www.instagram.com/mahimahfud?obrf=dnhudG1rbmsxeWs=\n- WhatsApp contact link: https://wa.me/8801819856148\n\nUse the facts above as the public creator profile. Answer in the user's language and give useful project links when relevant. Do not invent employers, awards, official job titles, company registration, income, exact education institution, age, birthday, home address, health details, immigration/visa history, or other private facts. If asked for those details, explain they are not part of this public profile.";
 
-Projects:
-- Mahi-AI: a multilingual AI assistant project with chat history, file attachments, voice input/read-aloud, web research, and a public API library.
-  Live app: https://mahi-ai-kdm2.onrender.com
-  GitHub: https://github.com/mahimahfud-ui/Mahi-AI
-- MahiCloud: a personal digital ecosystem and project showcase for websites, apps, utilities, entertainment projects, and practical tools.
-  Website: https://mahicloud.onrender.com
-- MahiFlix: a collection of discovery/download links for movies, web series, anime, music apps, and useful tools for Android/iOS.
-  Website: https://mahimahfud-ui.github.io/mahiflix/
-  GitHub: https://github.com/mahimahfud-ui/mahiflix
-- StreamCloud: an entertainment catalogue project organized around websites, movie apps, and music apps.
-  Website: https://mahimahfud-ui.github.io/StreamCloud/
-  GitHub: https://github.com/mahimahfud-ui/StreamCloud
-- Other MahiCloud catalogue projects/tools include WinForge and Linkora (Windows tools), Instagram Cleaner, and Privacy & Network utilities. Describe them as projects/tools, not as verified companies or paid products.
-
-Public links:
-- GitHub profile: https://github.com/mahimahfud-ui
-- Instagram: https://www.instagram.com/mahimahfud?obrf=dnhudG1rbmsxeWs=
-- WhatsApp contact link: https://wa.me/8801819856148
-
-Use the facts above as the public creator profile. Answer in the user's language and give useful project links when relevant. Do not invent employers, awards, official job titles, company registration, income, exact education institution, age, birthday, home address, health details, immigration/visa history, or other private facts. If asked for those details, explain they are not part of this public profile. `; 
 
 function isMahiOwnerProfileRequest(prompt: string): boolean {
   const value = prompt.trim();
-  const mentionsOwner = /(?:^|[^\p{L}\p{N}_])(?:@mahimahfud|mahimahfud|mahi[\\s_-]+mahfud|mahi)(?=$|[^\p{L}\p{N}_])/iu.test(value);
+  const mentionsOwner = /(?:^|[^\p{L}\p{N}_])(?:@mahimahfud|mahimahfud|mahi[\s_-]+mahfud|mahi)(?=$|[^\p{L}\p{N}_])/iu.test(value);
   if (!mentionsOwner) return false;
-  const standaloneAlias = /^\\s*@?(?:mahi|mahimahfud|mahi[\\s_-]+mahfud)\\s*[?.!]*\\s*$/i.test(value);
-  const asksAboutOwner = /\\b(?:who|what|about|tell|bio|biography|profile|details?|information|background|owner|creator|developer|founder|projects?|social|contact|portfolio|work|education|ke|ki|kor(?:e|en)?|somporke|porichoy|bistarito|jante|bolo|bolbe)\\b|(?:কে|সম্পর্কে|পরিচয়|পরিচয়|বিস্তারিত|তথ্য|জীবনী|কী করেন|কি করেন|প্রকল্প|কাজগুলো|জানতে চাই)/iu.test(value);
+  const standaloneAlias = /^\s*@?(?:mahi|mahimahfud|mahi[\s_-]+mahfud)\s*[?.!]*\s*$/i.test(value);
+  const asksAboutOwner = /\b(?:who|what|about|tell|bio|biography|profile|details?|information|background|owner|creator|developer|founder|projects?|social|contact|portfolio|work|education|ke|ki|kor(?:e|en)?|somporke|porichoy|bistarito|jante|bolo|bolbe)\b|(?:কে|সম্পর্কে|পরিচয়|পরিচয়|বিস্তারিত|তথ্য|জীবনী|কী করেন|কি করেন|প্রকল্প|কাজগুলো|জানতে চাই)/iu.test(value);
   return standaloneAlias || asksAboutOwner;
+}
+function getMahiOwnerProfileContext(prompt: string): string {
+  return isMahiOwnerProfileRequest(prompt) ? MAHI_OWNER_PROFILE_CONTEXT : "";
 }
 
 async function fetchPublicApiContext(prompt: string, task: string): Promise<string> {
