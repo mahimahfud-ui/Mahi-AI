@@ -298,9 +298,9 @@
       .trim();
   }
   function spokenLanguage(text) {
-    if (/[\\u0980-\\u09FF]/.test(text)) return "bn-BD";
-    if (/[\\u0900-\\u097F]/.test(text)) return "hi-IN";
-    if (/[\\u0600-\\u06FF]/.test(text)) return "ur-PK";
+    if (/[\u0980-\u09FF]/.test(text)) return "bn-BD";
+    if (/[\u0900-\u097F]/.test(text)) return "hi-IN";
+    if (/[\u0600-\u06FF]/.test(text)) return "ur-PK";
     return "en-US";
   }
   function speakText(value, inVoiceMode) {
