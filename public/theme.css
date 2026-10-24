@@ -1,18 +1,18 @@
-/* MahiCloud — modern chat theme (ChatGPT/Claude-style). Drop-in replacement for public/theme.css.
+/* MahiCloud — v2 Blue-Black theme. Drop-in replacement for public/theme.css.
    No JS/HTML changes needed. Uses CSS nesting + :root:root so it wins over later-loaded files. */
 :root{color-scheme:dark;
  --ink-0:#06070c;--ink-1:#0a0c14;--ink-2:#0f121c;--ink-3:#151927;--ink-4:#1d2233;
  --line-1:rgba(190,198,240,.07);--line-2:rgba(190,198,240,.12);--line-3:rgba(190,198,240,.22);
  --text-1:#eef0fa;--text-2:#bcc2d6;--text-3:#9097b0;--text-4:#7b829a;
- --accent:#a896ff;--accent2:#6e8bff;--accent-hi:#ddd6ff;--accent-rgb:168,150,255;--accent2-rgb:110,139,255;
+ --accent:#4f8cff;--accent2:#38bdf8;--accent-hi:#cfe1ff;--accent-rgb:79,140,255;--accent2-rgb:56,189,248;
  --bg:var(--ink-0);--panel:var(--ink-1);--panel-2:var(--ink-2);--line:var(--line-2);--muted:var(--text-3);--text:var(--text-1);
  /* modern layer */
- --m-bg:#212121;--m-side:#171717;--m-comp:#2f2f2f;--m-bubble:#303030;--m-hover:rgba(255,255,255,.07);
- --m-text:#ececec;--m-mute:#a1a1a1;--m-line:rgba(255,255,255,.1);--m-code:#141414;--m-send:#ececec;--m-send-ic:#161616;
+ --m-bg:#060a14;--m-side:#03050b;--m-comp:#0c1322;--m-bubble:#0f1c3a;--m-hover:rgba(96,165,250,.1);
+ --m-text:#e8eefc;--m-mute:#8a97b5;--m-line:rgba(110,160,255,.15);--m-code:#040712;--m-send:#4f8cff;--m-send-ic:#fff;
  --m-font:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"DM Sans",sans-serif}
 html[data-theme="light"]{color-scheme:light;
- --m-bg:#fff;--m-side:#f9f9f9;--m-comp:#f4f4f4;--m-bubble:#f0f0f0;--m-hover:rgba(0,0,0,.06);
- --m-text:#1f1f1f;--m-mute:#6b6b6b;--m-line:rgba(0,0,0,.1);--m-code:#f6f6f7;--m-send:#1f1f1f;--m-send-ic:#fff}
+ --m-bg:#f7faff;--m-side:#eaf1ff;--m-comp:#ffffff;--m-bubble:#dbe8ff;--m-hover:rgba(37,99,235,.08);
+ --m-text:#0b1530;--m-mute:#5b6b8c;--m-line:rgba(37,99,235,.16);--m-code:#eef3ff;--m-send:#2563eb;--m-send-ic:#fff;--accent:#2563eb}
 
 /* ===== THEME ENGINE =====
    themes.js sets data-mytheme + 3 inputs (--c-bg, --c-text, --c-accent) on <html>.
@@ -125,8 +125,7 @@ html[data-theme="light"]{color-scheme:light;
  :root:root body{
   .sidebar{width:min(300px,86vw);background:var(--m-side)}
   .topbar{height:52px;padding:0 10px}
-  .secure-label,.temporary-chat-button span{display:none}
-  .header-tool-button{display:inline-grid;width:30px;height:30px}
+  .header-tool-button,.secure-label,.temporary-chat-button span{display:none}
   .temporary-chat-button{width:34px;padding:0;display:grid;place-items:center}
   .conversation-area{padding:14px 14px 8px}
   .welcome h1{font-size:28px}
@@ -157,3 +156,77 @@ html[data-theme="light"]{color-scheme:light;
 .theme-custom input[type=color]{width:100%;height:34px;padding:2px;border:1px solid var(--m-line);border-radius:9px;background:transparent;cursor:pointer}
 .theme-label{margin-top:10px;font-size:12px;color:var(--m-mute)}
 .theme-label b{color:var(--m-text);font-weight:600}
+
+/* =====================================================================
+   V2 · BLUE-BLACK LAYOUT   (structure is arranged by layout.js)
+   1 sidebar  2 brand + social icons  3 bottom bar (profile + settings icon)
+   4 top-right collapsible tool menu  5 chat surfaces  6 mobile
+   ===================================================================== */
+:root:root body{
+ /* 1 · sidebar */
+ .main-panel{background:radial-gradient(820px 420px at 62% -8%,color-mix(in srgb,var(--accent) 17%,transparent),transparent 65%),var(--m-bg)}
+ .sidebar{background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 8%,var(--m-side)),var(--m-side) 45%)}
+ .new-chat{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 70%,#000),var(--accent));border:0;color:#fff;box-shadow:0 8px 22px -8px var(--accent)}
+ .new-chat:hover{filter:brightness(1.1);background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 70%,#000),var(--accent))}
+ .new-chat kbd{color:rgba(255,255,255,.7)}
+ .chat-item.active{background:color-mix(in srgb,var(--accent) 14%,transparent);box-shadow:inset 2px 0 0 var(--accent)}
+
+ /* 2 · brand row: logo, name, then Instagram + WhatsApp as icons only */
+ .brand-row{display:flex;align-items:center;gap:10px}
+ .brand-logo{width:36px;height:36px;border-radius:12px;object-fit:cover;box-shadow:0 0 0 1px var(--m-line),0 0 18px color-mix(in srgb,var(--accent) 38%,transparent)}
+ .brand-copy strong{background:linear-gradient(100deg,var(--m-text) 30%,var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+ .brand-social{display:flex;align-items:center;gap:2px;margin-left:2px}
+ .brand-social .social-link{width:30px;height:30px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--m-mute);display:grid;place-items:center;transition:color .15s,background .15s,transform .15s}
+ .brand-social .social-link span{display:none}
+ .brand-social .social-icon{width:17px;height:17px}
+ .brand-social .social-link:hover{color:var(--accent);background:var(--m-hover);transform:translateY(-1px)}
+ .sidebar-social{display:none}
+
+ /* 3 · bottom bar: profile on the left, settings as a lone icon on the right, no status dot */
+ .sidebar-bottom{position:relative;margin-top:10px;padding-top:10px;border-top:1px solid var(--m-line)}
+ .profile-row{display:flex;align-items:center;gap:10px;padding:2px}
+ .avatar{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 45%,#000));color:#fff}
+ .online-dot{display:none!important}
+ .sidebar-settings{margin-left:auto;position:static}
+ .settings-trigger{width:36px;height:36px;padding:0;gap:0;border:0;border-radius:50%;background:transparent;color:var(--m-mute);display:grid;place-items:center}
+ .settings-trigger>span,.settings-chevron{display:none}
+ .settings-trigger svg{width:20px;height:20px;transition:transform .35s}
+ .settings-trigger:hover,.settings-trigger[aria-expanded="true"]{background:var(--m-hover);color:var(--accent)}
+ .settings-trigger[aria-expanded="true"] svg{transform:rotate(60deg)}
+ .settings-panel{position:absolute;left:0;right:0;bottom:calc(100% + 10px);max-height:min(70vh,560px);overflow:auto;padding:14px;background:var(--m-comp);border:1px solid var(--m-line);border-radius:18px;box-shadow:0 24px 60px rgba(0,0,0,.5);z-index:40}
+ .settings-panel[hidden]{display:none}
+
+ /* 4 · top-right: one menu icon that fades out while the 4 tools fade in */
+ .topbar{background:transparent}
+ .tool-menu{display:grid;align-items:center;justify-items:end}
+ .tool-menu>*{grid-area:1/1}
+ .tool-toggle{width:38px;height:38px;border-radius:50%;border:1px solid var(--m-line);background:var(--m-comp);color:var(--m-text);display:grid;place-items:center;transition:opacity .22s,transform .35s cubic-bezier(.3,.9,.3,1),background .15s,color .15s}
+ .tool-toggle svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+ .tool-toggle:hover{background:var(--m-hover);color:var(--accent)}
+ .tool-tray{display:flex;gap:2px;padding:3px;border-radius:999px;background:var(--m-comp);border:1px solid var(--m-line);box-shadow:0 10px 30px rgba(0,0,0,.35);opacity:0;visibility:hidden;pointer-events:none;transform:translateX(14px) scale(.92);transform-origin:right center;transition:opacity .25s,transform .35s cubic-bezier(.3,.9,.3,1),visibility 0s .35s}
+ .tool-tray>*{opacity:0;transform:translateY(-4px);transition:opacity .25s,transform .25s,background .15s,color .15s}
+ .tool-menu.open .tool-toggle{opacity:0;transform:rotate(90deg) scale(.6);pointer-events:none}
+ .tool-menu.open .tool-tray{opacity:1;visibility:visible;pointer-events:auto;transform:none;transition-delay:.05s,.05s,0s}
+ .tool-menu.open .tool-tray>*{opacity:1;transform:none}
+ .tool-menu.open .tool-tray>:nth-child(2){transition-delay:.05s}
+ .tool-menu.open .tool-tray>:nth-child(3){transition-delay:.1s}
+ .tool-menu.open .tool-tray>:nth-child(4){transition-delay:.15s}
+
+ /* 5 · chat surfaces in blue-black */
+ .message.user .message-content{background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 80%,#000),color-mix(in srgb,var(--accent) 45%,#000));color:#fff}
+ .message.assistant .message-avatar{background:color-mix(in srgb,var(--accent) 14%,var(--m-comp));border:1px solid var(--m-line);color:var(--accent)}
+ .suggestion-card{background:linear-gradient(160deg,color-mix(in srgb,var(--accent) 8%,var(--m-comp)),var(--m-comp));border-color:var(--m-line)}
+ .composer{background:color-mix(in srgb,var(--m-comp) 92%,transparent);backdrop-filter:blur(12px)}
+ .composer:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 12%,transparent),0 12px 40px rgba(0,0,0,.4)}
+ .send-button{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 55%,#000));color:#fff;box-shadow:0 4px 14px -4px var(--accent)}
+}
+
+/* 6 · mobile: all four tools stay reachable inside the menu */
+@media (max-width:760px){
+ :root:root body{
+  .header-tool-button,.temporary-chat-button{display:inline-grid}
+  .secure-label{display:none}
+  .tool-tray{transform-origin:right center}
+  .settings-panel{max-height:62vh}
+ }
+}

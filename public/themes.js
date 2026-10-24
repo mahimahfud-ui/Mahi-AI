@@ -29,7 +29,10 @@
   const save = (s) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (_) {} };
 
   /* ---------- 3. APPLY ---------- */
-  const lum = (hex) => { const n = parseInt(hex.slice(1), 16), f = (c) => { c /= 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; }; return .2126 * f(n >> 16 & 255) + .7152 * f(n >> 8 & 255) + .0722 * f(n & 255); };
+  const lum = (hex) => {
+    const n = parseInt(hex.slice(1), 16), f = (c) => { c /= 255; return c <= .03928 ? c / 12.92 : ((c + .055) / 1.055) ** 2.4; };
+    return .2126 * f(n >> 16 & 255) + .7152 * f(n >> 8 & 255) + .0722 * f(n & 255);
+  };
   let prevMode;
   const resolve = (s) => s.id === "custom" && s.custom ? { ...s.custom, name: "Custom", mode: lum(s.custom.bg) > .4 ? "light" : "dark" } : THEMES.find((t) => t.id === s.id);
 
@@ -69,7 +72,7 @@
       b.style.setProperty("--sw-bg", bg); b.style.setProperty("--sw-ac", ac);
       b.onclick = () => choose(id); swatches.push([id, b]); grid.append(b);
     };
-    mk("", "Default", "#212121", "#a896ff");
+    mk("", "Blue Black", "#060a14", "#4f8cff");
     THEMES.forEach((t) => mk(t.id, t.name, t.bg, t.accent));
 
     const custom = el("div", "theme-custom"), inputs = {};
@@ -83,13 +86,14 @@
       const cur = state.id || "";
       swatches.forEach(([id, b]) => b.setAttribute("aria-pressed", String(id === cur)));
       const t = cur ? resolve(state) : null;
-      name.replaceChildren("Active: ", Object.assign(el("b"), { textContent: t ? t.name : "Default" }));
+      name.replaceChildren("Active: ", Object.assign(el("b"), { textContent: t ? t.name : "Blue Black" }));
       if (t) { inputs.bg.value = t.bg; inputs.text.value = t.text; inputs.accent.value = t.accent; }
     }
     function choose(id) { state = id ? { id } : {}; apply(state); save(state); mark(); }
 
     box.append(grid, name, custom);
     panel.append(box);
+    mark();
   }
 
   /* ---------- 5. BOOT ---------- */
