@@ -90,6 +90,17 @@ Image intents recognize English, Bangla and Banglish requests (for example `bong
 The assistant uses an accuracy-first instruction and, when another eligible non-paid provider is available, a second-pass reviewer. The reviewer tries alternate providers after request errors and applies a correction only when it returns a valid structured decision; timeout or invalid output retains the original draft. The router can request Gemini's built-in Google Search grounding, URL Context, and sandboxed code execution for eligible prompts when the selected model/account supports those tools; web-research tasks can also use OpenRouter's server-side web search and fetch tools as a fallback. Other providers do not automatically inherit every tool, so a fallback answer must not claim live verification or code execution unless retrieval/execution actually occurred. These features depend on model availability, quota, and applicable usage charges and do not guarantee error-free output.
 
 
+## Automatic public API tools
+
+Mahi AI can enrich eligible requests with server-side public API data without asking the user to connect an account or paste an API key. The built-in adapters cover:
+- Open-Meteo geocoding and current/forecast weather (only when a location is stated in the prompt; no browser geolocation is used).
+- ExchangeRate-API public currency rates for supported pairs; rates refresh daily and are not trading quotes.
+- Nager.Date public-holiday calendars for supported countries.
+- Open Library book search and Wikipedia search excerpts for relevant reference questions.
+- API Atlas catalogue lookup for discovering public APIs, filtered to entries marked as requiring no authentication.
+
+Only fixed HTTPS hosts in the server-side allowlist are callable. The catalogue is used for discovery, not to execute arbitrary third-party endpoints. A directory entry is not proof that an API is healthy, free, suitable, or permissionless; verify provider documentation, pricing, terms, and rate limits before relying on it. Results are cached briefly in the Edge Function isolate and passed to the model as untrusted reference data with source links. If a public endpoint is slow, unavailable, unsupported, or does not match the request, Mahi AI falls back to its existing response/research path. These integrations do not guarantee error-free or always-current answers.
+
 ## Live web research
 
 Mahi AI detects current/latest/news/price queries, explicit online research, source links, references, resources, and common Bangla/Banglish equivalents. With no inline media attachment, Gemini is preferred for native Google Search grounding; public HTTPS URLs additionally enable Gemini URL Context. Retrieved URL-context metadata and grounding metadata are collected into a **Sources** list where the provider returns them.
