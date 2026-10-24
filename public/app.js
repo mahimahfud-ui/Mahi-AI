@@ -11,6 +11,7 @@
   };
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
+  let activeRequestController = null;
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
   const MAX_HISTORY = 24;
   // Use the visible viewport height so mobile browser chrome and virtual keyboards
@@ -44,13 +45,23 @@
   }
   function setBusy(value) {
     busy = value;
-    ui.send.disabled = value || (!ui.input.value.trim() && !pendingFiles.length);
+    const canStop = value && !!activeRequestController;
+    ui.send.disabled = value ? !canStop : (!ui.input.value.trim() && !pendingFiles.length);
+    ui.send.setAttribute("aria-label", canStop ? "Stop generation" : "Send message");
+    ui.send.title = canStop ? "Stop generation" : "Send message";
     ui.input.disabled = value;
     ui.attachButton.disabled = value;
     ui.fileInput.disabled = value;
-    ui.send.innerHTML = value
-      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h8v8H8z"/></svg>'
+    ui.send.innerHTML = canStop
+      ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg>'
       : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>';
+  }
+  function throwIfAborted(signal) {
+    if (signal && signal.aborted) {
+      const error = new Error("Request cancelled");
+      error.name = "AbortError";
+      throw error;
+    }
   }
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (c) => ({
@@ -77,18 +88,18 @@
     } else {
       if (!/<!doctype\s+html/i.test(doc)) doc = "<!doctype html>\n" + doc;
       if (!/<head\b/i.test(doc)) {
-        doc = doc.replace(/<html\b[^>]*>/i, '  function addMessage(role, content, options) {<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
+        doc = doc.replace(/<html\b[^>]*>/i, (htmlTag) => htmlTag + '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
       } else {
-        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {<meta charset="utf-8">');
-        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {<meta name="viewport" content="width=device-width, initial-scale=1">');
+        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + '<meta charset="utf-8">');
+        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + '<meta name="viewport" content="width=device-width, initial-scale=1">');
       }
     }
     const styles = (cssBlocks || []).filter(Boolean);
     if (styles.length) {
       const styleText = '<style>\n' + styles.join('\n\n').replace(/<\/style/gi, '<\\/style') + '\n</style>';
       if (/<\/head>/i.test(doc)) doc = doc.replace(/<\/head>/i, styleText + '</head>');
-      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '  function addMessage(role, content, options) {' + styleText);
-      else doc = doc.replace(/<html\b[^>]*>/i, '  function addMessage(role, content, options) {<head>' + styleText + '</head>');
+      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + styleText);
+      else doc = doc.replace(/<html\b[^>]*>/i, (htmlTag) => htmlTag + '<head>' + styleText + '</head>');
     }
     const scripts = (jsBlocks || []).filter(Boolean);
     if (scripts.length) {
@@ -311,8 +322,19 @@
       const script = document.createElement("script");
       script.src = url;
       script.async = true;
-      script.onload = () => window[globalName] ? resolve(window[globalName]) : reject(new Error("Document parser failed to load."));
-      script.onerror = () => reject(new Error("Could not load the document parser. Try a PDF or plain-text export instead."));
+      script.onload = () => {
+        if (window[globalName]) resolve(window[globalName]);
+        else {
+          delete scriptPromises[url];
+          script.remove();
+          reject(new Error("Document parser failed to load."));
+        }
+      };
+      script.onerror = () => {
+        delete scriptPromises[url];
+        script.remove();
+        reject(new Error("Could not load the document parser. Try a PDF or plain-text export instead."));
+      };
       document.head.appendChild(script);
     });
     return scriptPromises[url];
@@ -386,19 +408,21 @@
     return "";
   }
 
-  async function uploadPendingAttachments(files) {
+  async function uploadPendingAttachments(files, signal) {
     const uploaded = [];
     let totalExtracted = 0;
     try {
       for (const file of files) {
+        throwIfAborted(signal);
         let extractedText = "";
         try {
           extractedText = await extractDocumentText(file);
         } catch (error) {
           // Any file type remains attachable even when its optional text extractor is unavailable.
-          console.warn("Mahi AI could not extract document text:", file.name, error);
+          // Extraction is best-effort; the original file can still be uploaded.
           extractedText = "";
         }
+        throwIfAborted(signal);
         if (extractedText) {
           const remaining = Math.max(0, 30000 - totalExtracted);
           extractedText = extractedText.slice(0, remaining);
@@ -414,6 +438,7 @@
           path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream",
           size: file.size, extracted_text: extractedText
         });
+        throwIfAborted(signal);
       }
       return uploaded;
     } catch (error) {
@@ -472,7 +497,10 @@
     }
     const result = await client.auth.signInAnonymously();
     if (result.error) throw result.error;
-    session = result.data.session;
+    session = result.data?.session || null;
+    if (!session || !session.access_token || !session.user?.id) {
+      throw new Error("Guest sign-in did not return a valid session.");
+    }
     return session;
   }
   async function refreshConversations() {
@@ -558,15 +586,25 @@
     closeMobileSidebar();
   }
   async function sendMessage(text) {
-    if (busy || (!text.trim() && !pendingFiles.length)) return;
-    if (!session) {
-      try { await ensureSession(); } catch (error) { setError(plainError(error)); return; }
-    }
-    setError("");
+    const draft = String(text || "").trim();
+    if (busy || (!draft && !pendingFiles.length)) return;
     const selectedFiles = pendingFiles.slice();
-    const userText = text.trim() || (selectedFiles.length === 1
+    const userText = draft || (selectedFiles.length === 1
       ? "Please analyze the attached file."
       : "Please analyze the attached files.");
+    activeRequestController = new AbortController();
+    setBusy(true);
+    try {
+      // Always re-check auth before a send. This recovers from expired tokens and
+      // Supabase auth changes propagated from another tab.
+      await ensureSession();
+    } catch (error) {
+      setError(plainError(error));
+      activeRequestController = null;
+      setBusy(false);
+      return;
+    }
+    setError("");
     ui.input.value = "";
     ui.input.style.height = "auto";
     updateCounter();
@@ -574,10 +612,10 @@
     currentMessages.push({ role: "user", content: userText });
     addMessage("user", userText, { files: selectedFiles });
     const typing = addMessage("assistant", "", { typing: true });
-    setBusy(true);
     let uploadedAttachments = [];
     try {
-      uploadedAttachments = await uploadPendingAttachments(selectedFiles);
+      uploadedAttachments = await uploadPendingAttachments(selectedFiles, activeRequestController.signal);
+      throwIfAborted(activeRequestController.signal);
       const { data: authData, error: authError } = await client.auth.getSession();
       if (authError) throw authError;
       const accessToken = authData?.session?.access_token;
@@ -589,6 +627,7 @@
           "apikey": cfg.supabasePublishableKey,
           "Authorization": "Bearer " + accessToken
         },
+        signal: activeRequestController.signal,
         body: JSON.stringify({
           conversation_id: conversationId,
           messages: currentMessages.slice(-MAX_HISTORY).map((m) => ({ role: m.role, content: m.content })),
@@ -662,15 +701,24 @@
       pendingFiles = [];
       renderAttachmentList();
       updateCounter();
-      await refreshConversations();
+      try {
+        await refreshConversations();
+      } catch (_) {
+        // The answer has already arrived and was saved. A sidebar refresh failure
+        // must not erase that successful response or duplicate the user's draft.
+        setError("Your reply was received, but chat history could not refresh. Use Refresh chats to try again.");
+      }
     } catch (error) {
       typing.remove();
       currentMessages.pop();
       if (uploadedAttachments.length) {
         try { await client.storage.from("mahi-ai-attachments").remove(uploadedAttachments.map((item) => item.path)); } catch (_) {}
       }
-      setError(error instanceof Error && error.message.startsWith("Mahi AI: ")
-        ? error.message.slice(9) : plainError(error));
+      const cancelled = !!activeRequestController?.signal.aborted || error?.name === "AbortError";
+      setError(cancelled
+        ? "Generation stopped. Your message and attachments are ready to retry."
+        : (error instanceof Error && error.message.startsWith("Mahi AI: ")
+          ? error.message.slice(9) : plainError(error)));
       // Keep the draft and selected files available so the user can retry.
       ui.input.value = userText;
       updateCounter();
@@ -683,6 +731,7 @@
         currentMessages.forEach((m, index) => addMessage(m.role, m.content, { userPrompt: m.role === "assistant" ? [...currentMessages.slice(0, index)].reverse().find((item) => item.role === "user")?.content || "" : "" }));
       }
     } finally {
+      activeRequestController = null;
       setBusy(false);
       ui.input.disabled = false;
       ui.input.focus();
@@ -933,7 +982,7 @@
 
   function updateCounter() {
     ui.charCount.textContent = ui.input.value.length + " / 12000";
-    ui.send.disabled = busy || (!ui.input.value.trim() && !pendingFiles.length);
+    ui.send.disabled = busy ? !activeRequestController : (!ui.input.value.trim() && !pendingFiles.length);
     ui.input.style.height = "auto";
     ui.input.style.height = Math.min(ui.input.scrollHeight, 180) + "px";
   }
@@ -947,6 +996,11 @@
     }
     client = window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+    client.auth.onAuthStateChange((event, nextSession) => {
+      session = nextSession;
+      if (nextSession) ui.session.textContent = "Guest workspace";
+      else if (event === "SIGNED_OUT") ui.session.textContent = "Guest session ended";
     });
     try {
       await ensureSession();
@@ -962,6 +1016,12 @@
 
   ui.form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (busy) {
+      if (activeRequestController && !activeRequestController.signal.aborted) {
+        activeRequestController.abort();
+      }
+      return;
+    }
     sendMessage(ui.input.value);
   });
   ui.attachButton.addEventListener("click", () => ui.fileInput.click());
