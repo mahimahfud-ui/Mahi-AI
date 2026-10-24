@@ -834,14 +834,26 @@ function isAdultSensitivePrompt(prompt: string): boolean {
   return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a|ism)?|sex(?:ual(?:ly)?|ual health| education)?|masturbat(?:ion|e)?|fetish(?:es)?|orgasm|nudity|nude|adult[- ]only|adult content|adult site|adult website|sexual wellness|reproductive health|contraception|onlyfans)\b|(?:পর্ন|অশ্লীল|হেনতাই|যৌন|নগ্নতা|উলঙ্গ|প্রাপ্তবয়স্কদের যৌন|প্রাপ্তবয়স্কদের যৌন|যৌনস্বাস্থ্য|যৌন শিক্ষা|গর্ভনিরোধ)/iu.test(prompt);
 }
 
+function isPornRelatedPrompt(prompt: string): boolean {
+  return /\b(?:porn(?:ography|ographic)?|nsfw|xxx|hentai|erotic(?:a|ism)?|onlyfans|pornhub|xvideos|xhamster|x[- ]rated|adult(?:[\s-]+)?(?:content|site|website|video|videos|movie|movies|film|films)|explicit(?:ly)?\s+(?:sexual|sex|erotic|adult)(?:\s+content)?|sex(?:ual)?(?:\s+(?:er|niye|related))?\s+(?:video|videos|movie|movies|film|films|clip|clips|scene|scenes|story|stories|content)|nude\s+(?:photo|photos|picture|pictures|image|images|video|videos)|sexual\s+content)\b|(?:পর্ন|পর্ণ|অশ্লীল(?:তা|ভিডিও|ছবি|কনটেন্ট)?|হেনতাই|হেন্টাই|এডাল্ট\s*(?:ভিডিও|কনটেন্ট|সাইট)?|অ্যাডাল্ট\s*(?:ভিডিও|কনটেন্ট|সাইট)?|সেক্স\s*(?:ভিডিও|মুভি|ছবি|কনটেন্ট)|নগ্ন\s*(?:ছবি|ভিডিও)|নুড\s*(?:ছবি|ভিডিও)|যৌন\s*(?:উত্তেজক|ভিডিও|গল্প|কনটেন্ট))/iu.test(prompt);
+}
+
+function isSensitiveSocialPrompt(prompt: string): boolean {
+  return /\b(?:politic(?:s|al)?|religio(?:n|us)|election|ideolog(?:y|ies)|rac(?:e|ism|ist)|sexism|gender identity|sexual orientation|abortion|war|terrorism|extremism|protest|controvers(?:y|ial)|polariz(?:ing|ed)|hate speech|discrimination)\b|(?:রাজনীতি|রাজনৈতিক|ধর্ম|নির্বাচন|বর্ণবাদ|যুদ্ধ|সন্ত্রাসবাদ|বিতর্কিত|বৈষম্য)/iu.test(prompt);
+}
+
 function shouldPreferVenice(prompt: string): boolean {
-  const sensitiveSocialTopics = /\b(?:politic(?:s|al)?|religio(?:n|us)|election|ideolog(?:y|ies)|rac(?:e|ism|ist)|sexism|gender identity|sexual orientation|abortion|war|terrorism|extremism|protest|controvers(?:y|ial)|polariz(?:ing|ed)|hate speech|discrimination)\b|(?:রাজনীতি|রাজনৈতিক|ধর্ম|নির্বাচন|বর্ণবাদ|যুদ্ধ|সন্ত্রাসবাদ|বিতর্কিত|বৈষম্য)/iu.test(prompt);
-  return isAdultSensitivePrompt(prompt) || sensitiveSocialTopics;
+  return isPornRelatedPrompt(prompt);
 }
 
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = ""): string[] {
   let preferred: string[];
-  if (hasInlineAttachments) {
+  if (isPornRelatedPrompt(prompt) && !hasInlineAttachments) {
+    // Route porn/NSFW/adult-media text prompts to Venice before task classification,
+    // including requests otherwise classified as coding, research, or creative writing.
+    // Other configured providers remain available only as fallbacks if Venice fails.
+    preferred = ["venice", "gemini", "groq", "openrouter", "shannon", "mistral", "deepseek", "nvidia", "cloudflare", "anthropic", "openai"];
+  } else if (hasInlineAttachments) {
     // Gemini handles multimodal and file inputs directly; OpenRouter's free router
     // is next and selects a free model with the needed feature when available.
     preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
@@ -850,10 +862,6 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     // Start coding requests with the fast Groq route; configured alternatives remain available.
     // OpenAI still remains a fallback when the paid-fallback opt-in is enabled.
     preferred = ["groq", "gemini", "openrouter", "openai", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic"];
-  } else if (isAdultSensitivePrompt(prompt) || (shouldPreferVenice(prompt) && task !== "web_research" && task !== "code_execution")) {
-    // Venice is the first choice for adult/sexual and other sensitive, controversial topics.
-    // Keep the remaining providers as fallbacks if Venice is unavailable or fails review.
-    preferred = ["venice", "gemini", "groq", "openrouter", "shannon", "mistral", "deepseek", "nvidia", "cloudflare", "anthropic", "openai"];
   } else if (task === "web_research" || task === "code_execution") {
     // Gemini has native Google Search, URL Context, and code-execution tool support.
     preferred = ["gemini", "openrouter", "groq", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
@@ -870,6 +878,7 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   const fallback = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])]
     .filter((name) => providerIsConfigured(name, task) &&
+      (isPornRelatedPrompt(prompt) || name !== "venice") &&
       !(hasInlineAttachments && (name === "venice" || name === "shannon")));
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
   // Preserve task/capability preference as the baseline, then adjust within that order
@@ -2466,7 +2475,7 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
 function shouldRequireIndependentReview(task: string, prompt: string): boolean {
   if (flagEnabled("FAST_MODE") && ["coding", "reasoning"].includes(task)) return false;
   if (["coding", "reasoning", "web_research", "code_execution"].includes(task)) return true;
-  if (isAdultSensitivePrompt(prompt) || shouldPreferVenice(prompt)) return true;
+  if (isAdultSensitivePrompt(prompt) || isSensitiveSocialPrompt(prompt)) return true;
   return /\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(prompt);
 }
 
@@ -2724,7 +2733,8 @@ async function streamChatResponse(
               output_chars: candidateText.length
             });
 
-            const requiresReview = shouldRequireIndependentReview(task, originalPrompt);
+            const requiresReview = shouldRequireIndependentReview(task, originalPrompt) &&
+              !(isPornRelatedPrompt(originalPrompt) && provider === "venice");
             const reviewBudgetMs = Math.max(
               0,
               Math.min(6000, totalProviderBudgetMs - (Date.now() - startedAt) - 3000)
