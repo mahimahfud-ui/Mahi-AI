@@ -92,7 +92,7 @@
       <header class="topbar">
         <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         <div class="topbar-title"><img class="small-mark" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="Official website logo" width="40" height="40"></div>
-        <div class="topbar-right"><span class="secure-label"><span class="status-dot"></span>Ready to help</span></div>
+        <div class="topbar-right"><button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button><span class="secure-label"><span class="status-dot"></span>Ready to help</span></div>
       </header>
 
       <section class="conversation-area" id="conversationArea">
@@ -125,6 +125,63 @@
     </main>
   </div>
   <div class="mobile-scrim" id="mobileScrim"></div>
+  <div class="account-modal" id="accountModal" hidden>
+    <div class="account-modal-scrim" data-account-close></div>
+    <section class="account-modal-panel" role="dialog" aria-modal="true" aria-labelledby="accountDialogTitle" aria-describedby="accountDialogDescription">
+      <header class="account-modal-header">
+        <div class="account-modal-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></div>
+        <div class="account-modal-heading">
+          <div class="account-modal-eyebrow">MAHI AI · YOUR WORKSPACE</div>
+          <h2 id="accountDialogTitle">Save your chats</h2>
+          <p id="accountDialogDescription">Use any valid email address or a phone number with its international country code.</p>
+        </div>
+        <button class="icon-button account-modal-close" type="button" data-account-close aria-label="Close account dialog" title="Close">×</button>
+      </header>
+      <div id="accountAuthPanel">
+        <div class="account-method-switch" id="accountMethodSwitch" aria-label="Choose sign-in method">
+          <button type="button" class="is-active" data-account-method="email" aria-pressed="true">Email</button>
+          <button type="button" data-account-method="phone" aria-pressed="false">Phone number</button>
+        </div>
+        <div class="account-mode-switch" id="accountModeSwitch" aria-label="Choose account action">
+          <button type="button" class="is-active" data-account-mode="register" aria-pressed="true">Create account</button>
+          <button type="button" data-account-mode="login" aria-pressed="false">Log in</button>
+        </div>
+        <form class="account-form" id="accountForm">
+          <div id="accountEmailFields">
+            <label for="accountEmailInput">Email address</label>
+            <input id="accountEmailInput" name="email" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email" maxlength="254" required>
+            <label for="accountPasswordInput">Password</label>
+            <input id="accountPasswordInput" name="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
+            <div id="accountPasswordConfirmWrap">
+              <label for="accountPasswordConfirm">Confirm password</label>
+              <input id="accountPasswordConfirm" name="passwordConfirm" type="password" placeholder="Enter the same password again" autocomplete="new-password" minlength="8" required>
+            </div>
+          </div>
+          <div id="accountPhoneFields" hidden>
+            <label for="accountPhoneInput">Phone number with country code</label>
+            <input id="accountPhoneInput" name="phone" type="tel" placeholder="+8801712345678" autocomplete="tel" inputmode="tel" maxlength="24" aria-describedby="accountPhoneHint">
+            <p class="account-field-hint" id="accountPhoneHint">Use the international format beginning with +, for example +880 for Bangladesh or +1 for the US/Canada.</p>
+            <div id="accountOtpGroup" hidden>
+              <label for="accountOtpInput">SMS verification code</label>
+              <input id="accountOtpInput" name="otp" type="text" placeholder="Enter the code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{4,8}">
+              <button class="account-resend-button" id="accountResendCode" type="button" hidden>Resend code</button>
+            </div>
+          </div>
+          <button class="account-submit-button" id="accountSubmitButton" type="submit">Create account</button>
+        </form>
+      </div>
+      <div class="account-summary" id="accountSummary" hidden>
+        <div class="account-summary-card">
+          <span class="account-summary-label">SIGNED IN AS</span>
+          <strong id="accountSummaryIdentity">Your account</strong>
+          <p id="accountSummaryName">Your chat history is saved to your account.</p>
+        </div>
+        <button class="account-signout-button" id="accountSignOut" type="button">Sign out / switch account</button>
+      </div>
+      <div class="account-status" id="accountStatus" role="status" aria-live="polite" hidden></div>
+      <p class="account-privacy-note"><span aria-hidden="true">✓</span> Your chats are private to your account. Sign in on another device to access your saved history.</p>
+    </section>
+  </div>
   <div class="api-explorer" id="apiExplorer" hidden>
     <div class="api-explorer-scrim" data-api-close></div>
     <section class="api-explorer-panel" role="dialog" aria-modal="true" aria-labelledby="apiExplorerTitle" aria-describedby="apiExplorerDescription">
