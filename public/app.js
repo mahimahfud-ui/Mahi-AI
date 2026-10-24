@@ -1750,6 +1750,9 @@
       if (messageError) throw messageError;
       conversationId = rows.id;
       pendingEdit = null;
+      branchSeedMessages = null;
+      branchOrigin = null;
+      setTemporaryChatMode(false);
       if (ui.draftNotice) ui.draftNotice.hidden = true;
       ui.input.value = "";
       updateCounter();
