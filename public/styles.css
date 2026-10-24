@@ -443,3 +443,72 @@ html[data-theme="light"] .account-button:hover { background: rgba(143,125,255,.1
   .account-modal-heading h2 { font-size: 21px; }
   .account-modal-heading p { font-size: 11px; }
 }
+
+
+/* Mahi AI voice conversation */
+.voice-mode-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:31px;padding:0 10px;border:1px solid rgba(169,179,215,.15);border-radius:8px;background:#191d29;color:#c2b6ff;font-size:11px;white-space:nowrap;transition:background .16s,border-color .16s,color .16s,transform .16s}
+.voice-mode-button:hover{border-color:rgba(169,145,255,.48);background:#241f38;color:#eee8ff;transform:translateY(-1px)}
+.voice-mode-button svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.voice-overlay{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:18px}
+.voice-overlay[hidden]{display:none}
+.voice-overlay-scrim{position:absolute;inset:0;background:rgba(3,5,12,.78);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.voice-panel{position:relative;z-index:1;width:min(620px,100%);max-height:calc(100dvh - 36px);overflow:auto;border:1px solid rgba(174,164,255,.2);border-radius:24px;background:radial-gradient(ellipse at 50% 40%,rgba(92,77,171,.16),transparent 48%),linear-gradient(145deg,#141724,#0c0f17 70%);box-shadow:0 35px 110px rgba(0,0,0,.55);padding:23px 26px 20px;animation:voicePanelIn .22s ease-out}
+.voice-panel-header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.voice-brand{display:flex;align-items:center;gap:12px;min-width:0}
+.voice-brand-mark{width:42px;height:42px;flex:0 0 42px;overflow:hidden;border:1px solid rgba(173,157,255,.3);border-radius:14px;background:#1b1a2d;display:grid;place-items:center}
+.voice-brand-mark img{width:100%;height:100%;object-fit:cover}
+.voice-brand h2{margin:0;color:#f0efff;font:700 16px var(--display);letter-spacing:-.4px}
+.voice-brand p{margin:4px 0 0;color:#858da4;font-size:11px;line-height:1.5}
+.voice-close{flex:0 0 34px;width:34px;height:34px}
+.voice-stage{display:flex;flex-direction:column;align-items:center;text-align:center;padding:24px 8px 18px;min-height:360px}
+.voice-orb-wrap{display:grid;place-items:center;width:230px;height:230px;margin:0 auto 12px;position:relative}
+.voice-orb-wrap:before,.voice-orb-wrap:after{content:"";position:absolute;inset:16px;border:1px solid rgba(153,133,255,.13);border-radius:50%;animation:voiceOrbit 8s linear infinite}
+.voice-orb-wrap:after{inset:0;border-color:rgba(122,154,255,.1);animation-direction:reverse;animation-duration:13s}
+.voice-orb{width:158px;height:158px;position:relative;display:grid;place-items:center;border-radius:50%;background:radial-gradient(circle at 36% 28%,#d4c4ff 0,#a18bff 14%,#6254d7 34%,#2a316e 61%,#111b36 78%,#0b101c 100%);box-shadow:0 0 34px rgba(139,116,255,.28),inset -14px -19px 40px rgba(0,0,0,.42),inset 10px 8px 27px rgba(218,206,255,.2);animation:voiceOrbFloat 4s ease-in-out infinite}
+.voice-orb:before{content:"";position:absolute;inset:9px;border-radius:50%;border:1px solid rgba(221,216,255,.18);box-shadow:0 0 26px rgba(158,138,255,.12)}
+.voice-orb span,.voice-orb i,.voice-orb b{position:absolute;display:block;border-radius:50%;filter:blur(1px)}
+.voice-orb span{width:50px;height:50px;left:26px;top:29px;background:radial-gradient(circle at 35% 30%,rgba(255,255,255,.72),rgba(216,199,255,.1) 65%,transparent)}
+.voice-orb i{width:72px;height:72px;right:13px;bottom:12px;background:radial-gradient(circle at 40% 40%,rgba(104,170,255,.36),rgba(68,78,190,.04) 70%,transparent)}
+.voice-orb b{width:32px;height:32px;right:36px;top:23px;background:radial-gradient(circle,rgba(235,230,255,.6),rgba(181,151,255,.08) 72%,transparent)}
+.voice-stage[data-state="listening"] .voice-orb{animation:voiceOrbListen 1.4s ease-in-out infinite;box-shadow:0 0 60px rgba(111,134,255,.48),inset -14px -19px 40px rgba(0,0,0,.38),inset 10px 8px 27px rgba(218,206,255,.2)}
+.voice-stage[data-state="speaking"] .voice-orb{animation:voiceOrbSpeak .75s ease-in-out infinite;box-shadow:0 0 65px rgba(166,119,255,.52),inset -14px -19px 40px rgba(0,0,0,.38),inset 10px 8px 27px rgba(218,206,255,.2)}
+.voice-stage[data-state="thinking"] .voice-orb{animation:voiceOrbThink 1.2s ease-in-out infinite}
+.voice-stage[data-state="error"] .voice-orb{filter:saturate(.45);opacity:.65}
+.voice-status{color:#f0efff;font:700 15px var(--display);letter-spacing:-.25px;margin-top:2px}
+.voice-transcript{max-width:430px;min-height:34px;margin:10px 0 0;color:#9aa3ba;font-size:12px;line-height:1.65;overflow-wrap:anywhere}
+.voice-interim{max-width:430px;min-height:17px;margin:2px 0 0;color:#c7bbff;font-size:11px;line-height:1.6;overflow-wrap:anywhere}
+.voice-panel-controls{display:flex;align-items:center;justify-content:center;gap:18px;padding-top:18px;border-top:1px solid rgba(170,179,215,.1)}
+.voice-language{display:flex;flex-direction:column;gap:6px;margin-right:auto;color:#7f899f;font-size:10px}
+.voice-language select{min-width:120px;border:1px solid rgba(169,179,215,.16);border-radius:9px;padding:9px 10px;background:#171a28;color:#e1e3f3;font:inherit;font-size:11px}
+.voice-mic-button{display:grid;place-items:center;width:55px;height:55px;flex:0 0 55px;border:1px solid rgba(217,206,255,.24);border-radius:50%;background:linear-gradient(145deg,#b6a4ff,#777ff5);color:#101222;box-shadow:0 8px 25px rgba(129,106,255,.22);transition:transform .16s,filter .16s,box-shadow .16s}
+.voice-mic-button:hover{filter:brightness(1.08);transform:translateY(-2px);box-shadow:0 12px 32px rgba(129,106,255,.34)}
+.voice-mic-button.is-listening{background:linear-gradient(145deg,#f3c6d5,#e28ba8);box-shadow:0 0 0 7px rgba(226,139,168,.1),0 8px 28px rgba(226,139,168,.25)}
+.voice-mic-button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.voice-end-button{height:38px;padding:0 14px;border:1px solid rgba(169,179,215,.17);border-radius:10px;background:#1a1e2b;color:#d4d8e8;font-size:11px}
+.voice-end-button:hover{border-color:rgba(255,148,166,.35);background:#2a1a27;color:#ffdbe2}
+.voice-privacy-note{margin:15px auto 0;max-width:450px;text-align:center;color:#68738a;font-size:9px;line-height:1.6}
+.speech-actions{margin-top:9px}
+.speech-action{display:inline-flex;align-items:center;gap:5px;padding:4px 6px;border-radius:6px;transition:background .15s,color .15s}
+.speech-action:hover{background:rgba(151,131,255,.1)}
+.speech-action svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@keyframes voicePanelIn{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes voiceOrbit{from{transform:rotate(0deg) scaleX(.95)}to{transform:rotate(360deg) scaleX(.95)}}
+@keyframes voiceOrbFloat{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-5px) scale(1.015)}}
+@keyframes voiceOrbListen{0%,100%{transform:scale(.97)}50%{transform:scale(1.055)}}
+@keyframes voiceOrbSpeak{0%,100%{transform:scale(1)}50%{transform:scale(1.065) rotate(1deg)}}
+@keyframes voiceOrbThink{0%,100%{transform:scale(.97) rotate(-3deg)}50%{transform:scale(1.035) rotate(3deg)}}
+@media(max-width:760px){
+  .voice-mode-button{width:32px;padding:0;gap:0}
+  .voice-mode-button span{display:none}
+  .voice-overlay{padding:0;align-items:stretch}
+  .voice-panel{width:100%;max-height:100dvh;height:100dvh;border-radius:0;border-left:0;border-right:0;padding:calc(16px + env(safe-area-inset-top)) 18px calc(14px + env(safe-area-inset-bottom));display:flex;flex-direction:column;justify-content:space-between}
+  .voice-stage{flex:1;justify-content:center;min-height:0;padding:12px 0}
+  .voice-orb-wrap{width:min(62vw,230px);height:min(62vw,230px);margin-bottom:20px}
+  .voice-orb{width:68%;height:68%}
+  .voice-panel-controls{gap:12px;padding-top:14px}
+  .voice-language{max-width:115px}
+  .voice-language select{min-width:100px;max-width:115px}
+  .voice-mic-button{width:52px;height:52px;flex-basis:52px}
+  .voice-end-button{padding:0 10px}
+}
+@media(prefers-reduced-motion:reduce){.voice-panel,.voice-orb,.voice-orb-wrap:before,.voice-orb-wrap:after{animation:none!important}}
