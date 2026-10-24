@@ -40,12 +40,12 @@ test("Edge Function forwards provider chunks while generating", () => {
 
 test("a delivered reply survives a conversation-history refresh error", () => {
   const sendStart = app.indexOf("async function sendMessage(text) {");
-  const sendEnd = app.indexOf("\\n  // Public API Library", sendStart);
+  const sendEnd = app.indexOf("\n  // Public API Library", sendStart);
   const send = app.slice(sendStart, sendEnd);
   assert.match(send, /let responseCompleted = false;/);
   assert.match(send, /responseCompleted = true;/);
-  assert.match(send, /await refreshConversations\\(\\);[\\s\\S]*?catch \\(historyError\\)/);
-  assert.match(send, /if \\(responseCompleted\\) \\{[\\s\\S]*?currentMessages\\[currentMessages\\.length - 1\\]\\?\\.role !== "assistant"/);
+  assert.ok(send.includes("await refreshConversations();") && send.includes("catch (historyError)"));
+  assert.ok(send.includes("if (responseCompleted) {") && send.includes('currentMessages[currentMessages.length - 1]?.role !== "assistant"'));
 });
 
 test("coding uses a fast provider first and fallback attempts are bounded", () => {
