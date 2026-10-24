@@ -6,8 +6,8 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 
 ## Chat features
 
-- Streaming replies with a stop-generation control, per-message copy, edit-and-replace, and regenerate.
-- Search saved conversation titles, rename or delete a chat, and export the current conversation as Markdown or JSON.
+- Streaming replies with a stop-generation control, per-message copy/share and helpful/not-helpful feedback, edit-and-replace, and regenerate.
+- Search chat titles and message contents, rename or delete a chat, branch from an earlier assistant response into a separate conversation, and export the current conversation as Markdown or JSON.
 - Temporary chats stay out of saved conversation history and long-term memory; they remain only in the open browser session until you leave or start another chat.
 - Existing capabilities remain available: responsive dark UI, multilingual chats, authenticated history, attachments, voice input/read-aloud, web research and source links, image generation where explicitly enabled, code execution/live previews, public API discovery, and per-user memory controls.
 
