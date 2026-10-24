@@ -19,7 +19,7 @@ test("coding, serious, and sensitive topics stay focused instead of playful", ()
   assert.match(edge, /avoid playful emojis unless the user asks/);
 });
 
-test("Mahi Mahfud is identified as Mahi-AI founder and owner", () => {
+test("MahiCloud assistant identifies Mahi Mahfud as its project owner", () => {
   assert.match(edge, /Mahi Mahfud \(@mahimahfud\) is the owner and founder of the MahiCloud assistant project/);
   assert.match(edge, /Full\/public name: Mahi Mahfud/);
 });
