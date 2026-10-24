@@ -77,18 +77,18 @@
     } else {
       if (!/<!doctype\s+html/i.test(doc)) doc = "<!doctype html>\n" + doc;
       if (!/<head\b/i.test(doc)) {
-        doc = doc.replace(/<html\b[^>]*>/i, '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
+        doc = doc.replace(/<html\b[^>]*>/i, (htmlTag) => htmlTag + '<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>');
       } else {
-        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '<head><meta charset="utf-8">');
-        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '<head><meta name="viewport" content="width=device-width, initial-scale=1">');
+        if (!/<meta\b[^>]*charset\s*=/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + '<meta charset="utf-8">');
+        if (!/<meta\b[^>]*name\s*=\s*["']viewport["']/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + '<meta name="viewport" content="width=device-width, initial-scale=1">');
       }
     }
     const styles = (cssBlocks || []).filter(Boolean);
     if (styles.length) {
       const styleText = '<style>\n' + styles.join('\n\n').replace(/<\/style/gi, '<\\/style') + '\n</style>';
       if (/<\/head>/i.test(doc)) doc = doc.replace(/<\/head>/i, styleText + '</head>');
-      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, '<head>' + styleText);
-      else doc = doc.replace(/<html\b[^>]*>/i, '<head>' + styleText + '</head>');
+      else if (/<head\b[^>]*>/i.test(doc)) doc = doc.replace(/<head\b[^>]*>/i, (headTag) => headTag + styleText);
+      else doc = doc.replace(/<html\b[^>]*>/i, (htmlTag) => htmlTag + '<head>' + styleText + '</head>');
     }
     const scripts = (jsBlocks || []).filter(Boolean);
     if (scripts.length) {
