@@ -44,3 +44,16 @@ test("persona behavior is documented", () => {
   assert.match(readme, /Mahi Mahfud/i);
   assert.match(readme, /fact-based/i);
 });
+
+test("reviewer outages do not discard a candidate answer for ordinary requests", () => {
+  assert.match(edge, /function shouldFailClosedWhenReviewUnavailable/);
+  assert.match(edge, /verdict: "unverified"/);
+  assert.match(edge, /let receivedValidVerdict = false/);
+  assert.match(edge, /if \(!receivedValidVerdict && !shouldFailClosedWhenReviewUnavailable\(originalPrompt\)\)/);
+});
+
+test("reviewer outages still fail closed for high-impact topics and explicit reviewer rejections", () => {
+  assert.match(edge, /medical\|health\|symptom/);
+  assert.match(edge, /receivedValidVerdict = true/);
+  assert.match(edge, /if \(review.verdict === "retry" \|\| !review.answer.trim\(\)\)/);
+});
