@@ -346,6 +346,8 @@ type ProviderHealthSample = {
 };
 
 const providerHealth = new Map<string, ProviderHealthSample>();
+// In-isolate circuit breaker cooldown state; it is intentionally ephemeral.
+const providerCooldownUntil = new Map<string, number>();
 
 function recordProviderOutcome(name: string, success: boolean, elapsedMs: number): void {
   const previous = providerHealth.get(name);
