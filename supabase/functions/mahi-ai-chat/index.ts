@@ -2168,43 +2168,18 @@ async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttac
   };
 }
 
-async function generateImageWithFallback(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
-  const hasGemini = configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
-  const hasGrok = configuredSecret(["XAI_API_KEY", "GROK_API_KEY"]);
-  const hasOpenAI = configuredSecret(["OPENAI_API_KEY"]);
-  if (!hasGemini && !hasGrok && !hasOpenAI) {
-    throw new Error("No image provider is configured. Add GEMINI_API_KEY, XAI_API_KEY/GROK_API_KEY, or OPENAI_API_KEY to Supabase Edge Function secrets.");
+async function generateImageWithGeminiOnly(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
+  if (!configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
+    throw new Error("Gemini image generation is not configured. Add GEMINI_API_KEY to Supabase Edge Function Secrets.");
   }
-  // API credentials explicitly enable their provider. Image generation can incur charges.
-  const failures: string[] = [];
-  if (configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
-    try {
-      return { ...(await generateGeminiImage(prompt, attachments)), provider: "gemini-image" };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      failures.push("Gemini: " + reason.slice(0, 160));
-      console.warn("Mahi AI Gemini image generation failed; trying Grok:", reason.slice(0, 180));
-    }
+  // Intentional policy: image generation uses Gemini only. Never fall back to Grok or OpenAI.
+  try {
+    return { ...(await generateGeminiImage(prompt, attachments)), provider: "gemini-image" };
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error("Mahi AI Gemini-only image generation failed:", reason.slice(0, 180));
+    throw new Error("Gemini image generation failed: " + reason.slice(0, 260));
   }
-  if (configuredSecret(["XAI_API_KEY", "GROK_API_KEY"])) {
-    try {
-      return { ...(await generateGrokImage(prompt, attachments)), provider: "grok-image" };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      failures.push("Grok: " + reason.slice(0, 160));
-      console.warn("Mahi AI Grok image generation failed; trying OpenAI fallback:", reason.slice(0, 180));
-    }
-  }
-  if (configuredSecret(["OPENAI_API_KEY"])) {
-    try {
-      return { ...(await generateOpenAIImage(prompt, attachments)), provider: "openai-image" };
-    } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
-      failures.push("OpenAI: " + reason.slice(0, 160));
-      console.warn("Mahi AI OpenAI image generation failed:", reason.slice(0, 180));
-    }
-  }
-  throw new Error("All configured image-generation providers failed: " + (failures.join(" | ") || "no image provider is configured"));
 }
 
 async function storeGeneratedImage(userId: string, bytes: Uint8Array, mimeType: string): Promise<string> {
@@ -2283,7 +2258,7 @@ async function streamImageGenerationResponse(
         );
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
         sseEvent(controller, encoder, { type: "status", message: "Generating image…" });
-        const result = await generateImageWithFallback(messages[messages.length - 1].content, attachments);
+        const result = await generateImageWithGeminiOnly(messages[messages.length - 1].content, attachments);
         const imagePath = await storeGeneratedImage(userId, result.bytes, result.mimeType);
         const reply = result.text + "\n\n![Generated image](mahi-storage://" + imagePath + ")";
         if (cancelled) return;
@@ -2322,7 +2297,7 @@ async function streamImageGenerationResponse(
         console.error("Mahi AI image generation failed:", reason.slice(0, 300));
         await updateUsage(usageId, {
           success: false,
-          provider: "gemini-grok-openai-image",
+          provider: "gemini-image",
           task_type: "image_generation",
           error_code: "image_generation_failed",
           duration_ms: Date.now() - requestStartedAt,
@@ -2330,18 +2305,15 @@ async function streamImageGenerationResponse(
           output_chars: 0,
           attachment_count: attachments.length
         });
-        const hasAnyImageKey =
-          configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]) ||
-          configuredSecret(["XAI_API_KEY", "GROK_API_KEY"]) ||
-          configuredSecret(["OPENAI_API_KEY"]);
+        const hasGeminiKey = configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
         const lowerReason = reason.toLowerCase();
         let userMessage: string;
-        if (/429|resource_exhausted|exceeded your current quota|quota exceeded|insufficient_quota|billing_hard_limit/i.test(lowerReason)) {
-          userMessage = "ছবি তৈরি করা যায়নি: configured image provider-এর quota/credit শেষ, rate limit হয়েছে, বা model access নেই। Provider dashboard-এ credits, model access, rate limits ও billing দেখুন।";
-        } else if (!hasAnyImageKey) {
-          userMessage = "ছবি তৈরি করতে Supabase Edge Function Secrets-এ GEMINI_API_KEY, XAI_API_KEY/GROK_API_KEY, অথবা OPENAI_API_KEY যোগ করুন।";
+        if (!hasGeminiKey) {
+          userMessage = "ছবি তৈরি করতে Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করো। Mahi AI-তে image generation শুধু Google Gemini দিয়ে হয়।";
+        } else if (/429|resource_exhausted|exceeded your current quota|quota exceeded|insufficient_quota|billing_hard_limit|billing|payment|required credits|model access/i.test(lowerReason)) {
+          userMessage = "Google Gemini দিয়ে ছবি তৈরি করা যায়নি। Gemini API quota, model access ও billing/credits পরীক্ষা করো; এই image task-এর জন্য অন্য provider চেষ্টা করা হবে না।";
         } else {
-          userMessage = "ছবি তৈরি করা যায়নি। Configured image APIs চেষ্টা করেও ব্যর্থ হয়েছে; Supabase mahi-ai-chat logs-এ provider error details দেখুন।";
+          userMessage = "Google Gemini image generation ব্যর্থ হয়েছে। Supabase mahi-ai-chat logs-এ Gemini-এর error details দেখো; এই image task-এর জন্য Grok বা OpenAI fallback চালু নেই।";
         }
         sseEvent(controller, encoder, { type: "error", message: userMessage });
       } finally {
