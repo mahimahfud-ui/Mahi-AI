@@ -17,3 +17,24 @@ test("Venice AI is configured as an OpenAI-compatible chat fallback", () => {
 test("Venice is skipped for inline media that needs native provider support", () => {
   assert.match(edge, /hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)/);
 });
+
+
+test("porn/NSFW text prompts select Venice before task-specific routes", () => {
+  const pornRoute = edge.indexOf('if (isPornRelatedPrompt(prompt) && !hasInlineAttachments)');
+  const attachmentRoute = edge.indexOf('} else if (hasInlineAttachments)', pornRoute);
+  const codingRoute = edge.indexOf('} else if (task === "coding")', pornRoute);
+  assert.ok(pornRoute >= 0, "porn-first routing branch should exist");
+  assert.ok(attachmentRoute > pornRoute, "attachments must keep their compatible-provider path");
+  assert.ok(codingRoute > pornRoute, "porn routing must override ordinary coding priority");
+  assert.match(edge, /function isPornRelatedPrompt\\(prompt: string\\): boolean \\{/);
+  assert.match(edge, /function shouldPreferVenice\\(prompt: string\\): boolean \\{\\s*return isPornRelatedPrompt\\(prompt\\);\\s*\\}/);
+});
+
+test("Venice is excluded from non-porn provider cascades", () => {
+  assert.match(edge, /\\(isPornRelatedPrompt\\(prompt\\) \\|\\| name !== "venice"\\)/);
+  assert.match(edge, /function isSensitiveSocialPrompt\\(prompt: string\\): boolean/);
+});
+
+test("a successful Venice response to a porn-related prompt is not rewritten by a second provider", () => {
+  assert.match(edge, /const requiresReview = shouldRequireIndependentReview\\(task, originalPrompt\\) &&\\s*!\\(isPornRelatedPrompt\\(originalPrompt\\) && provider === "venice"\\);/);
+});
