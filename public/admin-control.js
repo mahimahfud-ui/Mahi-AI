@@ -78,6 +78,32 @@
     consoleView.hidden = true;
     loginView.hidden = false;
   }
+  const PROVIDERS = [{"id":"gemini","label":"Gemini"},{"id":"groq","label":"Groq"},{"id":"openrouter","label":"OpenRouter"},{"id":"shannon","label":"Shannon AI"},{"id":"deepseek","label":"DeepSeek"},{"id":"nvidia","label":"NVIDIA"},{"id":"cloudflare","label":"Cloudflare Workers AI"},{"id":"mistral","label":"Mistral"},{"id":"venice","label":"Venice AI"},{"id":"anthropic","label":"Anthropic"},{"id":"openai","label":"OpenAI"}];
+  const TASK_ROUTES = [{"id":"general","label":"General chat","description":"Everyday questions and normal conversations."},{"id":"coding","label":"Coding & development","description":"Building, debugging, code review and software questions."},{"id":"web_research","label":"Web research","description":"Current information, web searches, source links and fact checking."},{"id":"code_execution","label":"Calculations & code execution","description":"Math, calculations and tasks using execution tools."},{"id":"reasoning","label":"Reasoning & analysis","description":"Multi-step reasoning, comparisons and analytical tasks."},{"id":"creative","label":"Writing & creativity","description":"Stories, captions, articles, rewriting and creative content."},{"id":"multimodal","label":"Files & attachments","description":"Requests that include files or other attachments."}];
+  const DEFAULT_ROUTES = {"general":["groq","gemini","openrouter","shannon","deepseek","nvidia","cloudflare","mistral","venice","anthropic","openai"],"coding":["groq","gemini","openrouter","openai","venice","shannon","deepseek","nvidia","cloudflare","mistral","anthropic"],"web_research":["gemini","openrouter","groq","venice","shannon","deepseek","nvidia","cloudflare","mistral","anthropic","openai"],"code_execution":["gemini","openrouter","groq","venice","shannon","deepseek","nvidia","cloudflare","mistral","anthropic","openai"],"reasoning":["gemini","openrouter","shannon","groq","deepseek","nvidia","cloudflare","mistral","venice","anthropic","openai"],"creative":["gemini","groq","openrouter","shannon","deepseek","nvidia","cloudflare","mistral","venice","anthropic","openai"],"multimodal":["gemini","openrouter","shannon","deepseek","groq","nvidia","cloudflare","mistral","venice","anthropic","openai"]};
+  function normalizeRouting(raw) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const routesSource = source.routes && typeof source.routes === "object" ? source.routes : {};
+    const modelsSource = source.models && typeof source.models === "object" ? source.models : {};
+    const routes = {};
+    TASK_ROUTES.forEach((task) => {
+      const values = Array.isArray(routesSource[task.id]) ? routesSource[task.id] : [];
+      const parsed = [...new Set(values.map((name) => String(name).toLowerCase()).filter((name) => PROVIDERS.some((provider) => provider.id === name)))];
+      routes[task.id] = parsed.length ? parsed : [...DEFAULT_ROUTES[task.id]];
+    });
+    const models = {};
+    PROVIDERS.forEach((provider) => { models[provider.id] = String(modelsSource[provider.id] || "").slice(0, 120); });
+    const disabledProviders = Array.isArray(source.disabledProviders)
+      ? [...new Set(source.disabledProviders.map((name) => String(name).toLowerCase()).filter((name) => PROVIDERS.some((provider) => provider.id === name)))]
+      : [];
+    const temperature = Number(source.temperature), maxOutputTokens = Number(source.maxOutputTokens);
+    return {
+      enabled: source.enabled !== false, allowFallbacks: source.allowFallbacks !== false,
+      routes, models, disabledProviders,
+      temperature: Number.isFinite(temperature) ? Math.min(1, Math.max(0, temperature)) : 0.3,
+      maxOutputTokens: Number.isFinite(maxOutputTokens) ? Math.round(Math.min(16384, Math.max(512, maxOutputTokens))) : 8192
+    };
+  }
   function normalizeConfig(raw) {
     const source = raw && typeof raw === "object" ? raw : {};
     const categories = Array.isArray(source.categories) ? source.categories.slice(0, 25).map((cat, index) => {
@@ -97,7 +123,7 @@
         })) : []
       };
     }) : [];
-    return { enabled: source.enabled !== false, globalInstructions: String(source.globalInstructions || ""), categories };
+    return { enabled: source.enabled !== false, globalInstructions: String(source.globalInstructions || ""), categories, routing: normalizeRouting(source.routing) };
   }
   function newId(prefix) {
     let raw = "";
@@ -121,6 +147,8 @@
     categoryList.textContent = "";
     const globalButton = document.querySelector('[data-admin-select="global"]');
     if (globalButton) globalButton.classList.toggle("is-active", selectedCategoryId === "global");
+    const routingButton = $("adminRoutingButton");
+    if (routingButton) routingButton.classList.toggle("is-active", selectedCategoryId === "routing");
     (adminConfig?.categories || []).forEach((category) => {
       const button = document.createElement("button");
       button.type = "button";
@@ -206,6 +234,54 @@
   function renderEditor() {
     editor.textContent = "";
     if (!adminConfig) return;
+    if (selectedCategoryId === "routing") {
+      const routing = adminConfig.routing || normalizeRouting({});
+      editor.innerHTML = '<div class="admin-editor-head"><div><h5>AI routing &amp; model control</h5><p>Choose the first provider for each task, change provider model IDs, and tune generation defaults. Changes affect new requests across all users.</p></div></div>' +
+        '<label class="admin-toggle-row"><span><strong>Use owner routing rules</strong><small>When off, built-in task priorities are used; provider access toggles remain enforced.</small></span><input type="checkbox" data-routing-setting="enabled"></label>' +
+        '<label class="admin-toggle-row"><span><strong>Enable automatic provider fallback</strong><small>When on, Mahi AI tries the next available configured provider if an attempt fails. When off, only the first available provider is tried.</small></span><input type="checkbox" data-routing-setting="allowFallbacks"></label>' +
+        '<div class="admin-routing-heading"><h6>Task-specific provider order</h6><p>Enter provider names in priority order, separated by commas. The first available provider is attempted first.</p></div>' +
+        '<div class="admin-route-list" id="adminRouteFields"></div>' +
+        '<div class="admin-routing-heading"><h6>Provider access &amp; model IDs</h6><p>Credentials stay in Supabase Secrets. Disabling a provider removes it from text routing/review, not its stored key. Gemini image generation remains Gemini-only.</p></div>' +
+        '<div class="admin-provider-list" id="adminProviderFields"></div>' +
+        '<div class="admin-routing-heading"><h6>Generation defaults</h6><p>Applied to supported text models for new requests; individual provider limits and model capabilities still apply.</p></div>' +
+        '<div class="admin-form-grid"><label class="admin-field"><span class="admin-field-copy"><span class="admin-field-label">Temperature</span><span class="admin-field-help">0 = more deterministic; 1 = more varied. Range 0–1.</span></span><input type="number" min="0" max="1" step="0.1" data-routing-setting="temperature"></label><label class="admin-field"><span class="admin-field-copy"><span class="admin-field-label">Maximum output tokens</span><span class="admin-field-help">512–16,384. Provider/model quotas may impose a lower limit.</span></span><input type="number" min="512" max="16384" step="512" data-routing-setting="maxOutputTokens"></label></div>' +
+        '<div class="admin-security-note">Protected behavior remains fixed: provider URLs and API secrets cannot be edited here; paid-access rules, attachment compatibility, Venice specialist routing for sensitive topics, independent safety review, and Gemini-only image generation remain enforced.</div>';
+      editor.querySelector('[data-routing-setting="enabled"]').checked = routing.enabled !== false;
+      editor.querySelector('[data-routing-setting="allowFallbacks"]').checked = routing.allowFallbacks !== false;
+      editor.querySelector('[data-routing-setting="temperature"]').value = String(routing.temperature);
+      editor.querySelector('[data-routing-setting="maxOutputTokens"]').value = String(routing.maxOutputTokens);
+      const routeHost = $("adminRouteFields");
+      TASK_ROUTES.forEach((task) => {
+        const row = document.createElement("label"); row.className = "admin-route-row";
+        const copy = document.createElement("span"); copy.className = "admin-route-copy";
+        const title = document.createElement("strong"); title.textContent = task.label;
+        const desc = document.createElement("small"); desc.textContent = task.description;
+        copy.append(title, desc);
+        const input = document.createElement("input"); input.type = "text"; input.autocomplete = "off";
+        input.value = (routing.routes[task.id] || DEFAULT_ROUTES[task.id]).map((id) => PROVIDERS.find((p) => p.id === id)?.label || id).join(", ");
+        input.setAttribute("data-routing-route", task.id); input.setAttribute("aria-label", task.label + " provider priority");
+        row.append(copy, input); routeHost.appendChild(row);
+      });
+      const providerHost = $("adminProviderFields");
+      PROVIDERS.forEach((provider) => {
+        const card = document.createElement("section"); card.className = "admin-provider-card";
+        const title = document.createElement("strong"); title.className = "admin-provider-title"; title.textContent = provider.label;
+        const toggle = document.createElement("label"); toggle.className = "admin-provider-toggle";
+        const checkbox = document.createElement("input"); checkbox.type = "checkbox";
+        checkbox.checked = (routing.disabledProviders || []).includes(provider.id);
+        checkbox.setAttribute("data-routing-disable-provider", provider.id);
+        const toggleText = document.createElement("span"); toggleText.textContent = "Disable for text routing";
+        toggle.append(checkbox, toggleText);
+        const modelLabel = document.createElement("label"); modelLabel.className = "admin-provider-model";
+        const modelCaption = document.createElement("span"); modelCaption.textContent = "Model ID override (optional)";
+        const modelInput = document.createElement("input"); modelInput.type = "text"; modelInput.autocomplete = "off";
+        modelInput.maxLength = 120; modelInput.placeholder = "Use configured default"; modelInput.value = routing.models[provider.id] || "";
+        modelInput.setAttribute("data-routing-model", provider.id);
+        modelLabel.append(modelCaption, modelInput);
+        card.append(title, toggle, modelLabel); providerHost.appendChild(card);
+      });
+      return;
+    }
     if (selectedCategoryId === "global") {
       editor.innerHTML = '<div class="admin-editor-head"><div><h5>Global instructions</h5><p>These instructions are attached to all new chat and coding requests for all users.</p></div></div><label class="admin-toggle-row"><span><strong>Enable owner instructions</strong><small>Pause or resume global and topic-specific instruction rules without deleting them.</small></span><input id="adminConfigEnabled" type="checkbox"></label><label class="admin-field"><span class="admin-field-copy"><span class="admin-field-label">Global custom instructions</span><span class="admin-field-help">Write the assistant\'s default behavior, response format, tone, preferred language, or project-specific rules. Maximum 12,000 characters.</span></span><textarea id="adminGlobalInstructions" rows="11" maxlength="12000" placeholder="Example: Answer Banglish messages in natural Banglish. Be direct, verify claims, and prioritize the exact task."></textarea></label><div class="admin-security-note">Your global instructions affect every user. They cannot replace platform safety requirements or make the AI claim actions it did not perform.</div>';
       $("adminConfigEnabled").checked = adminConfig.enabled !== false;
@@ -305,6 +381,11 @@
     renderCategoryList();
     renderEditor();
   });
+  $("adminRoutingButton")?.addEventListener("click", () => {
+    selectedCategoryId = "routing";
+    renderCategoryList();
+    renderEditor();
+  });
   $("adminAddCategory")?.addEventListener("click", () => {
     if (!adminConfig || adminConfig.categories.length >= 25) {
       setConsoleStatus("Maximum of 25 categories reached."); return;
@@ -320,6 +401,22 @@
   editor.addEventListener("input", (event) => {
     const control = event.target;
     if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement)) return;
+    const routeKey = control.getAttribute("data-routing-route");
+    if (routeKey) {
+      const accepted = control.value.split(",").map((value) => {
+        const needle = value.trim().toLowerCase();
+        return PROVIDERS.find((provider) => provider.id === needle || provider.label.toLowerCase() === needle)?.id || "";
+      }).filter(Boolean);
+      adminConfig.routing.routes[routeKey] = [...new Set(accepted)]; markDirty(); return;
+    }
+    const modelProvider = control.getAttribute("data-routing-model");
+    if (modelProvider) { adminConfig.routing.models[modelProvider] = control.value.trim().slice(0, 120); markDirty(); return; }
+    const numericSetting = control.getAttribute("data-routing-setting");
+    if (numericSetting === "temperature" || numericSetting === "maxOutputTokens") {
+      const value = Number(control.value);
+      if (Number.isFinite(value)) adminConfig.routing[numericSetting] = value;
+      markDirty(); return;
+    }
     if (control.id === "adminGlobalInstructions") {
       adminConfig.globalInstructions = control.value;
       markDirty(); return;
@@ -343,9 +440,15 @@
   });
   editor.addEventListener("change", (event) => {
     const control = event.target;
-    if (control instanceof HTMLInputElement && control.id === "adminConfigEnabled") {
-      adminConfig.enabled = control.checked;
-      markDirty();
+    if (!(control instanceof HTMLInputElement)) return;
+    if (control.id === "adminConfigEnabled") { adminConfig.enabled = control.checked; markDirty(); return; }
+    const routingSetting = control.getAttribute("data-routing-setting");
+    if (routingSetting === "enabled" || routingSetting === "allowFallbacks") { adminConfig.routing[routingSetting] = control.checked; markDirty(); return; }
+    const disabledProvider = control.getAttribute("data-routing-disable-provider");
+    if (disabledProvider) {
+      const current = new Set(adminConfig.routing.disabledProviders || []);
+      if (control.checked) current.add(disabledProvider); else current.delete(disabledProvider);
+      adminConfig.routing.disabledProviders = [...current]; markDirty();
     }
   });
   editor.addEventListener("click", (event) => {
