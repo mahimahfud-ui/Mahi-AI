@@ -33,7 +33,7 @@ function send(res, status, body, type) {
   res.end(body);
 }
 
-http.createServer((req, res) => {
+const server = http.createServer((req, res) => {
   if (req.method !== "GET" && req.method !== "HEAD") {
     return send(res, 405, "Method not allowed");
   }
@@ -43,13 +43,25 @@ http.createServer((req, res) => {
   } catch (_) {
     return send(res, 400, "Bad request");
   }
-  if (pathname === "/healthz") return send(res, 200, "ok");
+  // Reject path bytes that can make filesystem APIs throw synchronously or that
+  // proxies and Node may interpret differently.
+  if (pathname.includes("\\0") || pathname.includes("\\\\")) {
+    return send(res, 400, "Bad request");
+  }
+  if (pathname === "/healthz") {
+    if (req.method === "HEAD") {
+      res.writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" });
+      return res.end();
+    }
+    return send(res, 200, "ok");
+  }
   if (pathname === "/") pathname = "/index.html";
   const filePath = path.resolve(PUBLIC_DIR, "." + pathname);
   if (!filePath.startsWith(PUBLIC_DIR + path.sep) && filePath !== path.join(PUBLIC_DIR, "index.html")) {
     return send(res, 403, "Forbidden");
   }
-  fs.readFile(filePath, (error, file) => {
+  try {
+    fs.readFile(filePath, (error, file) => {
     if (error) return send(res, 404, "Not found");
     const type = MIME[path.extname(filePath).toLowerCase()] || "application/octet-stream";
     res.writeHead(200, {
@@ -58,8 +70,21 @@ http.createServer((req, res) => {
       "Referrer-Policy": "strict-origin-when-cross-origin",
       "X-Frame-Options": "DENY",
       "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
-      "Cache-Control": pathname === "/index.html" || pathname === "/config.js" ? "no-cache" : "public, max-age=3600"
+      // Files have stable names rather than content hashes, so revalidate code on
+      // every navigation and avoid serving stale frontend/backend configuration.
+      "Cache-Control": /\\.(?:html?|js|css|json)$/i.test(pathname) ? "no-cache" : "public, max-age=3600"
     });
     res.end(req.method === "HEAD" ? undefined : file);
-  });
-}).listen(PORT, "0.0.0.0", () => console.log("Mahi AI web server listening on port " + PORT));
+    });
+  } catch (error) {
+    // Guard against malformed paths that can throw before fs.readFile's callback.
+    return send(res, 400, "Bad request");
+  }
+});
+
+server.requestTimeout = 10000;
+server.headersTimeout = 12000;
+server.keepAliveTimeout = 5000;
+server.maxHeadersCount = 100;
+
+server.listen(PORT, "0.0.0.0", () => console.log("Mahi AI web server listening on port " + PORT));
