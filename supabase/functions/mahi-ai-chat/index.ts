@@ -321,14 +321,52 @@ function formatUserMemoryContext(context: UserMemoryContext | null): string {
   ].join("\n\n").slice(0, 14000);
 }
 
-function appendUserMemoryContext(messages: ChatMessage[], memoryText: string, actionNotice: string): ChatMessage[] {
-  if (!memoryText && !actionNotice) return messages;
+function formatUserResponsePreferences(value: unknown): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "";
+  const source = value as Record<string, unknown>;
+  const language = source.language === "bn" ? "Bengali (বাংলা)"
+    : source.language === "en" ? "English"
+    : "automatic";
+  const length = source.length === "concise" ? "concise"
+    : source.length === "detailed" ? "detailed"
+    : source.length === "balanced" ? "balanced"
+    : "";
+  const tone = source.tone === "friendly" ? "friendly"
+    : source.tone === "professional" ? "professional"
+    : source.tone === "creative" ? "creative"
+    : source.tone === "neutral" ? "neutral"
+    : "";
+  const format = source.format === "markdown" ? "Markdown"
+    : source.format === "plain" ? "plain text"
+    : "";
+  const preferences = [
+    language !== "automatic" ? "Default response language: " + language + "." : "",
+    length ? "Default answer length: " + length + "." : "",
+    tone ? "Default communication tone: " + tone + "." : "",
+    format ? "Default formatting: prefer " + format + "." : ""
+  ].filter(Boolean);
+  if (!preferences.length) return "";
+  return [
+    "[MAHI AI RESPONSE PREFERENCES — user-selected defaults]",
+    "Use these defaults when they fit the request. An explicit instruction in the user's current message takes priority. Do not mention this preference block unless asked.",
+    preferences.join("\n")
+  ].join("\n");
+}
+
+function appendUserMemoryContext(
+  messages: ChatMessage[],
+  memoryText: string,
+  actionNotice: string,
+  responsePreferencesText = ""
+): ChatMessage[] {
+  if (!memoryText && !actionNotice && !responsePreferencesText) return messages;
   const prepared = [...messages];
   const lastUserIndex = prepared.map((message) => message.role).lastIndexOf("user");
   if (lastUserIndex < 0) return messages;
   const additions: string[] = [];
   if (memoryText) additions.push(memoryText);
   if (actionNotice) additions.push("[MAHI AI MEMORY ACTION RESULT — system-generated status]\n" + actionNotice + "\nDo not claim an operation succeeded unless this status says it did.");
+  if (responsePreferencesText) additions.push(responsePreferencesText);
   const context = additions.join("\n\n").slice(0, 14500);
   const original = prepared[lastUserIndex].content;
   const baseLimit = Math.max(1000, 56000 - context.length - 4);
@@ -2838,7 +2876,13 @@ Deno.serve(async (req: Request) => {
     }
   }
   const memoryContextText = formatUserMemoryContext(userMemoryContext);
-  messagesForProvider = appendUserMemoryContext(messagesForProvider, memoryContextText, memoryActionNotice);
+  const responsePreferencesText = formatUserResponsePreferences(input?.user_preferences);
+  messagesForProvider = appendUserMemoryContext(
+    messagesForProvider,
+    memoryContextText,
+    memoryActionNotice,
+    responsePreferencesText
+  );
   if (memoryContextText) {
     logStructured("info", "user_memory_context_added", {
       request_id: requestId,
