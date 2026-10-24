@@ -7,7 +7,7 @@ const edge = fs.readFileSync(
   "utf8"
 );
 const migration = fs.readFileSync(
-  require.resolve("../supabase/migrations/20261024150000_mahi_ai_memory_system.sql"),
+  require.resolve("../supabase/migrations/20261024081817_mahi_ai_memory_system.sql"),
   "utf8"
 );
 const readme = fs.readFileSync(require.resolve("../README.md"), "utf8");
