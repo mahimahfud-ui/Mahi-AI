@@ -669,7 +669,10 @@
     if (passwordConfirmWrap) passwordConfirmWrap.hidden = accountMethod !== "email" || accountMode !== "register";
     if (phoneOtpGroup) phoneOtpGroup.hidden = accountMethod !== "phone" || !phoneOtpPending;
     if (emailInput) emailInput.required = accountMethod === "email";
-    if (passwordInput) passwordInput.required = accountMethod === "email";
+    if (passwordInput) {
+      passwordInput.required = accountMethod === "email";
+      passwordInput.autocomplete = accountMode === "register" ? "new-password" : "current-password";
+    }
     if (confirmInput) confirmInput.required = accountMethod === "email" && accountMode === "register";
     if (phoneInput) {
       phoneInput.required = accountMethod === "phone";
@@ -738,9 +741,9 @@
   }
 
   function normalizeInternationalPhone(value) {
-    let phone = String(value || "").trim().replace(/[\\s().-]/g, "");
+    let phone = String(value || "").trim().replace(/[\s().-]/g, "");
     if (phone.startsWith("00")) phone = "+" + phone.slice(2);
-    return /^\\+[1-9]\\d{7,14}$/.test(phone) ? phone : "";
+    return /^\+[1-9]\d{7,14}$/.test(phone) ? phone : "";
   }
 
   function readableAuthError(error) {
@@ -826,8 +829,8 @@
       }
 
       if (phoneOtpPending) {
-        const token = String($("accountOtpInput").value || "").trim().replace(/\\s/g, "");
-        if (!/^\\d{4,8}$/.test(token)) throw new Error("Enter the verification code from the SMS.");
+        const token = String($("accountOtpInput").value || "").trim().replace(/\s/g, "");
+        if (!/^\d{4,8}$/.test(token)) throw new Error("Enter the verification code from the SMS.");
         const { data, error } = await client.auth.verifyOtp({
           phone: pendingPhone,
           token,
