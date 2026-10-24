@@ -327,9 +327,11 @@
       const languageVoice = voices.find((voice) => String(voice.lang || "").toLowerCase().startsWith(language.split("-")[0].toLowerCase()));
       if (exactVoice || languageVoice) utterance.voice = exactVoice || languageVoice;
       let settled = false;
+      let speechWatchdog = null;
       const finish = () => {
         if (settled) return;
         settled = true;
+        if (speechWatchdog) window.clearTimeout(speechWatchdog);
         if (voiceCurrentUtterance === utterance) {
           voiceCurrentUtterance = null;
           voiceIsSpeaking = false;
@@ -347,6 +349,14 @@
       voiceCurrentUtterance = utterance;
       voiceIsSpeaking = true;
       if (inVoiceMode && voiceModeActive) setVoiceStatus("Mahi AI is speaking…", "speaking");
+      // Some browser/OS speech engines omit onend after an interrupted utterance.
+      // Prevent that from leaving voice mode stuck in "speaking" forever.
+      speechWatchdog = window.setTimeout(() => {
+        if (!settled) {
+          try { synth.cancel(); } catch (_) {}
+          finish();
+        }
+      }, Math.min(120000, Math.max(12000, text.length * 90)));
       try { synth.speak(utterance); } catch (_) { finish(); }
     });
   }
