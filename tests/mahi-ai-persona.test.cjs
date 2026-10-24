@@ -8,7 +8,7 @@ const edge = fs.readFileSync(
 );
 const readme = fs.readFileSync(require.resolve("../README.md"), "utf8");
 
-test("Mahi AI uses a relaxed friendly tone for casual chats and emojis only when fitting", () => {
+test("MahiCloud uses a relaxed friendly tone for casual chats and emojis only when fitting", () => {
   assert.match(edge, /natural, friendly, relaxed, supportive tone, like a helpful friend/);
   assert.match(edge, /use a few fitting emojis when a moment is playful or cheerful/);
   assert.match(edge, /do not force emojis into every reply/);
@@ -20,7 +20,7 @@ test("coding, serious, and sensitive topics stay focused instead of playful", ()
 });
 
 test("Mahi Mahfud is identified as Mahi-AI founder and owner", () => {
-  assert.match(edge, /Mahi Mahfud \(@mahimahfud\) is the owner and founder of the Mahi-AI assistant project/);
+  assert.match(edge, /Mahi Mahfud \(@mahimahfud\) is the owner and founder of the MahiCloud assistant project/);
   assert.match(edge, /Full\/public name: Mahi Mahfud/);
 });
 
