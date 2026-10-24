@@ -90,7 +90,10 @@
   }
   function setBusy(value) {
     busy = value;
-    ui.send.disabled = value || (!ui.input.value.trim() && !pendingFiles.length);
+    // While busy the send button doubles as a working Stop button.
+    ui.send.disabled = value ? false : (!ui.input.value.trim() && !pendingFiles.length);
+    ui.send.setAttribute("aria-label", value ? "Stop generating" : "Send message");
+    ui.send.title = value ? "Stop generating" : "Send message";
     ui.input.disabled = value;
     ui.attachButton.disabled = value;
     ui.fileInput.disabled = value;
@@ -1455,6 +1458,8 @@
     currentMessages.push({ role: "user", content: userText });
     addMessage("user", sendOptions.displayText || userText, { files: selectedFiles });
     const typing = addMessage("assistant", "", { typing: true });
+    window.__mahiStopped = false;
+    window.__mahiAbort = new AbortController();
     setBusy(true);
     let uploadedAttachments = [];
     let responseCompleted = false;
@@ -1468,6 +1473,7 @@
       if (!accessToken) throw new Error("MahiCloud: Your guest session expired. Reload the page and try again.");
       const response = await fetch(cfg.supabaseUrl + "/functions/v1/mahi-ai-chat", {
         method: "POST",
+        signal: window.__mahiAbort.signal,
         headers: {
           "Content-Type": "application/json",
           "apikey": cfg.supabasePublishableKey,
@@ -1568,6 +1574,25 @@
           historyError instanceof Error ? historyError.message.slice(0, 160) : "Unknown error");
       }
     } catch (error) {
+      if (window.__mahiStopped && !responseCompleted) {
+        // The user pressed Stop: keep whatever text already arrived, or restore the draft.
+        window.__mahiStopped = false;
+        const stoppedContent = typing.querySelector(".message-content");
+        if (fullText.trim() && stoppedContent) {
+          fullText = fullText.replace(/\s*\[\[MAHI_LANG:[\s\S]*$/i, "").trim();
+          stoppedContent.classList.remove("streaming-text");
+          stoppedContent.innerHTML = safeMarkdown(fullText);
+          delete typing.dataset.typing;
+          addSpeechActions(typing, fullText);
+          currentMessages.push({ role: "assistant", content: fullText });
+        } else {
+          typing.remove();
+          currentMessages.pop();
+          ui.input.value = userText;
+          updateCounter();
+        }
+        return;
+      }
       if (responseCompleted) {
         // Preserve a successfully received answer if image-marker resolution or another
         // non-critical UI step failed after the stream already finished.
@@ -1896,6 +1921,11 @@
 
   ui.form.addEventListener("submit", (event) => {
     event.preventDefault();
+    if (busy) {
+      window.__mahiStopped = true;
+      try { window.__mahiAbort.abort(); } catch (_) {}
+      return;
+    }
     sendMessage(ui.input.value);
   });
   if (ui.voiceModeButton) ui.voiceModeButton.addEventListener("click", openVoiceMode);
