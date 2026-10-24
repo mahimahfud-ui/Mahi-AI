@@ -7,6 +7,7 @@ const corsHeaders: Record<string, string> = {
 
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://mahi-ai.onrender.com",
+  "https://mahi-ai-kdm2.onrender.com",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ];
