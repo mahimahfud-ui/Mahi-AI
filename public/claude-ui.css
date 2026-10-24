@@ -1,23 +1,118 @@
 /* MahiCloud — Claude-style layer. Loaded LAST so it overrides earlier sheets.
-   Warm palette, centered column, soft message cards. */
-:root {
-  --claude-bg: #f5f3ef;
-  --claude-surface: #ffffff;
-  --claude-border: #e8e4dc;
-  --claude-text: #1a1a1a;
-  --claude-muted: #6b6560;
-  --claude-accent: #d97757;
-  --claude-user: #ebe7e0;
-  --claude-radius: 16px;
+   Warm palette, centered reading column, serif answers, rounded composer, fully responsive. */
+:root{
+  --cl-max:46rem;
+  --cl-serif:ui-serif,"Iowan Old Style","Palatino Linotype",Georgia,"Noto Serif Bengali","Noto Serif",serif;
+  --cl-radius:18px;
+  --bg:#262624;--panel:#1f1e1d;--panel-2:#30302e;
+  --line:rgba(222,220,209,.13);--muted:#a8a69c;--text:#faf9f5;
+  --accent:#d97757;--accent2:#c6613f;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --claude-bg: #1c1b1a;
-    --claude-surface: #262422;
-    --claude-border: #3a3733;
-    --claude-text: #f5f3ef;
-    --claude-muted: #a39e96;
-    --claude-user: #2f2c29;
-  }
+html[data-theme="light"]{
+  --bg:#faf9f5;--panel:#f0eee6;--panel-2:#ffffff;
+  --line:rgba(31,30,29,.14);--muted:#6b6a64;--text:#1f1e1d;
+  --accent:#c6613f;--accent2:#b5532f;
 }
-/* Placeholder - full CSS from pack should be used. See mahi-upgrade-pack.zip */
+body{background:var(--bg);color:var(--text)}
+html[data-theme="light"] body{background:#faf9f5;color:#1f1e1d}
+.sidebar{background:var(--panel)}
+.main-panel{background:var(--bg)}
+html[data-theme="light"] .sidebar{background:#f0eee6}
+html[data-theme="light"] .main-panel{background:#faf9f5}
+.topbar{background:transparent;border-color:transparent;backdrop-filter:none}
+html[data-theme="light"] .topbar{background:transparent}
+
+/* Conversation column */
+.messages{max-width:var(--cl-max);width:100%;margin-inline:auto;gap:28px}
+.message{gap:0}
+.message-avatar,.message-heading{display:none}
+.message.user .message-body{
+  max-width:min(85%,34rem);margin-left:auto;background:var(--panel-2);
+  border:1px solid var(--line);border-radius:var(--cl-radius);padding:10px 16px
+}
+.message.assistant .message-body{width:100%}
+.message.assistant .message-content{font-family:var(--cl-serif);font-size:1.0625rem;line-height:1.7}
+.message.user .message-content{font-size:1rem;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}
+.message-content a{color:var(--accent);text-underline-offset:2px}
+.message-content :is(p,ul,ol){margin:.7em 0}
+.message-content img{max-width:100%;height:auto;border-radius:12px}
+.message-content table{display:block;max-width:100%;overflow-x:auto;border-collapse:collapse}
+.message-content :is(th,td){border:1px solid var(--line);padding:6px 10px}
+
+/* Code blocks */
+.message-content pre{
+  position:relative;max-width:100%;overflow-x:auto;border-radius:12px;
+  border:1px solid var(--line);background:rgba(0,0,0,.28);padding:2.5rem 1rem 1rem
+}
+html[data-theme="light"] .message-content pre{background:rgba(31,30,29,.05)}
+.message-content code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.88em}
+.cf-code-bar{
+  position:absolute;inset:0 0 auto 0;height:2.1rem;display:flex;align-items:center;justify-content:space-between;
+  padding:0 .6rem 0 1rem;font:500 .75rem/1 ui-sans-serif,system-ui,sans-serif;color:var(--muted);
+  border-bottom:1px solid var(--line);user-select:none
+}
+.cf-code-copy,.cf-act{
+  display:inline-flex;align-items:center;gap:6px;border:0;border-radius:8px;background:transparent;
+  color:var(--muted);font:inherit;font-size:.78rem;cursor:pointer;padding:5px 8px;min-height:28px
+}
+.cf-code-copy:hover,.cf-act:hover{background:rgba(127,127,127,.16);color:var(--text)}
+.cf-act svg,.cf-code-copy svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cf-copying .cf-code-bar{display:none!important}
+
+/* Message actions: appear on hover (desktop), always visible on touch */
+.message-actions{display:flex;flex-wrap:wrap;gap:2px;margin-top:6px}
+@media(hover:hover){
+  .message.assistant .message-actions{opacity:0;transition:opacity .15s}
+  .message.assistant:hover .message-actions,.message.assistant:focus-within .message-actions,
+  .message.assistant:last-child .message-actions{opacity:1}
+}
+@media(pointer:coarse){.message-action,.cf-act,.cf-code-copy{min-height:40px}}
+
+/* Composer */
+.composer-wrap{padding-inline:clamp(10px,3vw,24px)}
+.composer,.footer-note{max-width:var(--cl-max);margin-inline:auto}
+.composer{
+  border-radius:24px;border:1px solid var(--line);background:var(--panel-2);
+  box-shadow:0 2px 14px rgba(0,0,0,.14);transition:border-color .15s,box-shadow .15s
+}
+.composer:focus-within{border-color:color-mix(in srgb,var(--accent) 60%,transparent);box-shadow:0 4px 22px rgba(0,0,0,.2)}
+#sendButton{background:var(--accent);color:#fff;border-radius:12px}
+#sendButton:hover:not(:disabled){background:var(--accent2)}
+#sendButton svg{stroke:currentColor;fill:none}
+.footer-note{text-align:center;color:var(--muted)}
+
+/* Welcome */
+.welcome h1{font-family:var(--cl-serif);font-weight:500;letter-spacing:-.02em}
+.welcome h1 span{color:var(--accent)}
+.suggestion-card{border-radius:14px}
+
+/* Extras injected by claude-features.js */
+.cf-scroll-down{
+  position:fixed;right:max(16px,env(safe-area-inset-right));bottom:calc(120px + env(safe-area-inset-bottom));
+  width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 4px 16px rgba(0,0,0,.25);z-index:20
+}
+.cf-scroll-down.show{display:flex}
+.cf-scroll-down svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.cf-chat-search{
+  width:100%;margin:6px 0;padding:9px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--text);font:inherit;font-size:16px
+}
+.cf-toast{
+  position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%);
+  background:var(--text);color:var(--bg);padding:8px 14px;border-radius:999px;font-size:.85rem;z-index:60;
+  pointer-events:none;animation:cf-fade 1.6s ease forwards
+}
+@keyframes cf-fade{0%{opacity:0;transform:translate(-50%,6px)}12%,80%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,0)}}
+
+/* Responsive */
+@media(min-width:1400px){:root{--cl-max:50rem}}
+@media(max-width:760px){
+  .messages{gap:22px}
+  .message.assistant .message-content{font-size:1rem;line-height:1.65}
+  .message.user .message-body{max-width:92%}
+  .composer{border-radius:20px}
+  .cf-scroll-down{bottom:calc(104px + env(safe-area-inset-bottom))}
+}
+@media(max-width:760px) and (orientation:landscape){.cf-scroll-down{bottom:calc(76px + env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){.cf-toast{animation-duration:.01ms}}
