@@ -3,7 +3,7 @@ name: apply-upgrade
 on:
   push:
     branches: [claude/upgrade-engine]
-    paths: ["tools/**", ".github/workflows/apply-upgrade.yml"]
+    paths: ["tools/**", "public/claude-ui.css", "public/claude-features.js", ".github/workflows/apply-upgrade.yml"]
 permissions:
   contents: write
 jobs:
