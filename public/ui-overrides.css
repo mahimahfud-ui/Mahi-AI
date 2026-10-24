@@ -542,3 +542,115 @@ body {
   padding: 0 !important;
   border-radius: 0 !important;
 }
+
+
+/* Desktop sidebar resize handle and expanded preferences panel. */
+@media (min-width: 761px) {
+  :root:root body .sidebar {
+    width: var(--sidebar-width, 260px) !important;
+    min-width: 220px !important;
+    flex: 0 0 var(--sidebar-width, 260px) !important;
+  }
+  :root:root body .app-shell.sidebar-collapsed .sidebar {
+    margin-left: calc(-1 * var(--sidebar-width, 260px)) !important;
+  }
+  .sidebar-resize-handle {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 70;
+    width: 8px;
+    cursor: col-resize;
+    touch-action: none;
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+  .sidebar-resize-handle::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 2px;
+    background: transparent;
+    transition: background .16s ease;
+  }
+  .sidebar-resize-handle:hover::after,
+  .sidebar-resize-handle:focus-visible::after,
+  .sidebar-resize-handle.is-dragging::after {
+    background: var(--accent, #4f8cff);
+  }
+  body.is-resizing-sidebar,
+  body.is-resizing-sidebar * {
+    cursor: col-resize !important;
+    user-select: none !important;
+  }
+}
+@media (max-width: 760px) {
+  .sidebar-resize-handle { display: none !important; }
+  .sidebar { width: min(290px, 86vw) !important; min-width: 0 !important; flex-basis: auto !important; }
+}
+.sidebar-bottom { position: relative; }
+:root:root body .sidebar-bottom .settings-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 8px);
+  width: auto;
+  max-height: min(78dvh, 760px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  z-index: 80;
+  padding: 16px 14px;
+  margin: 0;
+  border: 1px solid var(--m-line, rgba(110,160,255,.15));
+  border-radius: 16px;
+  background: var(--m-comp, #0c1322);
+  box-shadow: 0 24px 60px rgba(0,0,0,.42);
+}
+:root:root body .sidebar-bottom .settings-panel[hidden] { display: none !important; }
+.settings-group { display: grid; gap: 11px; padding: 0 0 15px; margin: 0 0 15px; border-bottom: 1px solid var(--m-line, rgba(110,160,255,.15)); }
+.settings-group:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: 0; }
+.settings-group-title { margin: 0; color: var(--m-text, #e8eefc); font-size: 12px; font-weight: 750; letter-spacing: .02em; }
+.settings-group .setting-row { gap: 12px; min-width: 0; }
+.setting-copy { flex: 1 1 auto; }
+.setting-title { display: block; color: var(--m-text, #e8eefc); font-size: 12px; font-weight: 650; }
+.setting-copy small, .settings-help { color: var(--m-mute, #8a97b5); font-size: 11px; line-height: 1.45; }
+.settings-help { margin: -3px 0 0; }
+.setting-switch { width: 38px; height: 22px; flex: 0 0 38px; padding: 2px; border: 1px solid var(--m-line); border-radius: 999px; background: var(--m-hover); position: relative; }
+.setting-switch > span { display: block; width: 16px; height: 16px; border-radius: 50%; background: var(--m-mute); transition: transform .18s, background .18s; }
+.setting-switch[aria-checked="true"] { background: var(--accent); border-color: transparent; }
+.setting-switch[aria-checked="true"] > span { background: #fff; transform: translateX(16px); }
+.setting-select { max-width: 142px; min-width: 118px; padding: 7px 8px; border: 1px solid var(--m-line); border-radius: 9px; background: var(--m-comp); color: var(--m-text); font: 500 11px var(--m-font); }
+.setting-select-wide { width: 100%; max-width: none; }
+.settings-field { display: grid; gap: 7px; min-width: 0; }
+.setting-textarea { width: 100%; min-width: 0; resize: vertical; padding: 9px 10px; border: 1px solid var(--m-line); border-radius: 10px; background: transparent; color: var(--m-text); font: 12px/1.5 var(--m-font); }
+.setting-textarea:focus-visible, .setting-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.settings-save-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.settings-save-row .setting-status { flex: 1 1 150px; margin: 0; }
+.setting-save-button, .setting-action-button { border: 1px solid var(--m-line); border-radius: 10px; padding: 7px 10px; background: var(--m-hover); color: var(--m-text); font-size: 11px; }
+.setting-save-button:hover, .setting-action-button:hover { border-color: var(--accent); }
+.settings-actions { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 7px; }
+.settings-actions .setting-action-button:last-child { grid-column: 1 / -1; }
+@media (max-width: 760px) {
+  :root:root body .sidebar-bottom .settings-panel {
+    left: 0; right: 0; bottom: calc(100% + 8px);
+    max-height: min(68dvh, 620px);
+    width: auto;
+  }
+  .setting-select { min-width: 104px; max-width: 122px; }
+  .settings-group { gap: 9px; margin-bottom: 12px; padding-bottom: 12px; }
+}
+:root[data-chat-font-size="small"] :is(.messages .message-content) { font-size: 14px !important; }
+:root[data-chat-font-size="default"] :is(.messages .message-content) { font-size: 16px !important; }
+:root[data-chat-font-size="large"] :is(.messages .message-content) { font-size: 18px !important; }
+:root[data-chat-density="compact"] .messages { gap: 13px !important; }
+:root[data-chat-density="comfortable"] .messages { gap: 26px !important; }
+@media (max-width: 760px) {
+  :root[data-chat-font-size="large"] :is(.messages .message-content) { font-size: 17px !important; }
+  :root[data-chat-density="comfortable"] .messages { gap: 22px !important; }
+  :root[data-chat-density="compact"] .messages { gap: 12px !important; }
+}
