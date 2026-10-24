@@ -856,7 +856,7 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   let preferred: string[];
   if (isPornRelatedPrompt(prompt) && !hasInlineAttachments) {
     // FULL UNLOCK: Venice first (rank 0) but nothing is locked to it any more.
-    preferred = ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];, "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
+    preferred = ["    preferred = ["    preferred = ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];, "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (hasInlineAttachments) {
     preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
     if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
