@@ -2162,8 +2162,21 @@
 
   ui.form.addEventListener("submit", (event) => {
     event.preventDefault();
-    sendMessage(ui.input.value);
+    void sendMessage(ui.input.value);
   });
+  if (ui.stop) ui.stop.addEventListener("click", () => {
+    if (activeRequestController && busy) activeRequestController.abort();
+  });
+  if (ui.chatSearch) ui.chatSearch.addEventListener("input", renderConversationList);
+  if (ui.exportMarkdownButton) ui.exportMarkdownButton.addEventListener("click", () => exportConversation("md"));
+  if (ui.exportJsonButton) ui.exportJsonButton.addEventListener("click", () => exportConversation("json"));
+  if (ui.temporaryChatButton) ui.temporaryChatButton.addEventListener("click", () => {
+    if (busy) return;
+    if (currentMessages.length && !window.confirm("Switching chat mode starts a new chat. The current temporary chat is only in this browser session. Continue?")) return;
+    setTemporaryChatMode(!temporaryChatMode);
+    beginNewChat();
+  });
+  if ($("cancelEditButton")) $("cancelEditButton").addEventListener("click", cancelPendingEdit);
   if (ui.voiceModeButton) ui.voiceModeButton.addEventListener("click", openVoiceMode);
   if (voiceUI.mic) voiceUI.mic.addEventListener("click", toggleVoiceMicrophone);
   if (voiceUI.end) voiceUI.end.addEventListener("click", closeVoiceMode);
