@@ -8,6 +8,16 @@ on:
       - "server.js"
       - "public/app.js"
       - "public/config.js"
+      - "public/index.html"
+      - "public/styles.css"
+      - "public/theme.css"
+      - "public/themes.js"
+      - "public/ui-overrides.css"
+      - "public/craft.css"
+      - "public/motion.css"
+      - "public/motion.js"
+      - "public/motion-b.css"
+      - "public/motion-b.js"
       - "tests/**"
       - ".github/workflows/edge-function-check.yml"
   push:
@@ -20,6 +30,16 @@ on:
       - "server.js"
       - "public/app.js"
       - "public/config.js"
+      - "public/index.html"
+      - "public/styles.css"
+      - "public/theme.css"
+      - "public/themes.js"
+      - "public/ui-overrides.css"
+      - "public/craft.css"
+      - "public/motion.css"
+      - "public/motion.js"
+      - "public/motion-b.css"
+      - "public/motion-b.js"
       - "tests/**"
       - ".github/workflows/edge-function-check.yml"
 
@@ -44,5 +64,6 @@ jobs:
         run: |
           node --check public/app.js
           node --check public/config.js
+          node --check public/themes.js
       - name: Run backend regression tests
         run: node --test tests/*.test.cjs
