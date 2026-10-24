@@ -176,9 +176,29 @@ function formatFileSize(bytes: number): string {
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
   return (bytes / (1024 * 1024)).toFixed(1) + " MB";
 }
+function conversationTitleFromPrompt(prompt: string): string {
+  const normalized = String(prompt || "").replace(/\x60{3}[\s\S]*?\x60{3}/g, " ").replace(/\s+/g, " ").trim();
+  if (!normalized) return "New chat";
+  const sentence = normalized.match(/^.{1,180}?(?:[.!?](?=\s|$)|$)/)?.[0] || normalized;
+  let title = sentence
+    .replace(/^(?:hi|hello|hey)[,!\s]+/i, "")
+    .replace(/^(?:please\s+)?(?:can|could|would)\s+you(?:\s+please)?\s+/i, "")
+    .replace(/^(?:please\s+)?(?:help me|i need you to)\s+/i, "")
+    .replace(/^please\s+/i, "")
+    .replace(/^[\s"'\x60*_#-]+|[\s"'\x60*_#-]+$/g, "")
+    .trim();
+  if (title.length > 56) {
+    const cut = title.slice(0, 57);
+    const boundary = cut.lastIndexOf(" ");
+    title = boundary >= 32 ? cut.slice(0, boundary) : title.slice(0, 56);
+  }
+  title = title.replace(/[.!?,;:]+$/g, "").trim();
+  return title || normalized.slice(0, 56) || "New chat";
+}
+
 async function createConversationIfNeeded(userId: string, initialConversationId: string, titlePrompt: string): Promise<string> {
   if (initialConversationId) return initialConversationId;
-  const title = titlePrompt.replace(/\s+/g, " ").trim().slice(0, 56) || "New chat";
+  const title = conversationTitleFromPrompt(titlePrompt);
   const created = await rest("mahi_ai_conversations", {
     method: "POST",
     headers: { Prefer: "return=representation" },
@@ -344,12 +364,21 @@ function systemPrompt(task: string): string {
   const previewGuidance = task === "coding"
     ? " When the user asks to build, create, design, or preview a website, webpage, landing page, or visual frontend prototype, make the result previewable in Mahi AI: provide a complete runnable page in one fenced html code block, put CSS in an inline style element and JavaScript in an inline script element, and include responsive viewport metadata. For this single-file preview path, avoid JSX/TSX, package imports, and build steps. If the user explicitly asks for an existing repository, a framework, multiple files, or a specific format, respect that request and do not force a single HTML file. For unrelated code questions, answer in the most appropriate code format."
     : "";
+  const taskGuidance = task === "coding"
+    ? " For technical work, identify the requested environment and deliverable first; prefer maintainable, compatible code over clever shortcuts, call out important assumptions, and include tests or verification steps when useful. Keep fixes scoped to the user's request."
+    : task === "reasoning"
+    ? " For analytical or numerical tasks, make the key assumptions explicit, show the essential derivation or evidence, check units and edge cases, then state the result plainly. Do not inflate confidence beyond the evidence."
+    : task === "creative"
+    ? " For writing and creative tasks, deliver the requested artifact in the requested format before adding commentary. Match the user's language, audience, tone, and length constraints; avoid generic filler and offer alternatives only when they add value."
+    : task === "general"
+    ? " Lead with the direct answer or completed task. Match the depth to the request, use headings or bullets only when they improve scanning, and include a practical next step only when it is genuinely useful."
+    : "";
   const toolGuidance = task === "web_research"
     ? " When web search or URL-context tools are enabled, use them. Prefer primary or official sources, compare publication date and event date, and include source links returned by the search tool. Never invent links or claim live verification if retrieval was unavailable."
     : task === "code_execution"
     ? " Use sandboxed Python code execution for calculations, numerical tasks, statistics or explicit code execution when available. Base numerical conclusions on actual tool results. Do not say code ran unless the tool returned an execution result."
     : "";
-  return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + "." + previewGuidance + toolGuidance + " Do not mention internal providers, routing, or API infrastructure.";
+  return "You are Mahi AI, an accuracy-first multilingual assistant. Current date: " + today + ". Detect the language/script/style of the actual user request and answer in that same language unless another is requested; support Bengali, Banglish transliteration, regional languages, non-Latin scripts, and mixed-language text. Complete the requested task; do not substitute an unrelated tutorial or code example. Before answering, internally check that every requirement is addressed; verify names, dates, units, arithmetic, assumptions, contradictions, code logic/syntax, and whether the response actually satisfies the request. Recalculate numerical results independently when practical. For code, provide a complete and compatible solution, state material environment/dependency assumptions, handle relevant errors and edge cases, and never claim code was run/tested unless it was. For factual answers, separate confirmed facts from inference, state material uncertainty, do not guess missing details, and never invent sources, quotations, citations, test results, or attachment contents. If a question depends on current/live facts and no live search/source is available in the supplied context, disclose that limitation rather than presenting an old guess as current. For medical, legal, financial, or safety-sensitive topics, be careful, explain critical caveats, and recommend qualified professional help where personal circumstances matter. If essential context is missing, ask one concise clarifying question; otherwise state a reasonable assumption and proceed. Give concise explanations without exposing hidden chain-of-thought. The task category is " + task + "." + taskGuidance + previewGuidance + toolGuidance + " Do not mention internal providers, routing, or API infrastructure.";
 }
 type ChatMessage = { role: "user" | "assistant"; content: string };
 async function fetchWithTimeout(url: string, init: RequestInit, ms = 45000): Promise<Response> {
