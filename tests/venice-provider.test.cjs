@@ -8,7 +8,7 @@ const edge = fs.readFileSync(
 );
 
 test("Venice AI is configured as an OpenAI-compatible chat fallback", () => {
-  assert.match(edge, /if \(name === "venice"\) return configuredSecret\(\["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"\]\)/);
+  assert.match(edge, /if \(name === "venice"\) return configuredSecret\(\["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"\]\)/);
   assert.match(edge, /"mistral", "venice", "anthropic", "openai"/);
   assert.match(edge, /https:\/\/api\.venice\.ai\/api\/v1\/chat\/completions/);
   assert.match(edge, /envFirst\(\["VENICE_MODEL"\]\) \|\| "zai-org-glm-5"/);
