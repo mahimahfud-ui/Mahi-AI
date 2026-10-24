@@ -849,10 +849,9 @@ function shouldPreferVenice(prompt: string): boolean {
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = ""): string[] {
   let preferred: string[];
   if (isPornRelatedPrompt(prompt) && !hasInlineAttachments) {
-    // Route porn/NSFW/adult-media text prompts to Venice before task classification,
-    // including requests otherwise classified as coding, research, or creative writing.
-    // Other configured providers remain available only as fallbacks if Venice fails.
-    preferred = ["venice", "gemini", "groq", "openrouter", "shannon", "mistral", "deepseek", "nvidia", "cloudflare", "anthropic", "openai"];
+    // Porn/NSFW text prompts are Venice-only. Do not pass these requests to
+    // other providers; if Venice is unavailable, report the actual provider failure.
+    preferred = ["venice"];
   } else if (hasInlineAttachments) {
     // Gemini handles multimodal and file inputs directly; OpenRouter's free router
     // is next and selects a free model with the needed feature when available.
@@ -875,7 +874,9 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
 
   // The order expresses the task routing preference. All other configured providers
   // remain in the cascade, with attachment-incompatible providers excluded.
-  const fallback = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
+  const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments
+    ? ["venice"]
+    : ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   const configured = [...new Set([...preferred, ...fallback])]
     .filter((name) => providerIsConfigured(name, task) &&
       (isPornRelatedPrompt(prompt) || name !== "venice") &&
