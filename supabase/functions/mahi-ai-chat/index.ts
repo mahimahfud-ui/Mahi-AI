@@ -26,7 +26,7 @@ function isAllowedOrigin(origin: string): boolean {
       /^mahi-ai(?:-[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)?\.onrender\.com$/i.test(parsed.hostname)
     ) return true;
 
-    const configured = envFirst(["MAHI_AI_ALLOWED_ORIGINS"]);
+    const configured = envFirst(["MAHI_AI_ALLOWED_ORIGINS", "ALLOWED_ORIGINS"]);
     const customOrigins = configured
       ? configured.split(",").map((value) => value.trim()).filter(Boolean)
       : [];
@@ -591,7 +591,7 @@ function flagEnabled(name: string): boolean {
 function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   // A configured provider key is the explicit opt-in for this provider.
-  if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+  if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
   if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
   if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
   // A configured DeepSeek key explicitly enables this provider in the fallback cascade.
@@ -1277,7 +1277,7 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
 async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<{ text: string; provider: string }> {
   if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride), provider: name };
   if (name === "shannon") {
-    const key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+    const key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
     if (!key) throw new Error("Not configured");
     const model = envFirst(["SHANNON_MODEL"]) || "shannon-3";
     return { text: await openAICompatible(name, "https://api.shannon-ai.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
@@ -1657,7 +1657,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
   } else {
     let key = "";
     if (name === "shannon") {
-      key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+      key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
       url = "https://api.shannon-ai.com/v1/chat/completions";
     } else if (name === "groq") { key = envFirst(["GROQ_API_KEY"]); url = "https://api.groq.com/openai/v1/chat/completions"; }
     else if (name === "openrouter") {
