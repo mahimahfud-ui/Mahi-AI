@@ -2232,7 +2232,8 @@ async function streamImageGenerationResponse(
   userId: string, messages: ChatMessage[], initialConversationId: string, usageId: string | null,
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
-  editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = []
+  editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = [],
+  customInstructions = "", responseStyle = "default"
 ): Promise<Response> {
   return eventStreamResponse((controller, encoder, registerCancellation) => {
     let cancelled = false;
@@ -2819,7 +2820,7 @@ Deno.serve(async (req: Request) => {
   const temporaryChat = input?.temporary_chat === true;
   const branchContext = input?.branch_context === true;
   const customInstructions = typeof input?.custom_instructions === "string"
-    ? input.custom_instructions.replace(/[\\u0000-\\u001f\\u007f]/g, "").trim().slice(0, 3000)
+    ? input.custom_instructions.replace(/[\x00-\x1F\x7F]/g, "").trim().slice(0, 3000)
     : "";
   const allowedResponseStyles = ["default", "friendly", "concise", "detailed", "professional"];
   const responseStyle = typeof input?.response_style === "string" && allowedResponseStyles.includes(input.response_style)
@@ -3034,6 +3035,6 @@ Deno.serve(async (req: Request) => {
   return await streamChatResponse(
     user.id, messagesForProvider, task, conversationId, usageId, attachments, displayUserText,
     responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent,
-    branchContext ? messages.slice(0, -1) : []
+    branchContext ? messages.slice(0, -1) : [], customInstructions, responseStyle
   );
 });
