@@ -51,3 +51,19 @@ test("provider routing stays server-side and paid optional routes honor opt-in f
   assert.match(edge, /if \(name === "openai"\) return \(task === "coding" \|\| flagEnabled\("ENABLE_PAID_FALLBACK"\)\)/);
   assert.doesNotMatch(app, /GEMINI_API_KEY|OPENROUTER_API_KEY|GROQ_API_KEY/);
 });
+
+test("settings panel exposes persistent working chat preferences", () => {
+  for (const id of [
+    "sidebarResizeHandle", "enterToSendToggle", "chatDensitySelect", "chatFontSizeSelect",
+    "autoScrollToggle", "responseStyleSelect", "customInstructionsInput", "autoReadAloudToggle",
+    "settingsExportMarkdown", "settingsExportJson", "resetChatPreferences"
+  ]) assert.ok(html.includes('id="' + id + '"'), "missing setting " + id);
+  assert.match(app, /setupSidebarResize\(\)/);
+  assert.match(app, /mahi-ai-sidebar-width/);
+  assert.match(app, /CHAT_PREFERENCES_STORAGE_KEY/);
+  assert.match(app, /custom_instructions: chatPreferences\.customInstructions/);
+  assert.match(app, /response_style: chatPreferences\.responseStyle/);
+  assert.match(edge, /const customInstructions = typeof input\?\.custom_instructions/);
+  assert.match(edge, /const responseStyle = typeof input\?\.response_style/);
+  assert.match(edge, /startProviderStream\(provider, providerMessages, task, attachments, providerBudget\)/);
+});
