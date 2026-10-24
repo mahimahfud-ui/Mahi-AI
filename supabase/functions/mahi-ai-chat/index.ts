@@ -2188,9 +2188,11 @@ async function streamChatResponse(
             break;
           }
           const providersLeft = available.length - index;
-          const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution";
-          // Keep tool-heavy work patient, but move on quickly from slow chat/coding routes.
-          const maxAttemptMs = taskNeedsLongToolExecution ? 22000 : index === 0 ? 12000 : 7500;
+          // Multimodal uploads (including voice-recording fallback) need extra time
+          // for the provider to ingest an attachment before generating an answer.
+          const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution" || hasInlineAttachments;
+          // Keep tool-heavy and multimodal work patient, but move on quickly from normal chat/coding routes.
+          const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 12000 : 7500;
           const providerBudget = Math.max(6000, Math.min(maxAttemptMs, Math.floor(remaining / providersLeft)));
           const provider = available[index];
           const providerStartedAt = Date.now();
