@@ -20,6 +20,7 @@ on:
       - "server.js"
       - "public/app.js"
       - "public/config.js"
+      - "tests/**"
       - ".github/workflows/edge-function-check.yml"
 
 permissions:
