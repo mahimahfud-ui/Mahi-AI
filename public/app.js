@@ -509,7 +509,7 @@
     return (readPreference(DISPLAY_NAME_STORAGE_KEY) || "You").trim() || "You";
   }
   function applyDisplayName(value, persist) {
-    const clean = String(value || "").replace(/[\\u0000-\\u001f\\u007f]/g, "").replace(/\\s+/g, " ").trim().slice(0, 32) || "You";
+    const clean = String(value || "").replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim().slice(0, 32) || "You";
     if (persist !== false) writePreference(DISPLAY_NAME_STORAGE_KEY, clean);
     const input = $("displayNameInput");
     if (input && input.value !== clean) input.value = clean;
