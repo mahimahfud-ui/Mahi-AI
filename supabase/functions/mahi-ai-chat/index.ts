@@ -733,7 +733,7 @@ const PUBLIC_CURRENCIES: Record<string, string> = {
 
 function findCurrencyPair(prompt: string): { base: string; quote: string; amount: number } | null {
   const names = Object.keys(PUBLIC_CURRENCIES).sort((a, b) => b.length - a.length)
-    .map((value) => value.replace(/[*+?^$()|[\]\\]/g, "\\async function readProviderError(response: Response): Promise<string> {")).join("|");
+    .map((value) => value.replace(/\s+/g, "\\s+")).join("|");
   const pattern = new RegExp("\\b(" + names + ")\\b\\s*(?:to|in|into|against|the rate of)\\s*\\b(" + names + ")\\b", "i");
   const match = prompt.match(pattern);
   if (!match) return null;
