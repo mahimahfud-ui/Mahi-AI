@@ -528,3 +528,17 @@ body {
 .message-content :is(img, video, iframe) {
   max-width: 100%;
 }
+
+
+/* Plain conversation stream: message wrappers never become cards or bubbles. */
+:root:root body .messages .message,
+:root:root body .messages .message .message-body,
+:root:root body .messages .message .message-content {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+:root:root body .messages .message .message-body {
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
