@@ -1900,6 +1900,12 @@ function parseReviewedAnswer(raw: string): { verdict: string; answer: string } |
   return null;
 }
 
+function shouldRequireIndependentReview(task: string, prompt: string): boolean {
+  if (["coding", "reasoning", "web_research", "code_execution"].includes(task)) return true;
+  if (isAdultSensitivePrompt(prompt) || shouldPreferVenice(prompt)) return true;
+  return /\\b(?:medical|health|symptom|diagnos(?:is|e)|prescription|medication|dosage|side effects|legal advice|lawyer|lawsuit|court case|immigration|visa application|investment|investing|stock market|cryptocurrency|crypto wallet|tax advice|suicid(?:e|al)|self-harm|emergency|weapon|explosive)\\b|(?:রোগের লক্ষণ|রোগ নির্ণয়|রোগ নির্ণয়|ওষুধের ডোজ|ওষুধের মাত্রা|পার্শ্বপ্রতিক্রিয়া|পার্শ্বপ্রতিক্রিয়া|আইনি পরামর্শ|ভিসা আবেদন|বিনিয়োগ|বিনিয়োগ|আত্মহত্যা|জরুরি চিকিৎসা)/iu.test(prompt);
+}
+
 async function independentlyReviewAnswer(
   available: string[], originalPrompt: string, contextText: string, draft: string, task: string,
   reviewBudgetMs = 9000
@@ -1992,6 +1998,7 @@ async function streamChatResponse(
       let conversationId = initialConversationId;
       const failures: string[] = [];
       let chosen: { provider: string; text: string; reviewer: string | null } | null = null;
+      let liveStreamText = "";
       const startedAt = Date.now();
       const totalProviderBudgetMs = 115000;
       const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
@@ -2010,6 +2017,7 @@ async function streamChatResponse(
           const providerBudget = Math.max(6000, Math.min(maxAttemptMs, Math.floor(remaining / providersLeft)));
           const provider = available[index];
           const providerStartedAt = Date.now();
+          let attemptStreamed = false;
           sseEvent(controller, encoder, {
             type: "status",
             message: index === 0
@@ -2035,8 +2043,12 @@ async function streamChatResponse(
                 if (completeText.length + next.value.length > 180000) {
                   throw new Error("Provider response exceeded the supported response size");
                 }
-                // Keep candidate drafts private until a separate model approves them.
                 completeText += next.value;
+                // Stream immediately so users see the answer while it is being generated.
+                // If review later corrects/rejects it, a reset event replaces this draft.
+                sseEvent(controller, encoder, { type: "delta", text: next.value });
+                liveStreamText += next.value;
+                attemptStreamed = true;
               }
             }
             candidate.cleanup();
@@ -2056,22 +2068,22 @@ async function streamChatResponse(
               output_chars: candidateText.length
             });
 
-            const remainingReviewBudgetMs = Math.max(
+            const requiresReview = shouldRequireIndependentReview(task, originalPrompt);
+            const reviewBudgetMs = Math.max(
               0,
-              Math.min(9000, totalProviderBudgetMs - (Date.now() - startedAt) - 5000)
+              Math.min(6000, totalProviderBudgetMs - (Date.now() - startedAt) - 3000)
             );
-            sseEvent(controller, encoder, {
-              type: "status",
-              message: "Checking whether the answer is reliable before showing it…"
-            });
-            const review = await independentlyReviewAnswer(
-              available.filter((name) => name !== provider),
-              originalPrompt,
-              contextText,
-              candidateText,
-              task,
-              remainingReviewBudgetMs
-            );
+            const review: { answer: string; reviewer: string | null; verdict: "keep" | "correct" | "retry" } =
+              requiresReview
+                ? await independentlyReviewAnswer(
+                    available.filter((name) => name !== provider),
+                    originalPrompt,
+                    contextText,
+                    candidateText,
+                    task,
+                    reviewBudgetMs
+                  )
+                : { answer: candidateText, reviewer: null, verdict: "keep" };
             if (cancelled) return;
             if (review.verdict === "retry" || !review.answer.trim()) {
               failures.push(provider + ":answer_not_verified" + (review.reviewer ? ":checked_by_" + review.reviewer : ""));
@@ -2083,6 +2095,10 @@ async function streamChatResponse(
                 duration_ms: Date.now() - providerStartedAt,
                 reason: "independent_check_did_not_accept"
               });
+              if (attemptStreamed) {
+                sseEvent(controller, encoder, { type: "reset" });
+                liveStreamText = "";
+              }
               continue;
             }
             chosen = { provider, text: review.answer, reviewer: review.reviewer };
@@ -2100,6 +2116,10 @@ async function streamChatResponse(
             if (candidate) candidate.cleanup();
             if (activeCandidate === candidate) activeCandidate = null;
             if (cancelled) return;
+            if (attemptStreamed) {
+              sseEvent(controller, encoder, { type: "reset" });
+              liveStreamText = "";
+            }
             const reason = error instanceof Error ? error.message : String(error);
             recordProviderOutcome(provider, false, Date.now() - providerStartedAt);
             logStructured("warn", "provider_attempt_failed", {
@@ -2141,12 +2161,18 @@ async function streamChatResponse(
         const finalAnswer = chosen.text;
         const reviewer: string | null = chosen.reviewer;
         if (cancelled) return;
-        conversationId = await createConversationIfNeeded(
-          userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
-        );
-        await saveChatTurn(userId, conversationId, displayUserText, finalAnswer);
+        // If a quality review repaired the streamed draft, replace it only when necessary.
+        if (liveStreamText.trim() !== finalAnswer) {
+          if (liveStreamText) sseEvent(controller, encoder, { type: "reset" });
+          liveStreamText = "";
+          for (let offset = 0; offset < finalAnswer.length; offset += 700) {
+            const chunk = finalAnswer.slice(offset, offset + 700);
+            sseEvent(controller, encoder, { type: "delta", text: chunk });
+            liveStreamText += chunk;
+          }
+        }
         const durationMs = Date.now() - requestStartedAt;
-        await updateUsage(usageId, {
+        const usageUpdate = updateUsage(usageId, {
           success: true,
           provider: reviewer ? chosen.provider + "+review:" + reviewer : chosen.provider,
           task_type: task,
@@ -2156,6 +2182,13 @@ async function streamChatResponse(
           output_chars: finalAnswer.length,
           attachment_count: attachments.length
         });
+        conversationId = await createConversationIfNeeded(
+          userId, conversationId, displayUserText || messages.find((m) => m.role === "user")?.content || "New chat"
+        );
+        await Promise.all([
+          saveChatTurn(userId, conversationId, displayUserText, finalAnswer),
+          usageUpdate
+        ]);
         logStructured("info", "request_completed", {
           request_id: requestId,
           task_type: task,
@@ -2167,9 +2200,6 @@ async function streamChatResponse(
           attachment_count: attachments.length
         });
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
-        for (let offset = 0; offset < finalAnswer.length; offset += 700) {
-          sseEvent(controller, encoder, { type: "delta", text: finalAnswer.slice(offset, offset + 700) });
-        }
         sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
       } catch (error) {
         if (cancelled) return;
