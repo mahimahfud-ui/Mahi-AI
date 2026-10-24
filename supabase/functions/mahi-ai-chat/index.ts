@@ -1818,11 +1818,12 @@ async function refreshProviderHealth(): Promise<void> {
         });
       }
       const until = Number(row.cooldown_until_ms) || 0;
-      // Older deployments persisted 30-minute auth/model cooldowns. Clamp legacy
-      // cooldown rows so newly corrected secrets/models are not blocked for ages.
-      const boundedUntil = Math.min(until, Date.now() + 90_000);
-      if (boundedUntil > Date.now() && boundedUntil > (providerCooldownUntil.get(name) ?? 0)) {
-        providerCooldownUntil.set(name, boundedUntil);
+      // Ignore legacy cooldowns longer than the current max. Clamping them to
+      // "now + 90s" on every refresh would otherwise extend them indefinitely.
+      const cooldownRemaining = until - Date.now();
+      if (cooldownRemaining > 0 && cooldownRemaining <= 90_000 &&
+          until > (providerCooldownUntil.get(name) ?? 0)) {
+        providerCooldownUntil.set(name, until);
       }
     }
   } catch (_) {
