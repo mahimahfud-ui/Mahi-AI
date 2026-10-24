@@ -803,7 +803,8 @@ function recordProviderOutcome(name: string, success: boolean, elapsedMs: number
 function providerCooldownMs(reason: string): number {
   const message = reason.toLowerCase();
   if (/\b401\b|\b403\b|invalid api key|authentication failed|rejected the api key/.test(message)) return 30 * 60_000;
-  if (/\b429\b|quota|rate limit|too many requests/.test(message)) return 90_000;
+  if (/\b402\b|insufficient.{0,50}(?:balance|credits?)|(?:balance|credits?).{0,50}insufficient|free-models-per-day|tokens? per day|daily quota|per-day quota|daily limit/.test(message)) return 6 * 60 * 60_000;
+  if (/\b429\b|quota|rate limit|too many requests|resource.?exhausted/.test(message)) return 90_000;
   if (/\b404\b|model not found|model .*unavailable/.test(message)) return 5 * 60_000;
   if (/\b5\d\d\b|timeout|network error|temporarily unavailable|connection timeout/.test(message)) return 30_000;
   return 0;
@@ -1444,30 +1445,81 @@ async function openAICompatible(provider: string, url: string, key: string, mode
   if (!text.trim()) throw new Error(provider + " returned no text");
   return text.trim();
 }
+function geminiModelCandidates(): string[] {
+  const configured = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
+  // Keep the configured model first, then try current stable free-tier models whose
+  // per-model quota may still be available. No paid-only models are added here.
+  return [...new Set([configured, "gemini-3.8-flash", "gemini-3.6-flash"])];
+}
+
+function canRetryGeminiModel(reason: string): boolean {
+  const message = String(reason || "").toLowerCase();
+  // A bad credential is account-wide; changing models cannot repair it.
+  if (/\b(?:401|403)\b|invalid api key|unauthorized|permission denied|access denied/.test(message)) return false;
+  return /\b(?:404|429|500|502|503|504)\b|resource.?exhausted|quota|rate.?limit|too many requests|temporarily unavailable|service unavailable|model.{0,40}(?:not found|unavailable)|network error|connection timeout|provider connection timeout/.test(message);
+}
+
 async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<string> {
   const key = envFirst(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
   if (!key) throw new Error("Not configured");
-  const model = envFirst(["GEMINI_MODEL"]) || "gemini-3.5-flash-lite";
   const normalizedMessages = messages[0]?.role === "assistant" ? messages.slice(1) : messages;
   const contents = normalizedMessages.map((message) => ({
     role: message.role === "assistant" ? "model" : "user",
     parts: [{ text: message.content }]
   }));
-  const directUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
-  const response = await fetchProviderWithGatewayFallback("gemini", directUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemOverride || systemPrompt(task) }] },
-      contents,
-      generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
-    })
-  }, timeoutMs);
-  if (!response.ok) throw new Error(await readProviderError(response));
-  const result = await response.json();
-  const text = (result?.candidates?.[0]?.content?.parts || []).map((part: any) => part.text || "").join("");
-  if (!text.trim()) throw new Error("Gemini returned no text");
-  return text.trim();
+  const models = geminiModelCandidates();
+  let lastError = "Gemini returned no text";
+  for (let index = 0; index < models.length; index++) {
+    const model = models[index];
+    try {
+      const directUrl = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":generateContent";
+      const response = await fetchProviderWithGatewayFallback("gemini", directUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemOverride || systemPrompt(task) }] },
+          contents,
+          generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
+        })
+      }, timeoutMs);
+      if (!response.ok) {
+        lastError = await readProviderError(response);
+        if (index + 1 < models.length && canRetryGeminiModel(lastError)) {
+          logStructured("warn", "gemini_model_fallback", {
+            from_model: model,
+            to_model: models[index + 1],
+            reason_class: /\b429\b|quota|rate.?limit|resource.?exhausted/.test(lastError.toLowerCase()) ? "quota_or_rate_limit" : "model_or_availability"
+          });
+          continue;
+        }
+        throw new Error(lastError);
+      }
+      const result = await response.json();
+      const text = (result?.candidates?.[0]?.content?.parts || []).map((part: any) => part.text || "").join("");
+      if (text.trim()) return text.trim();
+      lastError = "Gemini returned no text";
+      if (index + 1 < models.length) {
+        logStructured("warn", "gemini_model_fallback", {
+          from_model: model,
+          to_model: models[index + 1],
+          reason_class: "empty_response"
+        });
+        continue;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+      if (index + 1 < models.length && canRetryGeminiModel(lastError)) {
+        logStructured("warn", "gemini_model_fallback", {
+          from_model: model,
+          to_model: models[index + 1],
+          reason_class: "connection_or_availability"
+        });
+        continue;
+      }
+      throw new Error(lastError);
+    }
+  }
+  throw new Error(lastError);
 }
 async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<{ text: string; provider: string }> {
   if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride), provider: name };
@@ -1956,9 +2008,40 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
       }
     }
     if (!response.ok) {
-      const reason = await readProviderError(response);
-      cleanup();
-      throw new Error(reason);
+      let reason = await readProviderError(response);
+      if (useGemini && canRetryGeminiModel(reason)) {
+        const encodedCurrentModel = url.split("/models/")[1]?.split(":")[0] || "";
+        const currentModel = (() => {
+          try { return decodeURIComponent(encodedCurrentModel); } catch (_) { return encodedCurrentModel; }
+        })();
+        const fallbackModels = geminiModelCandidates().filter((candidate) => candidate !== currentModel);
+        for (const fallbackModel of fallbackModels) {
+          if (!canRetryGeminiModel(reason)) break;
+          const fallbackUrl = "https://generativelanguage.googleapis.com/v1beta/models/" +
+            encodeURIComponent(fallbackModel) + ":streamGenerateContent?alt=sse";
+          logStructured("warn", "gemini_model_fallback", {
+            from_model: currentModel || "configured",
+            to_model: fallbackModel,
+            reason_class: /\b429\b|quota|rate.?limit|resource.?exhausted/.test(reason.toLowerCase())
+              ? "quota_or_rate_limit" : "model_or_availability"
+          });
+          try {
+            const fallbackResponse = await request(fallbackUrl);
+            if (fallbackResponse.ok) {
+              response = fallbackResponse;
+              reason = "";
+              break;
+            }
+            reason = await readProviderError(fallbackResponse);
+          } catch (fallbackError) {
+            reason = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+          }
+        }
+      }
+      if (!response.ok) {
+        cleanup();
+        throw new Error(reason);
+      }
     }
     const iterator = useGemini ? readGeminiEventStream(response)
       : useAnthropic ? readAnthropicEventStream(response)
