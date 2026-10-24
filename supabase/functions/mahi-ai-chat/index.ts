@@ -1753,7 +1753,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     if (!response.ok) {
       const status = response.status;
       const reason = await readProviderError(response);
-      const modelError = /model[_ ]?(?:not found|unavailable|does not exist|not available)|unknown model|invalid model|model.*(?:not found|unavailable|does not exist)/i.test(reason);
+      const modelError = /model.{0,30}(?:not[_\s-]?found|unavailable|does[_\s-]+not[_\s-]+exist|not[_\s-]+available)|unknown[_\s-]+model|invalid[_\s-]+model/i.test(reason);
       const fallbackModel = providerFallbackModel(name, task);
       let currentModel = typeof body.model === "string" ? body.model : "";
       if (useGemini) {
