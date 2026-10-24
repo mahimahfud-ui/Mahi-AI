@@ -550,23 +550,97 @@ function flagEnabled(name: string): boolean {
   return envFirst([name])?.trim().toLowerCase() === "true";
 }
 
+function cloudflareSecretObject(): Record<string, unknown> | null {
+  for (const name of ["Cloudflare", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY"]) {
+    const raw = Deno.env.get(name) || "";
+    if (!raw.trim()) continue;
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
+    } catch (_) {}
+  }
+  return null;
+}
+
+function cloudflareApiToken(): string {
+  const direct = envFirst(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY"]);
+  if (direct) return direct;
+  const raw = Deno.env.get("Cloudflare") || "";
+  const parsed = cloudflareSecretObject();
+  if (parsed) {
+    for (const [key, value] of Object.entries(parsed)) {
+      if (/^(?:api.?token|token|api.?key|cloudflare.?api.?token|value)$/i.test(key) &&
+          typeof value === "string" && value.trim()) return value.trim();
+    }
+    return "";
+  }
+  return raw.trim();
+}
+
+function cloudflareConfiguredAccountId(): string {
+  const direct = envFirst(["CLOUDFLARE_ACCOUNT_ID", "Cloudflare Account ID"]);
+  if (direct) return direct;
+  const parsed = cloudflareSecretObject();
+  if (!parsed) return "";
+  for (const [key, value] of Object.entries(parsed)) {
+    if (/^(?:account.?id|cloudflare.?account.?id)$/i.test(key) && typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+  return "";
+}
+
+let cloudflareAccountIdCache = "";
+let cloudflareAccountIdLookupUntil = 0;
+let cloudflareAccountIdLookup: Promise<string> | null = null;
+
+async function resolveCloudflareAccountId(token: string): Promise<string> {
+  const configured = cloudflareConfiguredAccountId();
+  if (configured) return configured;
+  if (cloudflareAccountIdCache) return cloudflareAccountIdCache;
+  if (Date.now() < cloudflareAccountIdLookupUntil) {
+    throw new Error("Cloudflare needs CLOUDFLARE_ACCOUNT_ID. Add that secret in Supabase Edge Function secrets.");
+  }
+  if (!cloudflareAccountIdLookup) {
+    cloudflareAccountIdLookup = (async () => {
+      try {
+        const response = await fetchWithTimeout("https://api.cloudflare.com/client/v4/accounts?per_page=2", {
+          headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" }
+        }, 5000);
+        if (!response.ok) throw new Error("account lookup failed");
+        const data = await response.json();
+        const accounts = Array.isArray(data?.result) ? data.result : [];
+        if (data?.success === false || accounts.length !== 1 || typeof accounts[0]?.id !== "string") {
+          throw new Error("account lookup was ambiguous or denied");
+        }
+        cloudflareAccountIdCache = accounts[0].id;
+        return cloudflareAccountIdCache;
+      } catch (_) {
+        cloudflareAccountIdLookupUntil = Date.now() + 300000;
+        throw new Error("Cloudflare account ID could not be auto-detected. Add CLOUDFLARE_ACCOUNT_ID in Supabase Edge Function secrets.");
+      } finally {
+        cloudflareAccountIdLookup = null;
+      }
+    })();
+  }
+  return await cloudflareAccountIdLookup;
+}
+
 function providerIsConfigured(name: string, task = "general"): boolean {
   if (name === "gemini") return configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
-  if (name === "shannon") return flagEnabled("ENABLE_SHANNON_FALLBACK") &&
-    configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+  if (name === "shannon") return configuredSecret(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
   if (name === "groq") return configuredSecret(["GROQ_API_KEY"]);
   if (name === "openrouter") return configuredSecret(["OPENROUTER_API_KEY"]);
   // Direct DeepSeek API requests may incur charges; require explicit opt-in.
-  if (name === "deepseek") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
+  if (name === "deepseek") return configuredSecret(["DEEPSEEK_API_KEY", "DeepSeek"]);
   if (name === "mistral") return configuredSecret(["MISTRAL_API_KEY"]);
-  if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
+  if (name === "venice") return configuredSecret(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"]);
   if (name === "nvidia") return flagEnabled("ENABLE_NVIDIA_FALLBACK") && configuredSecret(["NVIDIA_API_KEY"]);
-  if (name === "cloudflare") return flagEnabled("ENABLE_CLOUDFLARE_FALLBACK") &&
-    configuredSecret(["CLOUDFLARE_API_TOKEN"]) && configuredSecret(["CLOUDFLARE_ACCOUNT_ID"]);
+  if (name === "cloudflare") return configuredSecret(["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_API_KEY", "Cloudflare"]);
   // The user explicitly assigns programming/debugging requests to OpenAI. Permit
   // that task-specific route when its API key exists, without enabling OpenAI for
   // unrelated requests; other paid fallback usage still requires global opt-in.
-  if (name === "openai") return (task === "coding" || flagEnabled("ENABLE_PAID_FALLBACK")) && configuredSecret(["OPENAI_API_KEY"]);
+  if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);
   if (name === "anthropic") return flagEnabled("ENABLE_PAID_FALLBACK") && configuredSecret(["ANTHROPIC_API_KEY"]);
   return false;
 }
@@ -1268,7 +1342,7 @@ async function callGemini(messages: ChatMessage[], task: string, timeoutMs = 450
 async function callProvider(name: string, messages: ChatMessage[], task: string, timeoutMs = 45000, systemOverride?: string): Promise<{ text: string; provider: string }> {
   if (name === "gemini") return { text: await callGemini(messages, task, timeoutMs, systemOverride), provider: name };
   if (name === "shannon") {
-    const key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+    const key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
     if (!key) throw new Error("Not configured");
     const model = envFirst(["SHANNON_MODEL"]) || "shannon-3";
     return { text: await openAICompatible(name, "https://api.shannon-ai.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
@@ -1298,15 +1372,15 @@ async function callProvider(name: string, messages: ChatMessage[], task: string,
     return { text: await openAICompatible(name, "https://integrate.api.nvidia.com/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "cloudflare") {
-    const key = envFirst(["CLOUDFLARE_API_TOKEN"]);
-    const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
-    if (!key || !accountId) throw new Error("Not configured");
+    const key = cloudflareApiToken();
+    if (!key) throw new Error("Not configured");
+    const accountId = await resolveCloudflareAccountId(key);
     const url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
     const model = envFirst(["CLOUDFLARE_MODEL"]) || "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
     return { text: await openAICompatible(name, url, key, model, messages, {}, timeoutMs, systemOverride), provider: name };
   }
   if (name === "venice") {
-    const key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]);
+    const key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"]);
     if (!key) throw new Error("Not configured");
     const model = envFirst(["VENICE_MODEL"]) || "zai-org-glm-5";
     return { text: await openAICompatible(name, "https://api.venice.ai/api/v1/chat/completions", key, model, messages, {}, timeoutMs, systemOverride), provider: name };
@@ -1631,7 +1705,7 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
   } else {
     let key = "";
     if (name === "shannon") {
-      key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY"]);
+      key = envFirst(["SHANNON_API_KEY", "SHANNONAI_API_KEY", "SHANNON_AI_API_KEY", "Shannon AI"]);
       url = "https://api.shannon-ai.com/v1/chat/completions";
     } else if (name === "groq") { key = envFirst(["GROQ_API_KEY"]); url = "https://api.groq.com/openai/v1/chat/completions"; }
     else if (name === "openrouter") {
@@ -1642,17 +1716,23 @@ async function startProviderStream(name: string, messages: ChatMessage[], task: 
     } else if (name === "deepseek") {
       key = envFirst(["DEEPSEEK_API_KEY", "DeepSeek"]);
       url = "https://api.deepseek.com/chat/completions";
-    } else if (name === "venice") { key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE"]); url = "https://api.venice.ai/api/v1/chat/completions"; }
+    } else if (name === "venice") { key = envFirst(["VENICE_API_KEY", "VENICEAI_API_KEY", "VENICE", "Venice AI"]); url = "https://api.venice.ai/api/v1/chat/completions"; }
     else if (name === "mistral") { key = envFirst(["MISTRAL_API_KEY"]); url = "https://api.mistral.ai/v1/chat/completions"; }
     else if (name === "openai") { key = envFirst(["OPENAI_API_KEY"]); url = "https://api.openai.com/v1/chat/completions"; }
     else if (name === "nvidia") {
       key = envFirst(["NVIDIA_API_KEY"]);
       url = "https://integrate.api.nvidia.com/v1/chat/completions";
     } else if (name === "cloudflare") {
-      key = envFirst(["CLOUDFLARE_API_TOKEN"]);
-      const accountId = envFirst(["CLOUDFLARE_ACCOUNT_ID"]);
-      if (key && accountId) url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
-      else key = "";
+      key = cloudflareApiToken();
+      if (key) {
+        try {
+          const accountId = await resolveCloudflareAccountId(key);
+          url = "https://api.cloudflare.com/client/v4/accounts/" + encodeURIComponent(accountId) + "/ai/v1/chat/completions";
+        } catch (error) {
+          cleanup();
+          throw error;
+        }
+      }
     }
     if (!key) { cleanup(); throw new Error("Not configured"); }
     headers.Authorization = "Bearer " + key;
