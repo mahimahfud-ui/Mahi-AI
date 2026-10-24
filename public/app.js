@@ -11,6 +11,8 @@
     input: $("promptInput"), send: $("sendButton"), error: $("errorBanner"),
     session: $("sessionLabel"), charCount: $("charCount"),
     fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList"),
+    chatSearch: $("chatSearch"), stop: $("stopButton"), draftNotice: $("draftNotice"),
+    temporaryChatButton: $("temporaryChatButton"), exportMarkdownButton: $("exportMarkdownButton"), exportJsonButton: $("exportJsonButton"),
     accountButton: $("accountButton"), accountModal: $("accountModal"), voiceModeButton: $("voiceModeButton")
   };
   const voiceUI = {
@@ -26,6 +28,7 @@
   let voiceResponseLanguage = "";
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
+  let activeRequestController = null, pendingEdit = null, temporaryChatMode = false;
   let accountMethod = "email", accountMode = "register";
   let phoneOtpPending = false, pendingPhone = "", phoneOtpType = "sms", accountReturnFocus = null;
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
@@ -94,9 +97,14 @@
     ui.input.disabled = value;
     ui.attachButton.disabled = value;
     ui.fileInput.disabled = value;
+    if (ui.stop) {
+      ui.stop.hidden = !value;
+      ui.stop.disabled = !value;
+    }
+    if (ui.temporaryChatButton) ui.temporaryChatButton.disabled = value;
     ui.send.innerHTML = value
       ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h8v8H8z"/></svg>'
-      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>';
+      : '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5.5"/></svg>';
   }
   function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, (c) => ({
@@ -230,6 +238,7 @@
     if (empty) empty.hidden = true;
     const node = document.createElement("article");
     node.className = "message " + (role === "user" ? "user" : "assistant");
+    if (Number.isInteger(opts.messageIndex)) node.dataset.messageIndex = String(opts.messageIndex);
     const avatar = document.createElement("div");
     avatar.className = "message-avatar";
     if (role === "user") {
@@ -287,6 +296,7 @@
     }
     body.append(heading, article);
     if (role !== "user" && !opts.typing) addSpeechActions(node, content);
+    if (!opts.typing) addMessageControls(node, role, content, opts.messageIndex);
     node.append(avatar, body);
     ui.messages.appendChild(node);
     scrollToBottom();
@@ -411,7 +421,7 @@
     });
   }
   function addSpeechActions(node, content) {
-    if (!node || node.querySelector(".message-actions")) return;
+    if (!node || node.querySelector(".speech-actions")) return;
     const body = node.querySelector(".message-body");
     if (!body) return;
     const actions = document.createElement("div");
@@ -433,6 +443,190 @@
     });
     actions.appendChild(button);
     body.appendChild(actions);
+  }
+  async function copyTextToClipboard(value) {
+    const text = String(value == null ? "" : value);
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (_) {}
+    const field = document.createElement("textarea");
+    field.value = text;
+    field.setAttribute("readonly", "");
+    field.style.position = "fixed";
+    field.style.left = "-9999px";
+    field.style.top = "0";
+    document.body.appendChild(field);
+    field.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (_) {}
+    field.remove();
+    return ok;
+  }
+  function isAttachmentTurn(message) {
+    return !!(message && /\n\nAttached files:/i.test(String(message.content || "")));
+  }
+  function addMessageControls(node, role, content, messageIndex) {
+    if (!node) return;
+    const body = node.querySelector(".message-body");
+    if (!body) return;
+    const existing = body.querySelector(".message-controls");
+    if (existing) existing.remove();
+    const actions = document.createElement("div");
+    actions.className = "message-actions message-controls";
+    const addButton = (label, title, callback) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "message-action";
+      button.textContent = label;
+      button.title = title;
+      button.setAttribute("aria-label", title);
+      button.addEventListener("click", callback);
+      actions.appendChild(button);
+      return button;
+    };
+    const copy = addButton("Copy", "Copy this message", async () => {
+      const ok = await copyTextToClipboard(content);
+      if (ok) {
+        copy.textContent = "Copied";
+        copy.classList.add("is-complete");
+        window.setTimeout(() => { if (copy.isConnected) { copy.textContent = "Copy"; copy.classList.remove("is-complete"); } }, 1400);
+      } else setError("Could not copy automatically. Select the message text and copy it manually.");
+    });
+    const index = Number.isInteger(messageIndex) ? messageIndex : Number(node.dataset.messageIndex);
+    const item = Number.isInteger(index) ? currentMessages[index] : null;
+    if (!item || item.role !== role || item.content !== content) {
+      body.appendChild(actions);
+      return;
+    }
+    if (role === "user" && !temporaryChatMode && item.created_at && !isAttachmentTurn(item)) {
+      addButton("Edit", "Edit this prompt and replace the following conversation", () => {
+        if (busy) return;
+        pendingEdit = { index, createdAt: item.created_at, content: item.content, previousMessages: currentMessages.slice() };
+        ui.input.value = item.content;
+        if (ui.draftNotice) ui.draftNotice.hidden = false;
+        updateCounter();
+        ui.input.focus();
+        const composer = document.querySelector(".composer-wrap");
+        if (composer) composer.scrollIntoView({ behavior: "smooth", block: "end" });
+      });
+    }
+    if (role === "assistant" && !temporaryChatMode && item.created_at && index === currentMessages.length - 1) {
+      let userIndex = index - 1;
+      while (userIndex >= 0 && currentMessages[userIndex].role !== "user") userIndex--;
+      const userMessage = currentMessages[userIndex];
+      if (userMessage && userMessage.created_at && !isAttachmentTurn(userMessage)) {
+        addButton("Regenerate", "Generate a new answer to the previous prompt", () => {
+          if (busy) return;
+          void sendMessage(userMessage.content, {
+            replacement: { index: userIndex, createdAt: userMessage.created_at, content: userMessage.content },
+            previousMessages: currentMessages.slice(),
+            displayText: userMessage.content
+          });
+        });
+      }
+    }
+    body.appendChild(actions);
+  }
+  function refreshMessageControls() {
+    ui.messages.querySelectorAll(".message").forEach((node) => {
+      const index = Number(node.dataset.messageIndex);
+      if (!Number.isInteger(index) || !currentMessages[index]) return;
+      const item = currentMessages[index];
+      addMessageControls(node, item.role, item.content, index);
+    });
+  }
+  function renderCurrentMessages() {
+    ui.messages.replaceChildren();
+    ui.welcome.hidden = true;
+    ui.messages.hidden = false;
+    currentMessages.forEach((message, index) => addMessage(message.role, message.content, { messageIndex: index }));
+    refreshMessageControls();
+  }
+  function setTemporaryChatMode(enabled) {
+    temporaryChatMode = !!enabled;
+    if (ui.temporaryChatButton) {
+      ui.temporaryChatButton.setAttribute("aria-pressed", String(temporaryChatMode));
+      ui.temporaryChatButton.title = temporaryChatMode
+        ? "Temporary chat is on. Messages and long-term memory are not saved."
+        : "Start a temporary chat that is not saved to chat history or long-term memory";
+      ui.temporaryChatButton.setAttribute("aria-label", temporaryChatMode ? "Turn off temporary chat" : "Turn on temporary chat");
+    }
+  }
+  function exportConversation(format) {
+    const title = (conversations.find((item) => item.id === conversationId)?.title || "MahiCloud conversation").trim();
+    if (!currentMessages.length) {
+      setError("There are no messages to export yet.");
+      return;
+    }
+    const exportedAt = new Date().toISOString();
+    let body, mime, extension;
+    if (format === "json") {
+      body = JSON.stringify({
+        title, exportedAt, temporary: temporaryChatMode,
+        messages: currentMessages.map((message) => ({ role: message.role, content: message.content }))
+      }, null, 2);
+      mime = "application/json;charset=utf-8";
+      extension = "json";
+    } else {
+      body = "# " + title + "\n\nExported: " + exportedAt + (temporaryChatMode ? "\nTemporary chat: yes" : "") + "\n\n" +
+        currentMessages.map((message) => (message.role === "assistant" ? "## MahiCloud" : "## " + getDisplayName()) + "\n\n" + message.content).join("\n\n---\n\n") + "\n";
+      mime = "text/markdown;charset=utf-8";
+      extension = "md";
+    }
+    const safeName = title.replace(/[^a-z0-9_-]+/gi, "-").replace(/^-+|-+$/g, "").slice(0, 50) || "mahicloud-chat";
+    const url = URL.createObjectURL(new Blob([body], { type: mime }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = safeName + "." + extension;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setError("");
+  }
+  async function renameConversation(conversation) {
+    const currentTitle = conversation.title || "New chat";
+    const value = window.prompt("Rename this conversation (1–120 characters):", currentTitle);
+    if (value === null) return;
+    const title = value.replace(/\s+/g, " ").trim().slice(0, 120);
+    if (!title) return setError("A conversation title cannot be empty.");
+    if (title === currentTitle) return;
+    try {
+      const { error } = await client.from("mahi_ai_conversations").update({ title }).eq("id", conversation.id);
+      if (error) throw error;
+      await refreshConversations();
+      setError("");
+    } catch (_) {
+      setError("Could not rename this conversation. Please try again.");
+    }
+  }
+  async function refreshMessageMetadata() {
+    if (!conversationId || !session || temporaryChatMode) return;
+    const { data, error } = await client.from("mahi_ai_messages")
+      .select("id,role,content,created_at")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true })
+      .limit(500);
+    if (error) throw error;
+    const rows = data || [];
+    const offset = Math.max(0, rows.length - currentMessages.length);
+    currentMessages.forEach((message, index) => {
+      const row = rows[offset + index];
+      if (row && row.role === message.role && row.content === message.content) {
+        message.id = row.id;
+        message.created_at = row.created_at;
+      }
+    });
+    refreshMessageControls();
+  }
+  function cancelPendingEdit() {
+    pendingEdit = null;
+    if (ui.draftNotice) ui.draftNotice.hidden = true;
+    ui.input.value = "";
+    updateCounter();
   }
   function monitorVoiceActivity(recorder, analyser) {
     const samples = new Uint8Array(analyser.fftSize);
