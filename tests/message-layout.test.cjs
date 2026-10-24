@@ -32,7 +32,7 @@ test("message DOM remains a single body/content structure", () => {
   assert.match(app, /body\.append\(heading,\s*article\)/);
   assert.match(app, /node\.append\(avatar,\s*body\)/);
   assert.match(html, /href="\.\/theme\.css\?v=20261024v5"/);
-  assert.match(html, /href="\.\/ui-overrides\.css\?v=20261024v2"/);
+  assert.match(html, /href="\.\/ui-overrides\.css\?v=20261024settings3"/);
 });
 
 test("message flex items and rich content remain bounded and wrap safely", () => {
