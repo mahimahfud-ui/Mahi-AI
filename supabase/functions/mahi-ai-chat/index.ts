@@ -1533,6 +1533,7 @@ async function streamChatResponse(
               : "The previous attempt did not finish. Trying the next available model…"
           });
           let candidate: ProviderStream | null = null;
+          let attemptStreamed = false;
           try {
             candidate = await startProviderStream(provider, messages, task, attachments, providerBudget);
             activeCandidate = candidate;
@@ -1545,8 +1546,14 @@ async function streamChatResponse(
             while (!cancelled) {
               const next = await candidate.iterator.next();
               if (next.done) break;
-              if (next.value) completeText += next.value;
-              if (completeText.length > 180000) throw new Error("Provider response exceeded the supported response size");
+              if (next.value) {
+                if (completeText.length + next.value.length > 180000) {
+                  throw new Error("Provider response exceeded the supported response size");
+                }
+                completeText += next.value;
+                attemptStreamed = true;
+                sseEvent(controller, encoder, { type: "delta", text: next.value });
+              }
             }
             candidate.cleanup();
             activeCandidate = null;
@@ -1566,6 +1573,7 @@ async function streamChatResponse(
             if (candidate) candidate.cleanup();
             if (activeCandidate === candidate) activeCandidate = null;
             if (cancelled) return;
+            if (attemptStreamed) sseEvent(controller, encoder, { type: "reset" });
             const reason = error instanceof Error ? error.message : String(error);
             recordProviderOutcome(provider, false, Date.now() - providerStartedAt);
             logStructured("warn", "provider_attempt_failed", {
@@ -1643,8 +1651,11 @@ async function streamChatResponse(
           attachment_count: attachments.length
         });
         sseEvent(controller, encoder, { type: "meta", conversation_id: conversationId });
-        for (let offset = 0; offset < finalAnswer.length; offset += 700) {
-          sseEvent(controller, encoder, { type: "delta", text: finalAnswer.slice(offset, offset + 700) });
+        if (finalAnswer !== chosen.text) {
+          sseEvent(controller, encoder, { type: "reset" });
+          for (let offset = 0; offset < finalAnswer.length; offset += 700) {
+            sseEvent(controller, encoder, { type: "delta", text: finalAnswer.slice(offset, offset + 700) });
+          }
         }
         sseEvent(controller, encoder, { type: "done", conversation_id: conversationId });
       } catch (error) {
