@@ -197,6 +197,53 @@
     return "text";
   }
 
+  function findProjectFiles(pre, lang) {
+    if (!["html", "htm", "xhtml"].includes(lang)) return null;
+    const root = pre.closest(".message-content");
+    if (!root) return null;
+    const files = { html: null, css: null, js: null };
+    root.querySelectorAll("pre").forEach((candidate) => {
+      const code = candidate.querySelector("code") || candidate;
+      const kind = detectLang(candidate, code);
+      if (["html", "htm", "xhtml"].includes(kind)) {
+        if (!files.html) files.html = { pre: candidate, lang: kind };
+      } else if (kind === "css" && !files.css) {
+        files.css = { pre: candidate, lang: kind };
+      } else if (["js", "javascript", "mjs", "cjs"].includes(kind) && !files.js) {
+        files.js = { pre: candidate, lang: kind };
+      }
+    });
+    return files.html && (files.css || files.js) ? files : null;
+  }
+
+  function readSourceFile(file) {
+    if (!file || !file.pre) return "";
+    const wrapper = file.pre.closest(".mahi-code-block");
+    const editor = wrapper && wrapper.querySelector(".mahi-code-editor:not([hidden]) textarea");
+    if (editor) return editor.value;
+    const code = file.pre.querySelector("code") || file.pre;
+    return code.textContent || "";
+  }
+
+  function buildProjectDocument(files, allowNetwork) {
+    let html = readSourceFile(files.html);
+    if (!/<html\b/i.test(html)) {
+      html = "<!doctype html><html><head></head><body>" + html + "</body></html>";
+    }
+    let extras = "";
+    const css = files.css ? readSourceFile(files.css) : "";
+    if (css.trim()) extras += "<style>" + css.replace(/<\/style/gi, "<\\/style") + "</style>";
+    html = injectHead(html, headBits(allowNetwork, extras));
+    const js = files.js ? readSourceFile(files.js) : "";
+    if (js.trim()) {
+      const script = "<script>" + inlineScript(js) + "</script>";
+      if (/<\/body\s*>/i.test(html)) html = html.replace(/<\/body\s*>/i, script + "</body>");
+      else if (/<\/html\s*>/i.test(html)) html = html.replace(/<\/html\s*>/i, script + "</html>");
+      else html += script;
+    }
+    return html;
+  }
+
   function enhancePre(pre) {
     if (!pre || pre.closest(".mahi-code-block")) return;
     const codeEl = pre.querySelector("code") || pre;
@@ -206,6 +253,7 @@
     const lang = detectLang(pre, codeEl);
     const ext = CODE_EXT[lang] || "txt";
     const runnable = RUNNABLE.has(lang);
+    const projectFiles = findProjectFiles(pre, lang);
     const wrap = element("div", "mahi-code-block");
     wrap.dataset.lang = lang;
     const bar = element("div", "mahi-code-toolbar");
@@ -222,7 +270,7 @@
     let networkToggle = null;
     let stage = null;
     let expandedOverlay = null;
-    let showRun = false;
+    let projectMode = false;
     const originalParent = wrap;
 
     function getCurrentCode() {
@@ -366,6 +414,11 @@
       currentCode = code;
       clearConsole();
       if (stage) stage.classList.remove("has-runtime-error");
+      if (projectMode && projectFiles) {
+        appendConsole("info", "Running combined HTML/CSS/JavaScript project in the isolated preview…");
+        iframe.srcdoc = buildProjectDocument(projectFiles, networkToggle.checked);
+        return;
+      }
       if ((lang === "python" || lang === "py") && !networkToggle.checked) {
         appendConsole("warn", "Python requires an external runtime. Enable Allow web resources and press Reload.");
       } else {
@@ -449,6 +502,7 @@
         currentCode = initialCode;
       });
       applyBtn.addEventListener("click", () => {
+        projectMode = false;
         currentCode = textarea.value;
         if (panel) {
           panel.hidden = false;
@@ -460,6 +514,7 @@
         }
       });
       runBtn.addEventListener("click", () => {
+        projectMode = false;
         if (panel && !panel.hidden) {
           collapseExpanded();
           panel.hidden = true;
@@ -479,6 +534,17 @@
         wrap.appendChild(p);
       }
       panel.hidden = false;
+    }
+
+    if (projectFiles) {
+      const projectBtn = makeButton("Run project", "Run this HTML together with CSS and JavaScript code blocks", "mahi-code-run");
+      projectBtn.addEventListener("click", () => {
+        projectMode = true;
+        currentCode = getCurrentCode();
+        showPreview();
+        refreshPreview();
+      });
+      actions.appendChild(projectBtn);
     }
 
     const parent = pre.parentNode;
