@@ -7,6 +7,8 @@ on:
       - "supabase/migrations/**"
       - "server.js"
       - "public/app.js"
+      - "public/code-blocks.js"
+      - "public/code-blocks.css"
       - "public/config.js"
       - "public/index.html"
       - "public/styles.css"
@@ -29,6 +31,8 @@ on:
       - "supabase/migrations/**"
       - "server.js"
       - "public/app.js"
+      - "public/code-blocks.js"
+      - "public/code-blocks.css"
       - "public/config.js"
       - "public/index.html"
       - "public/styles.css"
@@ -65,5 +69,6 @@ jobs:
           node --check public/app.js
           node --check public/config.js
           node --check public/themes.js
+          node --check public/code-blocks.js
       - name: Run backend regression tests
         run: node --test tests/*.test.cjs
