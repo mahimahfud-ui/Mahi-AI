@@ -37,3 +37,23 @@ test("Edge Function forwards provider chunks while generating", () => {
   assert.match(stream, /if \(finalAnswer !== chosen\.text\)/);
   assert.ok(stream.includes('if (finalAnswer !== chosen.text) {') && stream.includes('for (let offset = 0; offset < finalAnswer.length; offset += 700)'), "only send a replacement if review changes the draft");
 });
+
+test("a delivered reply survives a conversation-history refresh error", () => {
+  const sendStart = app.indexOf("async function sendMessage(text) {");
+  const sendEnd = app.indexOf("\\n  // Public API Library", sendStart);
+  const send = app.slice(sendStart, sendEnd);
+  assert.match(send, /let responseCompleted = false;/);
+  assert.match(send, /responseCompleted = true;/);
+  assert.match(send, /await refreshConversations\\(\\);[\\s\\S]*?catch \\(historyError\\)/);
+  assert.match(send, /if \\(responseCompleted\\) \\{[\\s\\S]*?currentMessages\\[currentMessages\\.length - 1\\]\\?\\.role !== "assistant"/);
+});
+
+test("coding uses a fast provider first and fallback attempts are bounded", () => {
+  const codingStart = edge.indexOf('} else if (task === "coding") {');
+  const reasoningStart = edge.indexOf('} else if (task === "reasoning") {', codingStart);
+  const coding = edge.slice(codingStart, reasoningStart);
+  assert.match(coding, /preferred = \\["groq", "gemini", "openrouter"/);
+  assert.match(edge, /maxAttemptMs = taskNeedsLongToolExecution \\? 24000 : index === 0 \\? 14000 : 9000/);
+  assert.match(edge, /\\)\\.slice\\(0, 1\\);/);
+  assert.match(edge, /task, 4500, reviewSystem/);
+});
