@@ -39,6 +39,7 @@
         <span class="api-library-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
       </button>
       <div class="history-heading"><span>Recents</span><button class="text-button" id="refreshChats" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
+      <label class="chat-search-wrap"><span class="sr-only">Search conversations</span><input id="chatSearch" type="search" placeholder="Search conversations…" autocomplete="off"></label>
       <nav id="chatList" class="chat-list" aria-label="Recent conversations">
       <div class="chat-skeleton" aria-hidden="true">
         <div class="skel-row" style="--i:0"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:74%"></span></div>
@@ -92,7 +93,13 @@
       <header class="topbar">
         <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
         <div class="topbar-title"><img class="small-mark" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="Official website logo" width="40" height="40"></div>
-        <div class="topbar-right"><button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button><span class="secure-label"><span class="status-dot"></span>Ready to help</span></div>
+        <div class="topbar-right">
+          <button class="header-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown">↓ <span>MD</span></button>
+          <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
+          <button class="temporary-chat-button" id="temporaryChatButton" type="button" aria-pressed="false" title="Start a temporary chat that is not saved to chat history or long-term memory">◌ <span>Temporary</span></button>
+          <button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button>
+          <span class="secure-label"><span class="status-dot"></span>Ready to help</span>
+        </div>
       </header>
 
       <section class="conversation-area" id="conversationArea">
@@ -114,11 +121,12 @@
 
       <footer class="composer-wrap">
         <form class="composer" id="chatForm">
+          <div class="draft-notice" id="draftNotice" hidden><span>Editing a previous message. Sending replaces that turn and the conversation after it.</span><button type="button" id="cancelEditButton">Cancel</button></div>
           <input id="fileInput" type="file" multiple hidden>
           <div id="attachmentList" class="attachment-list" hidden aria-label="Selected attachments"></div>
           <label for="promptInput" class="sr-only">Message MahiCloud</label>
           <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message MahiCloud…" autocomplete="off" enterkeyhint="send"></textarea>
-          <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
+          <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="stop-button" id="stopButton" type="button" hidden aria-label="Stop generating" title="Stop generating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg><span>Stop</span></button><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
         </form>
         <p class="footer-note">Attach up to 5 files, 15 MB each. Some file types may need text or PDF conversion. MahiCloud can make mistakes.</p>
       </footer>
