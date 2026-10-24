@@ -58,6 +58,8 @@
 .settings-field-help{display:block;margin-top:4px;color:var(--muted);font-size:11px;line-height:1.55}
 .settings-control{width:100%;min-width:0;min-height:39px;padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--text);font-size:12px!important}
 .settings-control option{background:var(--panel-2);color:var(--text)}
+.settings-name-control input,.settings-name-control button{min-height:40px;height:auto}
+.settings-name-control input{flex:1;box-sizing:border-box;font-size:12px!important}
 .settings-choice-list{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:7px}
 .settings-choice{
   min-height:35px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--muted);font-size:11px!important;cursor:pointer
