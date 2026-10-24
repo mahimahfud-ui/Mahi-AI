@@ -2169,9 +2169,13 @@ async function generateOpenAIImage(rawPrompt: string, attachments: PreparedAttac
 }
 
 async function generateImageWithFallback(prompt: string, attachments: PreparedAttachment[]): Promise<{ text: string; bytes: Uint8Array; mimeType: string; provider: string }> {
-  if (!flagEnabled("ENABLE_PAID_IMAGE_GENERATION")) {
-    throw new Error("Paid image generation is disabled by default. Set ENABLE_PAID_IMAGE_GENERATION=true only if you accept possible image API charges.");
+  const hasGemini = configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+  const hasGrok = configuredSecret(["XAI_API_KEY", "GROK_API_KEY"]);
+  const hasOpenAI = configuredSecret(["OPENAI_API_KEY"]);
+  if (!hasGemini && !hasGrok && !hasOpenAI) {
+    throw new Error("No image provider is configured. Add GEMINI_API_KEY, XAI_API_KEY/GROK_API_KEY, or OPENAI_API_KEY to Supabase Edge Function secrets.");
   }
+  // API credentials explicitly enable their provider. Image generation can incur charges.
   const failures: string[] = [];
   if (configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"])) {
     try {
@@ -2326,17 +2330,18 @@ async function streamImageGenerationResponse(
           output_chars: 0,
           attachment_count: attachments.length
         });
-        const hasGeminiKey = configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]);
+        const hasAnyImageKey =
+          configuredSecret(["GEMINI_API_KEY", "GOOGLE_GEMINI_API_KEY"]) ||
+          configuredSecret(["XAI_API_KEY", "GROK_API_KEY"]) ||
+          configuredSecret(["OPENAI_API_KEY"]);
         const lowerReason = reason.toLowerCase();
         let userMessage: string;
-        if (/enable_paid_image_generation|paid image generation is disabled/.test(lowerReason)) {
-          userMessage = "ছবি তৈরির API-গুলো সম্ভাব্য paid, তাই খরচ এড়াতে default-এ বন্ধ রাখা হয়েছে। Supabase Edge Function Secrets-এ ENABLE_PAID_IMAGE_GENERATION=true সেট করলেই কেবল চালু হবে।";
-        } else if (/429|resource_exhausted|exceeded your current quota|quota exceeded/.test(lowerReason)) {
-          userMessage = "ছবি তৈরি করা যায়নি: Gemini image API quota শেষ বা এই model-এর জন্য available নয় (429)। GEMINI_API_KEY আবার যোগ করার দরকার নেই। Google AI Studio-তে image model usage limit ও billing tier দেখুন। Gemini 3.1 Flash Image-এর API Free Tier নেই।";
-        } else if (!hasGeminiKey) {
-          userMessage = "ছবি তৈরি করা যায়নি। Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন।";
+        if (/429|resource_exhausted|exceeded your current quota|quota exceeded|insufficient_quota|billing_hard_limit/i.test(lowerReason)) {
+          userMessage = "ছবি তৈরি করা যায়নি: configured image provider-এর quota/credit শেষ, rate limit হয়েছে, বা model access নেই। Provider dashboard-এ credits, model access, rate limits ও billing দেখুন।";
+        } else if (!hasAnyImageKey) {
+          userMessage = "ছবি তৈরি করতে Supabase Edge Function Secrets-এ GEMINI_API_KEY, XAI_API_KEY/GROK_API_KEY, অথবা OPENAI_API_KEY যোগ করুন।";
         } else {
-          userMessage = "ছবি তৈরি করা যায়নি। Image API request ব্যর্থ হয়েছে। Supabase mahi-ai-chat logs-এ সর্বশেষ error দেখুন।";
+          userMessage = "ছবি তৈরি করা যায়নি। Configured image APIs চেষ্টা করেও ব্যর্থ হয়েছে; Supabase mahi-ai-chat logs-এ provider error details দেখুন।";
         }
         sseEvent(controller, encoder, { type: "error", message: userMessage });
       } finally {
