@@ -58,17 +58,17 @@
     }
     const origin = typeof location !== "undefined" ? location.origin : "";
     if (/origin not allowed|cors/i.test(msg)) {
-      return "Mahi AI blocked this page origin" + (origin ? " (" + origin + ")" : "") +
+      return "MahiCloud blocked this page origin" + (origin ? " (" + origin + ")" : "") +
         ". Add the exact origin to MAHI_AI_ALLOWED_ORIGINS in Supabase → Edge Functions → mahi-ai-chat → Secrets, then redeploy the function and hard-refresh this page.";
     }
     if (/failed to fetch|networkerror|load failed|network request failed/i.test(msg)) {
       if (typeof navigator !== "undefined" && navigator.onLine === false) {
         return "You appear to be offline. Check your internet connection and try again.";
       }
-      return "Could not reach Mahi AI" + (origin ? " from " + origin : "") +
+      return "Could not reach MahiCloud" + (origin ? " from " + origin : "") +
         ". This is often a CORS/origin allowlist issue or the Edge Function being unavailable — not necessarily your internet. Check MAHI_AI_ALLOWED_ORIGINS in Supabase → Edge Functions → mahi-ai-chat → Secrets, redeploy the function, then hard-refresh this page.";
     }
-    return "Mahi AI could not complete that request. Please try again in a moment.";
+    return "MahiCloud could not complete that request. Please try again in a moment.";
   }
   function setBusy(value) {
     busy = value;
@@ -177,7 +177,7 @@
         '</div>' +
       '</div>' +
       '<div class="live-preview-browser">' +
-        '<div class="live-preview-browserbar"><span class="live-preview-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="live-preview-address"><span aria-hidden="true">⌕</span> mahi-ai.local / preview</div><span class="live-preview-sandbox-tag">SANDBOX</span></div>' +
+        '<div class="live-preview-browserbar"><span class="live-preview-window-dots" aria-hidden="true"><i></i><i></i><i></i></span><div class="live-preview-address"><span aria-hidden="true">⌕</span> mahicloud.local / preview</div><span class="live-preview-sandbox-tag">SANDBOX</span></div>' +
         '<div class="live-preview-stage"><div class="live-preview-viewport" data-device="desktop"><iframe title="Generated website preview" sandbox="allow-scripts" referrerpolicy="no-referrer" loading="lazy"></iframe></div></div>' +
       '</div>' +
       '<div class="live-preview-footnote"><span class="live-preview-status-dot" aria-hidden="true"></span> Preview generated from the HTML/CSS/JavaScript in this answer.</div>';
@@ -229,7 +229,7 @@
     body.className = "message-body";
     const heading = document.createElement("div");
     heading.className = "message-heading";
-    heading.textContent = role === "user" ? getDisplayName() : "Mahi AI";
+    heading.textContent = role === "user" ? getDisplayName() : "MahiCloud";
     const article = document.createElement("div");
     article.className = "message-content";
     if (opts.typing) {
@@ -374,13 +374,13 @@
       utterance.onstart = () => {
         voiceCurrentUtterance = utterance;
         voiceIsSpeaking = true;
-        if (inVoiceMode && voiceModeActive) setVoiceStatus("Mahi AI is speaking…", "speaking");
+        if (inVoiceMode && voiceModeActive) setVoiceStatus("MahiCloud is speaking…", "speaking");
       };
       utterance.onend = finish;
       utterance.onerror = finish;
       voiceCurrentUtterance = utterance;
       voiceIsSpeaking = true;
-      if (inVoiceMode && voiceModeActive) setVoiceStatus("Mahi AI is speaking…", "speaking");
+      if (inVoiceMode && voiceModeActive) setVoiceStatus("MahiCloud is speaking…", "speaking");
       // Some browser/OS speech engines omit onend after an interrupted utterance.
       // Prevent that from leaving voice mode stuck in "speaking" forever.
       speechWatchdog = window.setTimeout(() => {
@@ -402,7 +402,7 @@
     button.className = "message-action speech-action";
     button.type = "button";
     button.title = "Read this answer aloud";
-    button.setAttribute("aria-label", "Read Mahi AI's answer aloud");
+    button.setAttribute("aria-label", "Read MahiCloud's answer aloud");
     button.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4Z"/><path d="M16 9a5 5 0 0 1 0 6M18.5 6.5a9 9 0 0 1 0 11"/></svg><span>Listen</span>';
     button.addEventListener("click", () => {
       if (voiceIsSpeaking) {
@@ -456,7 +456,7 @@
     if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== "function" ||
         typeof window.MediaRecorder !== "function") {
       voicePaused = true;
-      setVoiceStatus("Voice input is unavailable here. Open Mahi AI in the latest Chrome or Edge over HTTPS.", "error");
+      setVoiceStatus("Voice input is unavailable here. Open MahiCloud in the latest Chrome or Edge over HTTPS.", "error");
       if (voiceUI.transcript) voiceUI.transcript.textContent = "This browser does not support speech recognition or microphone recording.";
       return;
     }
@@ -498,7 +498,7 @@
         if (!voiceModeActive) return;
         if (shouldSubmit && blob.size >= 1200) {
           setVoiceStatus("Processing your voice message…", "thinking");
-          if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message captured. Mahi AI is listening…";
+          if (voiceUI.transcript) voiceUI.transcript.textContent = "Voice message captured. MahiCloud is listening…";
           void submitVoiceRecording(blob, actualType);
         } else {
           voicePaused = true;
@@ -514,7 +514,7 @@
       recorder.start(250);
       voiceIsListening = true;
       setVoiceStatus("Listening… speak naturally", "listening");
-      if (voiceUI.transcript) voiceUI.transcript.textContent = "Language detection is automatic. Pause briefly when you finish speaking; Mahi AI will answer aloud.";
+      if (voiceUI.transcript) voiceUI.transcript.textContent = "Language detection is automatic. Pause briefly when you finish speaking; MahiCloud will answer aloud.";
       const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
       if (AudioContextConstructor) {
         try {
@@ -593,7 +593,7 @@
         updateCounter();
         voicePaused = true;
         setVoiceStatus("Voice reply failed", "error");
-        if (voiceUI.transcript) voiceUI.transcript.textContent = "I couldn’t reach Mahi AI for that turn. Check your connection, then tap the mic to try again.";
+        if (voiceUI.transcript) voiceUI.transcript.textContent = "I couldn’t reach MahiCloud for that turn. Check your connection, then tap the mic to try again.";
       }
     } catch (_) {
       voicePaused = true;
@@ -611,7 +611,7 @@
     voicePaused = false;
     voiceForceRecorder = true;
     voiceUI.overlay.hidden = false;
-    if (voiceUI.transcript) voiceUI.transcript.textContent = "Allow microphone access when your browser asks. Speak in any language; Mahi AI will detect it and reply aloud.";
+    if (voiceUI.transcript) voiceUI.transcript.textContent = "Allow microphone access when your browser asks. Speak in any language; MahiCloud will detect it and reply aloud.";
     if (voiceUI.interim) voiceUI.interim.textContent = "";
     setVoiceStatus("Connecting to your microphone…", "idle");
     closeMobileSidebar();
@@ -847,7 +847,7 @@
           extractedText = await extractDocumentText(file);
         } catch (error) {
           // Any file type remains attachable even when its optional text extractor is unavailable.
-          console.warn("Mahi AI could not extract document text:", file.name, error);
+          console.warn("MahiCloud could not extract document text:", file.name, error);
           extractedText = "";
         }
         if (extractedText) {
@@ -860,7 +860,7 @@
         const result = await client.storage.from("mahi-ai-attachments").upload(path, file, {
           upsert: false, contentType: file.type || "application/octet-stream", cacheControl: "3600"
         });
-        if (result.error) throw new Error("Mahi AI: Could not upload " + file.name + ". Check the Supabase attachment bucket setup and try again.");
+        if (result.error) throw new Error("MahiCloud: Could not upload " + file.name + ". Check the Supabase attachment bucket setup and try again.");
         uploaded.push({
           path: result.data.path, name: file.name, mime_type: file.type || "application/octet-stream",
           size: file.size, extracted_text: extractedText
@@ -1209,7 +1209,7 @@
   async function handleAccountSubmit(event) {
     event.preventDefault();
     if (!client) {
-      setAccountStatus("Mahi AI is still connecting. Please try again in a moment.", "error");
+      setAccountStatus("MahiCloud is still connecting. Please try again in a moment.", "error");
       return;
     }
     const submit = $("accountSubmitButton");
@@ -1409,7 +1409,7 @@
       renderConversationList();
       closeMobileSidebar();
     } catch (error) {
-      setError(error instanceof Error && error.message.startsWith("Mahi AI: ")
+      setError(error instanceof Error && error.message.startsWith("MahiCloud: ")
         ? error.message.slice(9) : plainError(error));
     }
   }
@@ -1447,7 +1447,7 @@
       const { data: authData, error: authError } = await client.auth.getSession();
       if (authError) throw authError;
       const accessToken = authData?.session?.access_token;
-      if (!accessToken) throw new Error("Mahi AI: Your guest session expired. Reload the page and try again.");
+      if (!accessToken) throw new Error("MahiCloud: Your guest session expired. Reload the page and try again.");
       const response = await fetch(cfg.supabaseUrl + "/functions/v1/mahi-ai-chat", {
         method: "POST",
         headers: {
@@ -1467,9 +1467,9 @@
           const body = await response.json();
           detail = typeof body?.error === "string" ? body.error : "";
         } catch (_) {}
-        throw new Error("Mahi AI: " + (detail || "Request failed. Please try again."));
+        throw new Error("MahiCloud: " + (detail || "Request failed. Please try again."));
       }
-      if (!response.body) throw new Error("Mahi AI: Streaming is not supported by this browser.");
+      if (!response.body) throw new Error("MahiCloud: Streaming is not supported by this browser.");
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -1498,7 +1498,7 @@
           if (payload.conversation_id) conversationId = payload.conversation_id;
           completed = true;
         } else if (payload.type === "error") {
-          throw new Error("Mahi AI: " + (payload.message || "The response was interrupted. Please try again."));
+          throw new Error("MahiCloud: " + (payload.message || "The response was interrupted. Please try again."));
         }
       };
 
@@ -1516,9 +1516,9 @@
       if (completed) {
         try { await reader.cancel(); } catch (_) {}
       } else {
-        throw new Error("Mahi AI: The connection ended before the answer finished. Please try again.");
+        throw new Error("MahiCloud: The connection ended before the answer finished. Please try again.");
       }
-      if (!fullText.trim()) throw new Error("Mahi AI: No response was returned. Please try again.");
+      if (!fullText.trim()) throw new Error("MahiCloud: No response was returned. Please try again.");
       fullText = fullText.trim();
       let detectedVoiceLanguage = "";
       if (voiceModeActive) {
@@ -1529,7 +1529,7 @@
         }
         voiceResponseLanguage = detectedVoiceLanguage;
       }
-      if (!fullText) throw new Error("Mahi AI: The answer contained no readable text. Please try again.");
+      if (!fullText) throw new Error("MahiCloud: The answer contained no readable text. Please try again.");
       responseCompleted = true;
       messageContent.classList.remove("streaming-text");
       const resolvedReply = await resolveStoredImageMarkers(fullText);
@@ -1546,7 +1546,7 @@
         await refreshConversations();
       } catch (historyError) {
         // A delivered answer must not be rolled back just because history refresh failed.
-        console.warn("Mahi AI reply delivered; conversation history refresh failed:",
+        console.warn("MahiCloud reply delivered; conversation history refresh failed:",
           historyError instanceof Error ? historyError.message.slice(0, 160) : "Unknown error");
       }
     } catch (error) {
@@ -1565,7 +1565,7 @@
         pendingFiles = [];
         renderAttachmentList();
         updateCounter();
-        console.warn("Mahi AI reply was received; a post-response UI step failed:",
+        console.warn("MahiCloud reply was received; a post-response UI step failed:",
           error instanceof Error ? error.message.slice(0, 160) : "Unknown error");
         return;
       }
@@ -1574,7 +1574,7 @@
       if (uploadedAttachments.length) {
         try { await client.storage.from("mahi-ai-attachments").remove(uploadedAttachments.map((item) => item.path)); } catch (_) {}
       }
-      setError(error instanceof Error && error.message.startsWith("Mahi AI: ")
+      setError(error instanceof Error && error.message.startsWith("MahiCloud: ")
         ? error.message.slice(9) : plainError(error));
       // Keep the draft and selected files available so the user can retry.
       ui.input.value = userText;
@@ -1853,7 +1853,7 @@
     if (!cfg || !cfg.supabaseUrl || !cfg.supabasePublishableKey ||
         !window.supabase || !window.supabase.createClient) {
       ui.session.textContent = "Configuration missing";
-      setError("Mahi AI is missing its Supabase public configuration. Check public/config.js.");
+      setError("MahiCloud is missing its Supabase public configuration. Check public/config.js.");
       ui.send.disabled = true;
       return;
     }
