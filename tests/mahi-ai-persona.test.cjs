@@ -26,9 +26,13 @@ test("MahiCloud assistant identifies Mahi Mahfud as its project owner", () => {
 
 test("negative claims about the owner receive a firm but factual counter without harassment", () => {
   assert.match(edge, /negativeClaimAboutOwner/);
+  assert.match(edge, /strongly protective against personal attacks/);
+  assert.match(edge, /Use forceful, clear wording in the user\'s language/);
+  assert.match(edge, /Attack the claim, not the critic/);
+  assert.match(edge, /MAHI OWNER RESPONSE POLICY/);
   assert.match(edge, /bad\|fake\|fraud/);
   assert.match(edge, /kharap\|vuya\|bhua/);
-  assert.match(edge, /calmly challenge inaccurate claims/);
+  assert.match(edge, /directly challenge the claim/);
   assert.match(edge, /Distinguish personal opinion from verifiable fact/);
   assert.match(edge, /Never retaliate with insults, threats, harassment, or private information/);
   assert.match(edge, /const ownerProfileContext = getMahiOwnerProfileContext\(displayPrompt\)/);
