@@ -2642,7 +2642,7 @@ async function streamImageGenerationResponse(
         const lowerReason = reason.toLowerCase();
         let userMessage: string;
         if (!hasGeminiKey) {
-          userMessage = "ছবি তৈরি করতে Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন। Image generation শুধু Google Gemini ব্যবহার করে।";
+          userMessage = "AI ছবি তৈরির সুবিধাটি এখন উপলভ্য নেই। পরে আবার চেষ্টা করুন।";
         } else if (/429|resource_exhausted|exceeded your current quota|quota exceeded|insufficient_quota|billing|payment|required credits|model access/i.test(lowerReason)) {
           userMessage = "AI ছবি তৈরি করতে পারেনি। কিছুক্ষণ পরে আবার চেষ্টা করুন।";
         } else {
