@@ -7,6 +7,8 @@ on:
       - "supabase/migrations/**"
       - "server.js"
       - "public/app.js"
+      - "public/ai-intro.js"
+      - "public/ai-intro.css"
       - "public/code-blocks.js"
       - "public/code-blocks.css"
       - "public/config.js"
@@ -31,6 +33,8 @@ on:
       - "supabase/migrations/**"
       - "server.js"
       - "public/app.js"
+      - "public/ai-intro.js"
+      - "public/ai-intro.css"
       - "public/code-blocks.js"
       - "public/code-blocks.css"
       - "public/config.js"
@@ -69,6 +73,7 @@ jobs:
       - name: Check browser JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/ai-intro.js
           node --check public/config.js
           node --check public/themes.js
           node --check public/code-blocks.js
