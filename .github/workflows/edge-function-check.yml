@@ -7,6 +7,8 @@ on:
       - "supabase/migrations/**"
       - "server.js"
       - "public/app.js"
+      - "public/ai-intro.js"
+      - "public/ai-intro.css"
       - "public/code-blocks.js"
       - "public/code-blocks.css"
       - "public/config.js"
@@ -31,6 +33,8 @@ on:
       - "supabase/migrations/**"
       - "server.js"
       - "public/app.js"
+      - "public/ai-intro.js"
+      - "public/ai-intro.css"
       - "public/code-blocks.js"
       - "public/code-blocks.css"
       - "public/config.js"
@@ -69,8 +73,23 @@ jobs:
       - name: Check browser JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/ai-intro.js
           node --check public/config.js
           node --check public/themes.js
           node --check public/code-blocks.js
       - name: Run backend regression tests
         run: node --test tests/*.test.cjs
+
+  ai-intro-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Check intro script syntax
+        run: node --check public/ai-intro.js
+      - name: Test intro markup and motion behavior
+        run: node --test tests/ai-intro.test.cjs

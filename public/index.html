@@ -20,6 +20,7 @@
   <link rel="stylesheet" href="./ui-overrides.css?v=20261024settings3">
   <link rel="stylesheet" href="./code-blocks.css?v=20261025">
   <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
+  <link rel="stylesheet" href="./ai-intro.css?v=20261027">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
@@ -31,8 +32,42 @@
   <script src="./admin-control.js?v=20261025admin1" defer></script>
   <script src="./code-blocks.js?v=20261025" defer></script>
   <script src="./motion-b.js" defer></script>
+  <script src="./ai-intro.js?v=20261027" defer></script>
 </head>
 <body>
+  <div class="ai-intro" id="aiIntro" aria-hidden="false">
+    <div class="ai-intro-grid" aria-hidden="true"></div>
+    <div class="ai-intro-glow ai-intro-glow--left" aria-hidden="true"></div>
+    <div class="ai-intro-glow ai-intro-glow--right" aria-hidden="true"></div>
+    <div class="ai-intro-content">
+      <div class="ai-intro-core" aria-hidden="true">
+        <div class="ai-intro-ring ai-intro-ring--pulse"></div>
+        <div class="ai-intro-orbit ai-intro-orbit--outer">
+          <span class="ai-intro-token ai-intro-token--spark">✦</span>
+          <span class="ai-intro-token ai-intro-token--ai">AI</span>
+          <span class="ai-intro-token ai-intro-token--nodes"><i></i><i></i><i></i></span>
+        </div>
+        <div class="ai-intro-orbit ai-intro-orbit--inner">
+          <span class="ai-intro-token ai-intro-token--code">&lt;/&gt;</span>
+          <span class="ai-intro-token ai-intro-token--signal"><i></i><i></i><i></i></span>
+        </div>
+        <span class="ai-intro-particle ai-intro-particle--one"></span>
+        <span class="ai-intro-particle ai-intro-particle--two"></span>
+        <span class="ai-intro-particle ai-intro-particle--three"></span>
+        <div class="ai-intro-logo-shell">
+          <span class="ai-intro-logo-aura"></span>
+          <img class="ai-intro-logo" src="./mahi-ai-logo.svg" alt="">
+        </div>
+      </div>
+      <div class="ai-intro-copy">
+        <span class="ai-intro-eyebrow"><span></span> YOUR AI SPACE</span>
+        <h1>MahiCloud <strong>AI</strong></h1>
+        <p>Think clearly. Create freely. Explore more.</p>
+      </div>
+      <div class="ai-intro-progress" aria-hidden="true"><span></span></div>
+      <button class="ai-intro-skip" type="button" data-ai-intro-skip>Skip intro <span aria-hidden="true">↗</span></button>
+    </div>
+  </div>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
