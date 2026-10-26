@@ -20,9 +20,7 @@
 
   const skipButton = intro.querySelector("[data-ai-intro-skip]");
   if (skipButton) skipButton.addEventListener("click", finishIntro);
-  intro.addEventListener("pointerdown", (event) => {
-    if (event.target !== skipButton) finishIntro();
-  });
+  intro.addEventListener("click", finishIntro);
   document.addEventListener("keydown", (event) => {
     if (!finished && event.key === "Escape") finishIntro();
   });
