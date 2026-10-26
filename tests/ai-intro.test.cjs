@@ -12,25 +12,28 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
   const appStart = html.indexOf('class="app-shell"');
   assert.ok(introStart >= 0, "intro overlay must exist");
   assert.ok(appStart > introStart, "intro overlay should precede the chat shell");
-  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027"/);
+  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027circlechat1"/);
   assert.match(html, /src="\.\/ai-intro\.js\?v=20261027" defer/);
   const officialLogo = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   assert.ok(html.includes(`<img class="ai-intro-logo" src="${officialLogo}" alt="MahiCloud official logo">`));
   assert.ok(html.includes(`<img class="brand-logo" src="${officialLogo}"`));
   assert.match(css, /\.ai-intro-logo-shell\s*\{[^}]*position:\s*absolute;[^}]*left:\s*50%;[^}]*top:\s*50%;[^}]*transform:\s*translate\(-50%,\s*-50%\)/s);
   assert.match(css, /@keyframes ai-intro-logo-breathe\s*\{[^}]*translate\(-50%,\s*-50%\) scale\(1\)/s);
-  assert.match(css, /\.ai-intro-logo\s*\{[^}]*object-fit:\s*contain/s);
+  assert.match(css, /\.ai-intro-logo-shell\s*\{[^}]*border-radius:\s*50%/s);
+  assert.match(css, /\.ai-intro-logo\s*\{[^}]*border-radius:\s*50%;[^}]*object-fit:\s*cover/s);
   assert.match(html, /<h1>MahiCloud <strong>AI<\/strong><\/h1>/);
 });
 
-test("intro orbit contains AI-themed elements only, not file or photo icons", () => {
-  const markup = html.match(/<div class="ai-intro" id="aiIntro"[\s\S]*?<div class="app-shell">/);
-  assert.ok(markup, "intro markup should be isolated before the app shell");
-  assert.match(markup[0], /ai-intro-token--ai/);
-  assert.match(markup[0], /ai-intro-token--code/);
-  assert.match(markup[0], /ai-intro-token--nodes/);
-  assert.match(markup[0], /ai-intro-token--signal/);
-  assert.doesNotMatch(markup[0], /files|photos|photo|image gallery/i);
+test("intro orbit uses chatbot-related chat, typing, composer and reply animations", () => {
+  const introStart = html.indexOf('<div class="ai-intro" id="aiIntro"');
+  const appStart = html.indexOf('<div class="app-shell">');
+  const introMarkup = html.slice(introStart, appStart);
+  assert.ok(introStart >= 0 && appStart > introStart, "intro markup should be isolated before the app shell");
+  assert.match(introMarkup, /ai-intro-token--chat/);
+  assert.match(introMarkup, /ai-intro-token--typing/);
+  assert.match(introMarkup, /ai-intro-token--prompt/);
+  assert.match(introMarkup, /ai-intro-token--reply/);
+  assert.doesNotMatch(introMarkup, /files|photos|photo|image gallery/i);
 });
 
 test("intro automatically exits, can be skipped, and respects reduced-motion preference", () => {
