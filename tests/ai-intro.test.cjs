@@ -31,6 +31,7 @@ test("intro orbit contains AI-themed elements only, not file or photo icons", ()
 test("intro automatically exits, can be skipped, and respects reduced-motion preference", () => {
   assert.match(js, /setTimeout\(finishIntro, reduceMotion \? 420 : 2820\)/);
   assert.match(js, /data-ai-intro-skip/);
+  assert.match(js, /intro\.addEventListener\("click", finishIntro\)/);
   assert.match(js, /event\.key === "Escape"/);
   assert.match(js, /ai-intro-active/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
