@@ -12,8 +12,8 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
   const appStart = html.indexOf('class="app-shell"');
   assert.ok(introStart >= 0, "intro overlay must exist");
   assert.ok(appStart > introStart, "intro overlay should precede the chat shell");
-  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027circlechat1"/);
-  assert.match(html, /src="\.\/ai-intro\.js\?v=20261027" defer/);
+  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027tapmaruf1"/);
+  assert.match(html, /src="\.\/ai-intro\.js\?v=20261027tapmaruf1" defer/);
   const officialLogo = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   assert.ok(html.includes(`<img class="ai-intro-logo" src="${officialLogo}" alt="MahiCloud official logo">`));
   assert.ok(html.includes(`<img class="brand-logo" src="${officialLogo}"`));
@@ -36,9 +36,11 @@ test("intro orbit uses chatbot-related chat, typing, composer and reply animatio
   assert.doesNotMatch(introMarkup, /files|photos|photo|image gallery/i);
 });
 
-test("intro automatically exits, can be skipped, and respects reduced-motion preference", () => {
+test("intro automatically exits, skips on any screen tap, and respects reduced-motion preference", () => {
   assert.match(js, /setTimeout\(finishIntro, reduceMotion \? 420 : 2820\)/);
-  assert.match(js, /data-ai-intro-skip/);
+  assert.doesNotMatch(html, /ai-intro-skip|data-ai-intro-skip/);
+  assert.doesNotMatch(css, /ai-intro-skip/);
+  assert.doesNotMatch(js, /skipButton|data-ai-intro-skip/);
   assert.match(js, /intro\.addEventListener\("click", finishIntro\)/);
   assert.match(js, /event\.key === "Escape"/);
   assert.match(js, /ai-intro-active/);

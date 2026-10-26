@@ -18,8 +18,6 @@
     window.setTimeout(() => intro.remove(), 620);
   }
 
-  const skipButton = intro.querySelector("[data-ai-intro-skip]");
-  if (skipButton) skipButton.addEventListener("click", finishIntro);
   intro.addEventListener("click", finishIntro);
   document.addEventListener("keydown", (event) => {
     if (!finished && event.key === "Escape") finishIntro();

@@ -13,15 +13,18 @@ const ui = fs.readFileSync(
 
 test("owner-profile context identifies Mahi aliases and profile intent", () => {
   assert.match(edge, /function isMahiOwnerProfileRequest\(prompt: string\)/);
-  assert.match(edge, /mahimahfud\|mahi/);
+  assert.match(edge, /mahimahfud\|mahi[^)]*maruf[^)]*মারুফ|maruf[^)]*মারুফ/);
   assert.match(edge, /somporke\|porichoy\|bistarito/);
   assert.match(edge, /const ownerProfileContext = getMahiOwnerProfileContext\(displayPrompt\)/);
   assert.match(edge, /MAHI OWNER PROFILE CONTEXT/);
+  assert.match(edge, /Maruf.*same creator\/owner profile|Maruf.*alias/i);
 });
 
 test("profile context includes the owner's projects and public links", () => {
   for (const value of [
     "Mahi Mahfud",
+    "Maruf",
+    "মারুফ",
     "MahiCloud",
     "MahiFlix",
     "StreamCloud",
