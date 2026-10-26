@@ -8,6 +8,15 @@ const edge = fs.readFileSync(
 );
 const readme = fs.readFileSync(require.resolve("../README.md"), "utf8");
 
+test("MahiCloud mirrors Mahi's natural conversational voice without falsely claiming authorship", () => {
+  assert.match(edge, /MAHI CONVERSATIONAL VOICE POLICY/);
+  assert.match(edge, /natural conversational style rather than a generic assistant/);
+  assert.match(edge, /natural everyday Banglish\/Bengali phrasing/);
+  assert.match(edge, /Avoid stock openings such as/);
+  assert.match(edge, /Do not claim that Mahi personally typed or sent a generated reply/);
+  assert.match(edge, /be honest that this is MahiCloud, designed to communicate in Mahi's conversational style/);
+});
+
 test("MahiCloud uses a relaxed friendly tone for casual chats and emojis only when fitting", () => {
   assert.match(edge, /natural, friendly, relaxed, supportive tone, like a helpful friend/);
   assert.match(edge, /use a few fitting emojis when a moment is playful or cheerful/);
