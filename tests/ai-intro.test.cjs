@@ -12,14 +12,15 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
   const appStart = html.indexOf('class="app-shell"');
   assert.ok(introStart >= 0, "intro overlay must exist");
   assert.ok(appStart > introStart, "intro overlay should precede the chat shell");
-  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027"/);
+  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027circlechat1"/);
   assert.match(html, /src="\.\/ai-intro\.js\?v=20261027" defer/);
   const officialLogo = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   assert.ok(html.includes(`<img class="ai-intro-logo" src="${officialLogo}" alt="MahiCloud official logo">`));
   assert.ok(html.includes(`<img class="brand-logo" src="${officialLogo}"`));
   assert.match(css, /\.ai-intro-logo-shell\s*\{[^}]*position:\s*absolute;[^}]*left:\s*50%;[^}]*top:\s*50%;[^}]*transform:\s*translate\(-50%,\s*-50%\)/s);
   assert.match(css, /@keyframes ai-intro-logo-breathe\s*\{[^}]*translate\(-50%,\s*-50%\) scale\(1\)/s);
-  assert.match(css, /\.ai-intro-logo\s*\{[^}]*object-fit:\s*contain/s);
+  assert.match(css, /\.ai-intro-logo-shell\s*\{[^}]*border-radius:\s*50%/s);
+  assert.match(css, /\.ai-intro-logo\s*\{[^}]*border-radius:\s*50%;[^}]*object-fit:\s*cover/s);
   assert.match(html, /<h1>MahiCloud <strong>AI<\/strong><\/h1>/);
 });
 
