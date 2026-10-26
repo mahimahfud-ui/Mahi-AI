@@ -286,3 +286,108 @@ body.ai-intro-active { overflow: hidden; }
   .ai-intro-particle, .ai-intro-copy, .ai-intro-eyebrow span, .ai-intro-progress,
   .ai-intro-progress span { animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
 }
+
+
+/* Chatbot-inspired intro polish: circular official avatar, message and reply cues. */
+.ai-intro-logo-shell {
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 24%, rgba(126, 112, 218, .32), rgba(13, 18, 34, .96) 70%);
+  border-color: rgba(199, 190, 255, .66);
+  box-shadow: 0 0 0 6px rgba(144, 125, 255, .055), 0 0 34px rgba(130, 99, 255, .27), 0 0 84px rgba(88, 122, 255, .16), inset 0 1px rgba(255,255,255,.16);
+}
+.ai-intro-logo-aura {
+  inset: -10px;
+  border-radius: 50%;
+  border-color: rgba(168, 189, 255, .31);
+  border-style: dashed;
+}
+.ai-intro-logo {
+  width: 88%;
+  height: 88%;
+  border-radius: 50%;
+  object-fit: cover;
+  clip-path: circle(50%);
+  filter: drop-shadow(0 0 15px rgba(158, 144, 255, .3));
+}
+.ai-intro-orbit--outer {
+  border-color: rgba(166, 151, 255, .34);
+  box-shadow: 0 0 20px rgba(125, 104, 255, .035);
+}
+.ai-intro-orbit--inner {
+  border-color: rgba(119, 190, 255, .29);
+  box-shadow: inset 0 0 18px rgba(108, 169, 255, .035);
+}
+.ai-intro-orbit--outer::after,
+.ai-intro-orbit--inner::after {
+  content: "";
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.ai-intro-orbit--outer::after {
+  top: 10%;
+  left: 23%;
+  background: #c7b8ff;
+  box-shadow: 0 0 12px 3px rgba(167, 143, 255, .6);
+}
+.ai-intro-orbit--inner::after {
+  right: 15%;
+  bottom: 12%;
+  background: #8ad7ff;
+  box-shadow: 0 0 12px 3px rgba(112, 201, 255, .58);
+}
+.ai-intro-token--chat {
+  left: 4%; top: 15%; width: 40px; height: 40px; border-radius: 15px;
+  color: #d8d0ff; animation-delay: -.7s;
+}
+.ai-intro-token--chat svg {
+  width: 23px; height: 23px; overflow: visible; fill: none; stroke: currentColor;
+  stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round;
+}
+.ai-intro-token--chat svg path + path { stroke-width: 2.7; stroke-dasharray: .1 4; }
+.ai-intro-token--typing {
+  right: 0; top: 55%; display: flex; align-items: center; justify-content: center;
+  gap: 4px; width: 46px; height: 35px; border-radius: 13px;
+  transform: rotate(12deg); animation-delay: -1.2s;
+}
+.ai-intro-token--typing i {
+  width: 5px; height: 5px; border-radius: 50%; background: #b9b1ff;
+  box-shadow: 0 0 9px rgba(171, 151, 255, .5);
+  animation: ai-intro-typing-dot 1.15s ease-in-out infinite;
+}
+.ai-intro-token--typing i:nth-child(2) { animation-delay: .14s; background: #a7c7ff; }
+.ai-intro-token--typing i:nth-child(3) { animation-delay: .28s; background: #85d7ff; }
+.ai-intro-token--prompt {
+  left: -3%; bottom: 28%; display: flex; align-items: center; justify-content: center;
+  gap: 2px; width: 45px; height: 35px; border-radius: 12px;
+  color: #bce5ff; font: 800 12px/1 var(--display); letter-spacing: -.5px;
+  animation-delay: -.9s;
+}
+.ai-intro-token--prompt i {
+  display: block; width: 2px; height: 12px; border-radius: 2px;
+  background: #a9dbff; box-shadow: 0 0 8px rgba(129, 200, 255, .7);
+  animation: ai-intro-caret 1s steps(2, start) infinite;
+}
+.ai-intro-token--reply {
+  right: 18%; top: -3%; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 3px; width: 43px; height: 39px;
+  border-radius: 13px; padding: 9px 10px; animation-delay: -1.8s;
+}
+.ai-intro-token--reply i {
+  display: block; width: 100%; height: 3px; border-radius: 3px;
+  background: linear-gradient(90deg, #c9baff, #87d6ff);
+  box-shadow: 0 0 7px rgba(153, 173, 255, .23);
+}
+.ai-intro-token--reply i:nth-child(2) { width: 72%; align-self: flex-start; }
+.ai-intro-token--reply i:nth-child(3) { width: 48%; align-self: flex-start; }
+@keyframes ai-intro-typing-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: .55; }
+  30% { transform: translateY(-4px); opacity: 1; }
+}
+@keyframes ai-intro-caret { to { opacity: .18; } }
+@media (prefers-reduced-motion: reduce) {
+  .ai-intro-orbit--outer::after, .ai-intro-orbit--inner::after,
+  .ai-intro-token--typing i, .ai-intro-token--prompt i { animation: none !important; }
+}
