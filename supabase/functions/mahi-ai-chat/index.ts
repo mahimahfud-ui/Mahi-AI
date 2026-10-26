@@ -2644,9 +2644,9 @@ async function streamImageGenerationResponse(
         if (!hasGeminiKey) {
           userMessage = "ছবি তৈরি করতে Supabase Edge Function Secrets-এ GEMINI_API_KEY যোগ করুন। Image generation শুধু Google Gemini ব্যবহার করে।";
         } else if (/429|resource_exhausted|exceeded your current quota|quota exceeded|insufficient_quota|billing|payment|required credits|model access/i.test(lowerReason)) {
-          userMessage = "Google Gemini image generation ব্যর্থ হয়েছে। Gemini API quota, model access ও billing/credits পরীক্ষা করো; এই image task-এ অন্য provider চেষ্টা করা হয় না।";
+          userMessage = "AI ছবি তৈরি করতে পারেনি। কিছুক্ষণ পরে আবার চেষ্টা করুন।";
         } else {
-          userMessage = "Google Gemini image generation ব্যর্থ হয়েছে। Supabase mahi-ai-chat logs-এ Gemini error details দেখো; এই image task-এ Grok বা OpenAI fallback নেই।";
+          userMessage = "AI ছবি তৈরি করতে পারেনি। কিছুক্ষণ পরে আবার চেষ্টা করুন।";
         }
         sseEvent(controller, encoder, { type: "error", message: userMessage });
       } finally {
