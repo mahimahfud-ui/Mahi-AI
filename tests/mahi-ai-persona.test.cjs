@@ -39,8 +39,8 @@ test("negative claims about the owner receive a firm but factual counter without
 });
 
 test("persona policy does not require blind agreement with the owner", () => {
-  assert.match(edge, /acknowledge fair criticism when it has merit/);
-  assert.match(edge, /Do not assume every disagreement is an attack/);
+  assert.match(edge, /address valid criticism honestly/);
+  assert.match(edge, /distinguish criticism of a project from an attack on the person/);
 });
 
 test("persona behavior is documented", () => {
