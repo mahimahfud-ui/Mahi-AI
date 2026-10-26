@@ -24,13 +24,15 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
 });
 
 test("intro orbit uses chatbot-related chat, typing, composer and reply animations", () => {
-  const markup = html.match(/<div class="ai-intro" id="aiIntro"[\\s\\S]*?<div class="app-shell">/);
-  assert.ok(markup, "intro markup should be isolated before the app shell");
-  assert.match(markup[0], /ai-intro-token--chat/);
-  assert.match(markup[0], /ai-intro-token--typing/);
-  assert.match(markup[0], /ai-intro-token--prompt/);
-  assert.match(markup[0], /ai-intro-token--reply/);
-  assert.doesNotMatch(markup[0], /files|photos|photo|image gallery/i);
+  const introStart = html.indexOf('<div class="ai-intro" id="aiIntro"');
+  const appStart = html.indexOf('<div class="app-shell">');
+  const introMarkup = html.slice(introStart, appStart);
+  assert.ok(introStart >= 0 && appStart > introStart, "intro markup should be isolated before the app shell");
+  assert.match(introMarkup, /ai-intro-token--chat/);
+  assert.match(introMarkup, /ai-intro-token--typing/);
+  assert.match(introMarkup, /ai-intro-token--prompt/);
+  assert.match(introMarkup, /ai-intro-token--reply/);
+  assert.doesNotMatch(introMarkup, /files|photos|photo|image gallery/i);
 });
 
 test("intro automatically exits, can be skipped, and respects reduced-motion preference", () => {
