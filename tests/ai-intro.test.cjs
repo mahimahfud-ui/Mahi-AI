@@ -23,13 +23,13 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
   assert.match(html, /<h1>MahiCloud <strong>AI<\/strong><\/h1>/);
 });
 
-test("intro orbit contains AI-themed elements only, not file or photo icons", () => {
-  const markup = html.match(/<div class="ai-intro" id="aiIntro"[\s\S]*?<div class="app-shell">/);
+test("intro orbit uses chatbot-related chat, typing, composer and reply animations", () => {
+  const markup = html.match(/<div class="ai-intro" id="aiIntro"[\\s\\S]*?<div class="app-shell">/);
   assert.ok(markup, "intro markup should be isolated before the app shell");
-  assert.match(markup[0], /ai-intro-token--ai/);
-  assert.match(markup[0], /ai-intro-token--code/);
-  assert.match(markup[0], /ai-intro-token--nodes/);
-  assert.match(markup[0], /ai-intro-token--signal/);
+  assert.match(markup[0], /ai-intro-token--chat/);
+  assert.match(markup[0], /ai-intro-token--typing/);
+  assert.match(markup[0], /ai-intro-token--prompt/);
+  assert.match(markup[0], /ai-intro-token--reply/);
   assert.doesNotMatch(markup[0], /files|photos|photo|image gallery/i);
 });
 
