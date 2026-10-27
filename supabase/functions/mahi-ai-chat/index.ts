@@ -1975,14 +1975,19 @@ function boundedIntegerSetting(name: string, fallback: number, minimum: number, 
   return Number.isInteger(value) && value >= minimum && value <= maximum ? value : fallback;
 }
 
-async function reserveUsageRequest(userId: string, requestId: string, adminConfig?: MahiAIAdminConfig): Promise<UsageReservation> {
+// Per-user minute/day caps are intentionally disabled. Keep the existing RPC parameters
+// for database/API compatibility, but send PostgreSQL's maximum integer and let the
+// reservation RPC record usage without rejecting requests based on request counts.
+const UNLIMITED_PER_USER_REQUEST_LIMIT = 2_147_483_647;
+
+async function reserveUsageRequest(userId: string, requestId: string): Promise<UsageReservation> {
   const response = await rest("rpc/mahi_ai_reserve_request", {
     method: "POST",
     headers: { Prefer: "return=representation" },
     body: JSON.stringify({
       p_user_id: userId,
-      p_minute_limit: adminConfig?.rateLimitPerMinute || boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_MINUTE", 120, 1, 120),
-      p_day_limit: adminConfig?.rateLimitPerDay || boundedIntegerSetting("MAHI_AI_RATE_LIMIT_PER_DAY", 5000, 1, 5000),
+      p_minute_limit: UNLIMITED_PER_USER_REQUEST_LIMIT,
+      p_day_limit: UNLIMITED_PER_USER_REQUEST_LIMIT,
       p_request_id: requestId
     })
   });
@@ -3446,7 +3451,7 @@ Deno.serve(async (req: Request) => {
   }
   let reservation: UsageReservation;
   try {
-    reservation = await reserveUsageRequest(user.id, requestId, accessConfig);
+    reservation = await reserveUsageRequest(user.id, requestId);
   } catch (_) {
     return json(503, { error: "MahiCloud is temporarily unavailable. Please try again." }, responseCors);
   }
