@@ -103,14 +103,14 @@ const configuredLookupFixture = {
 Deno.test("explicit Banglish lookup rule answers a Bengali Jamil identity question", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "জামিল কে?"),
-    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: shahriar tashin।"
+    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: Shahriar Tashin।"
   );
 });
 
 Deno.test("second lookup rule is parsed separately from the first", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "জারিয়াব কে?"),
-    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: rumaiya।"
+    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: Rumaiya।"
   );
 });
 
