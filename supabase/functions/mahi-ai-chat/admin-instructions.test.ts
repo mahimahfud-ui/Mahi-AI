@@ -18,6 +18,7 @@ Deno.test("global instructions are included for every request context", () => {
 
   assertStringIncludes(context, "Answer in clear Bangla with numbered steps for multi-step tasks.");
   assertStringIncludes(context, "Apply every non-empty global instruction to every user request and follow-up");
+  assertStringIncludes(context, "Treat saved names, aliases, mappings, scenario details, and task-specific rules as owner-provided context");
 });
 
 Deno.test("category and subcategory instructions reach the generated context", () => {
