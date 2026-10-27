@@ -297,8 +297,10 @@
     panel.appendChild(field("Public announcement", "text", adminConfig.announcement, "providerSetting", "announcement"));
     panel.appendChild(field("Prompt templates (Title | Prompt, one per line)", "textarea",
       (adminConfig.templates || []).map((item) => item.title + " | " + item.prompt).join("\n"), "providerTemplates", "templates"));
-    panel.appendChild(field("Requests per minute per user", "number", adminConfig.rateLimitPerMinute, "providerLimit", "rateLimitPerMinute"));
-    panel.appendChild(field("Requests per day per user", "number", adminConfig.rateLimitPerDay, "providerLimit", "rateLimitPerDay"));
+    const requestLimitNotice = document.createElement("p");
+    requestLimitNotice.className = "admin-security-note";
+    requestLimitNotice.textContent = "Per-user request caps: Unlimited (disabled). Provider/API quotas and platform capacity limits still apply.";
+    panel.appendChild(requestLimitNotice);
     const providerList = document.createElement("div");
     providerList.className = "ap-provider-list";
     Object.keys(adminConfig.providers || {}).forEach((name) => {
