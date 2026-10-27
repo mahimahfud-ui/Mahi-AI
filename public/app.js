@@ -2,6 +2,59 @@
   "use strict";
   const cfg = window.MAHI_AI_CONFIG;
   const $ = (id) => document.getElementById(id);
+  const mahiStepPanels = new WeakMap();
+  const mahiSteps = {
+    update(typing, payload) {
+      const host = typing && typing.querySelector(".message-content");
+      if (!host || !payload) return;
+      let state = mahiStepPanels.get(host);
+      if (!state) {
+        const panel = document.createElement("section");
+        panel.className = "mahi-steps is-open";
+        const header = document.createElement("button");
+        header.type = "button";
+        header.className = "mahi-steps-head";
+        header.setAttribute("aria-expanded", "true");
+        const title = document.createElement("span");
+        title.className = "mahi-steps-title";
+        title.textContent = "Working…";
+        const list = document.createElement("ol");
+        list.className = "mahi-steps-list";
+        header.append(title);
+        header.addEventListener("click", event => {
+          const open = panel.classList.toggle("is-open");
+          event.currentTarget.setAttribute("aria-expanded", String(open));
+        });
+        panel.append(header, list);
+        host.before(panel);
+        state = { panel, header, title, list, items: new Map() };
+        mahiStepPanels.set(host, state);
+      }
+      const id = String(payload.id || "step-" + state.items.size);
+      const label = String(payload.label || payload.message || "");
+      if (!label) return;
+      let item = state.items.get(id);
+      if (!item) {
+        item = document.createElement("li");
+        state.items.set(id, item);
+        state.list.append(item);
+      }
+      item.className = "mahi-step is-" + String(payload.state || "running");
+      item.textContent = label;
+      if (payload.detail) item.title = String(payload.detail);
+      state.title.textContent = label;
+    },
+    finish(typing) {
+      const host = typing && typing.querySelector(".message-content");
+      const state = host && mahiStepPanels.get(host);
+      if (!state) return;
+      state.list.querySelectorAll(".is-running").forEach(item => item.classList.replace("is-running", "is-done"));
+      state.title.textContent = "Completed · " + state.items.size + " steps";
+      state.panel.classList.add("is-finished");
+      state.panel.classList.remove("is-open");
+      state.header.setAttribute("aria-expanded", "false");
+    }
+  };
   const OFFICIAL_LOGO_URL = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   const THEME_STORAGE_KEY = "mahi-ai-theme";
   const DISPLAY_NAME_STORAGE_KEY = "mahi-ai-display-name";
@@ -2035,9 +2088,12 @@
           if (!fullText) messageContent.textContent = "";
           fullText += payload.text;
           scheduleStreamPaint();
+        } else if (payload.type === "step") {
+          mahiSteps.update(typing, payload);
         } else if (payload.type === "done") {
           if (payload.conversation_id) conversationId = payload.conversation_id;
           completed = true;
+          mahiSteps.finish(typing);
         } else if (payload.type === "error") {
           throw new Error("MahiCloud: " + (payload.message || "The response was interrupted. Please try again."));
         }
