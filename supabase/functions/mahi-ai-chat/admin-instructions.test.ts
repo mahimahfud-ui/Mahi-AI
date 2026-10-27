@@ -100,26 +100,33 @@ const configuredLookupFixture = {
   categories: []
 };
 
-Deno.test("explicit Banglish lookup rule answers a Bengali Jamil identity question", () => {
+Deno.test("Bangla lookup returns a natural, direct identity answer", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "জামিল কে?"),
-    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: Shahriar Tashin।"
+    "জামিল বলতে শাহরিয়ার তাশিনকেই বোঝায়।"
   );
-});
 
-Deno.test("second lookup rule is parsed separately from the first", () => {
+
+Deno.test("second Bangla lookup answer is phrased naturally", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "জারিয়াব কে?"),
-    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: Rumaiya।"
+    "জারিয়াব বলতে রুমাইয়াকেই বোঝায়।"
+  );
+
+
+Deno.test("Banglish lookup answer uses natural wording", () => {
+  assertEquals(
+    matchAdminInstructionLookupRule(configuredLookupFixture, "zaryab ke?"),
+    "Zaryab bolte Rumaiya-ke bojhay."
   );
 });
 
-Deno.test("English lookup intent honours an explicit Global Instruction rule", () => {
+Deno.test("English lookup answer is direct and conversational", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "Who is Jamil?"),
-    "According to the saved Global Instruction, the configured answer for this name is: Shahriar Tashin."
+    "Jamil refers to Shahriar Tashin."
   );
-});
+
 
 Deno.test("explicit lookup rules are not applied when Admin Control is disabled", () => {
   assertEquals(matchAdminInstructionLookupRule({
