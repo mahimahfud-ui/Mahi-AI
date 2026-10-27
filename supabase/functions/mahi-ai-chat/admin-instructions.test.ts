@@ -1,4 +1,12 @@
-import { assertEquals, assert, assertStringIncludes } from "jsr:@std/assert";
+function assert(condition: unknown, message = "Assertion failed"): asserts condition {
+  if (!condition) throw new Error(message);
+}
+function assertEquals(actual: unknown, expected: unknown, message = "Values are not equal"): void {
+  if (actual !== expected) throw new Error(message + ": expected " + String(expected) + ", got " + String(actual));
+}
+function assertStringIncludes(actual: string, expected: string): void {
+  assert(actual.includes(expected), "Expected text to include: " + expected);
+}
 import { buildMahiAIAdminInstructionContext } from "./admin-instructions.ts";
 
 Deno.test("global instructions are included for every request context", () => {
