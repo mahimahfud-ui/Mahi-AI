@@ -105,14 +105,14 @@ Deno.test("Bangla lookup returns a natural, direct identity answer", () => {
     matchAdminInstructionLookupRule(configuredLookupFixture, "জামিল কে?"),
     "জামিল বলতে শাহরিয়ার তাশিনকেই বোঝায়।"
   );
-
+});
 
 Deno.test("second Bangla lookup answer is phrased naturally", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "জারিয়াব কে?"),
     "জারিয়াব বলতে রুমাইয়াকেই বোঝায়।"
   );
-
+});
 
 Deno.test("Banglish lookup answer uses natural wording", () => {
   assertEquals(
@@ -126,7 +126,7 @@ Deno.test("English lookup answer is direct and conversational", () => {
     matchAdminInstructionLookupRule(configuredLookupFixture, "Who is Jamil?"),
     "Jamil refers to Shahriar Tashin."
   );
-
+});
 
 Deno.test("explicit lookup rules are not applied when Admin Control is disabled", () => {
   assertEquals(matchAdminInstructionLookupRule({
