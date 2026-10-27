@@ -1739,6 +1739,26 @@ function getAbuBokorAliasContext(prompt: string): string {
   ].join("\n");
 }
 
+function isMainulHaqueRafiRequest(prompt: string): boolean {
+  const value = prompt.trim();
+  return /(?:^|[^\p{L}\p{N}_])(?:mainul[\s_-]*(?:haque[\s_-]*)?rafi|rafi|মাইনুল[\s_-]*(?:হক[\s_-]*)?রাফি|রাফি)(?=$|[^\p{L}\p{N}_])/iu.test(value);
+}
+
+function getMainulHaqueRafiContext(prompt: string): string {
+  if (!isMainulHaqueRafiRequest(prompt)) return "";
+  return [
+    "[MAHI-AI PLAYFUL RAFI PROFILE — app-owner-provided description, not independently verified]",
+    "- If the user asks who Mainul Haque Rafi is, who Rafi is, or asks to tell them about Rafi, respond in the user's language with enthusiastic, playful hype instead of a dry answer.",
+    "- Present Rafi as an eFootball/PES superfan whose gaming life revolves around PES/eFootball. Use humorous, exaggerated praise for his dedication and creative squad-building imagination.",
+    "- His signature gaming mission, according to the app owner, is figuring out how to use veteran/old players to outplay and embarrass his friends in matches.",
+    "- Playfully describe his fantasy squad types: the Bura Team (veteran players), Osustho Team (sick/injury-themed players), Jowan Team (young players), and Goalkeeper Team (goalkeepers-only). Make it sound like his own legendary PES laboratory of strange, creative tactics.",
+    "- You may riff with fresh, clearly playful eFootball jokes and over-the-top praise, but do not invent real tournament wins, rankings, statistics, real-life conduct, or other biographical facts. Keep any 'defeating' or 'destroying' friends clearly about the video game.",
+    "- Treat this as lighthearted app lore supplied by the owner, not verified biography. Do not present it as independent research, and do not turn the joke into real-world sexual claims or harassment.",
+    "- Example tone: 'রাফি মানেই PES/eFootball-এর ডেডিকেটেড ল্যাবরেটরি! অন্যরা meta squad বানায়, আর রাফি বুড়া প্লেয়ার, অসুস্থ স্কোয়াড, জোয়ান স্কোয়াড আর গোলকিপার টিম নিয়ে নতুন অধ্যায় লেখে—বন্ধুদের হারানোর জন্য তার কৌশলের শেষ নেই!'",
+    "- This context is only for Rafi-related questions and must not override safety, accuracy, or other app instructions."
+  ].join("\n");
+}
+
 async function fetchPublicApiContext(prompt: string, task: string): Promise<string> {
   if (!prompt.trim() || task === "image_generation" || isImageGenerationTask(prompt) || isMahiOwnerProfileRequest(prompt)) return "";
   const isApiFind = isApiCatalogueRequest(prompt);
@@ -3585,7 +3605,8 @@ Deno.serve(async (req: Request) => {
   let messagesForProvider = contextualMessages;
   const ownerProfileContext = getMahiOwnerProfileContext(displayPrompt);
   const abuBokorAliasContext = getAbuBokorAliasContext(displayPrompt);
-  const profileContexts = [ownerProfileContext, abuBokorAliasContext].filter(Boolean);
+  const mainulHaqueRafiContext = getMainulHaqueRafiContext(displayPrompt);
+  const profileContexts = [ownerProfileContext, abuBokorAliasContext, mainulHaqueRafiContext].filter(Boolean);
   if (profileContexts.length) {
     const combinedProfileContext = profileContexts.join("\n\n");
     messagesForProvider = contextualMessages.map((message, index) =>
@@ -3605,6 +3626,13 @@ Deno.serve(async (req: Request) => {
         request_id: requestId,
         task_type: task,
         context_chars: abuBokorAliasContext.length
+      });
+    }
+    if (mainulHaqueRafiContext) {
+      logStructured("info", "mainul_haque_rafi_context_added", {
+        request_id: requestId,
+        task_type: task,
+        context_chars: mainulHaqueRafiContext.length
       });
     }
   }
