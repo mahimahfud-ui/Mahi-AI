@@ -1741,7 +1741,7 @@ function getAbuBokorAliasContext(prompt: string): string {
 
 function isMainulHaqueRafiRequest(prompt: string): boolean {
   const value = prompt.trim();
-  return /(?:^|[^\p{L}\p{N}_])(?:mainul[\s_-]*(?:haque[\s_-]*)?rafi|মাইনুল[\s_-]*(?:হক[\s_-]*)?রাফি|রাফি)(?=$|[^\p{L}\p{N}_])/iu.test(value);
+  return /(?:^|[^\p{L}\p{N}_])(?:mainul[\s_-]*(?:haque[\s_-]*)?rafi|rafi|মাইনুল[\s_-]*(?:হক[\s_-]*)?ரাফি|রাফি)(?=$|[^\p{L}\p{N}_])/iu.test(value);
 }
 
 function getMainulHaqueRafiContext(prompt: string): string {
