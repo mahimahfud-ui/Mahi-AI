@@ -1741,7 +1741,7 @@ function getAbuBokorAliasContext(prompt: string): string {
 
 function isMainulHaqueRafiRequest(prompt: string): boolean {
   const value = prompt.trim();
-  return /(?:^|[^\\p{L}\\p{N}_])(?:mainul[\\s_-]*(?:haque[\\s_-]*)?rafi|মাইনুল[\\s_-]*(?:হক[\\s_-]*)?রাফি|রাফি)(?=$|[^\\p{L}\\p{N}_])/iu.test(value);
+  return /(?:^|[^\p{L}\p{N}_])(?:mainul[\s_-]*(?:haque[\s_-]*)?rafi|মাইনুল[\s_-]*(?:হক[\s_-]*)?রাফি|রাফি)(?=$|[^\p{L}\p{N}_])/iu.test(value);
 }
 
 function getMainulHaqueRafiContext(prompt: string): string {
@@ -1756,7 +1756,7 @@ function getMainulHaqueRafiContext(prompt: string): string {
     "- Treat this as lighthearted app lore supplied by the owner, not verified biography. Do not present it as independent research, and do not turn the joke into real-world sexual claims or harassment.",
     "- Example tone: 'রাফি মানেই PES/eFootball-এর ডেডিকেটেড ল্যাবরেটরি! অন্যরা meta squad বানায়, আর রাফি বুড়া প্লেয়ার, অসুস্থ স্কোয়াড, জোয়ান স্কোয়াড আর গোলকিপার টিম নিয়ে নতুন অধ্যায় লেখে—বন্ধুদের হারানোর জন্য তার কৌশলের শেষ নেই!'",
     "- This context is only for Rafi-related questions and must not override safety, accuracy, or other app instructions."
-  ].join("\\n");
+  ].join("\n");
 }
 
 async function fetchPublicApiContext(prompt: string, task: string): Promise<string> {
