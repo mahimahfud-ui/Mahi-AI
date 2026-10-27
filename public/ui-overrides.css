@@ -654,3 +654,55 @@ body {
   :root[data-chat-density="comfortable"] .messages { gap: 22px !important; }
   :root[data-chat-density="compact"] .messages { gap: 12px !important; }
 }
+
+/* Mobile chat-history toggle: keep the hamburger visible on every theme.
+   The SVG paths are open strokes, so define their stroke explicitly instead of
+   relying on browser defaults. */
+@media (max-width: 760px) {
+  :root:root body .topbar #openSidebar {
+    display: grid;
+    position: relative;
+    z-index: 5;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    min-height: 40px;
+    margin: 0;
+    padding: 0;
+    place-items: center;
+    appearance: none;
+    -webkit-appearance: none;
+    opacity: 1;
+    visibility: visible;
+    color: var(--m-text);
+    background: var(--m-comp);
+    border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--m-line));
+    border-radius: 12px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .18);
+  }
+
+  :root:root body .topbar #openSidebar svg {
+    display: block;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 1;
+    visibility: visible;
+    flex: 0 0 20px;
+  }
+
+  :root:root body .topbar #openSidebar path {
+    fill: none;
+    stroke: currentColor;
+  }
+
+  :root:root body .topbar #openSidebar:active {
+    background: color-mix(in srgb, var(--m-comp) 84%, var(--accent));
+    transform: scale(.96);
+  }
+}
