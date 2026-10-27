@@ -8,7 +8,7 @@ test("Rafi-name queries receive the owner-provided playful eFootball profile con
   assert.match(source, /function isMainulHaqueRafiRequest\(prompt: string\)/);
   assert.match(source, /mainul.*haque.*rafi/);
   assert.match(source, /function getMainulHaqueRafiContext\(prompt: string\): string/);
-  assert.match(source, /PES\/eFootball superfan whose gaming life revolves around PES\/eFootball/);
+  assert.match(source, /eFootball\/PES superfan whose gaming life revolves around PES\/eFootball/);
   assert.match(source, /Bura Team/);
   assert.match(source, /Osustho Team/);
   assert.match(source, /Jowan Team/);
