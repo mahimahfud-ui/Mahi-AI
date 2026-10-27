@@ -8,7 +8,8 @@ const edgeFile = path.join(__dirname, "../supabase/functions/mahi-ai-chat/index.
 const source = fs.readFileSync(edgeFile, "utf8");
 
 test("request handler compiles saved Admin Control instructions before routing", () => {
-  assert.match(source, /buildMahiAIAdminInstructionContext\(await getCachedMahiAIAdminConfig\(\)\)/);
+  assert.match(source, /const adminInstructionConfig = await getCachedMahiAIAdminConfig\(\)/);
+  assert.match(source, /buildMahiAIAdminInstructionContext\(adminInstructionConfig\)/);
 });
 
 test("compiled Admin Control instructions are inserted into the system prompt", () => {
