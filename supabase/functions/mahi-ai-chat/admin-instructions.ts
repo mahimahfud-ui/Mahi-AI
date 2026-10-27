@@ -173,7 +173,7 @@ export function matchAdminInstructionLookupRule(config: AdminInstructionConfig, 
     if (/\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbe|hobe|nai|lagbe|kibhabe|keno|bolo|dao|daw|ache|hoy|hocche|chai|jante chai)\b/i.test(prompt)) {
       return "Global Instruction অনুযayi, ei name-er jonno set kora answer: " + presentLookupResponse(rule.response) + ".";
     }
-    return "According to the saved Global Instruction, the configured answer for this name is: " + rule.response + ".";
+    return "According to the saved Global Instruction, the configured answer for this name is: " + presentLookupResponse(rule.response) + ".";
   }
   return null;
 }
