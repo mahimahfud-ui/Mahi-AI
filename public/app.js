@@ -19,7 +19,7 @@
     fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList"),
     chatSearch: $("chatSearch"), stop: $("stopButton"), draftNotice: $("draftNotice"),
     temporaryChatButton: $("temporaryChatButton"), exportMarkdownButton: $("exportMarkdownButton"), exportJsonButton: $("exportJsonButton"),
-    accountButton: $("accountButton"), accountModal: $("accountModal"), voiceModeButton: $("voiceModeButton")
+    accountButton: $("accountButton"), accountModal: $("accountModal"), voiceModeButton: $("voiceModeButton"), thinkModeButton: $("thinkModeButton")
   };
   const voiceUI = {
     overlay: $("voiceOverlay"), stage: $("voiceStage"), status: $("voiceStatus"), transcript: $("voiceTranscript"),
@@ -34,6 +34,7 @@
   let voiceResponseLanguage = "";
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
+  let thinkModeEnabled = false;
   let activeRequestController = null, pendingEdit = null, temporaryChatMode = false;
   let branchSeedMessages = null, branchOrigin = null;
   let chatSearchMatches = null, chatSearchSequence = 0;
@@ -99,6 +100,17 @@
     }
     return "MahiCloud could not complete that request. Please try again in a moment.";
   }
+  function setThinkModeEnabled(enabled) {
+    thinkModeEnabled = !!enabled;
+    if (ui.thinkModeButton) {
+      ui.thinkModeButton.setAttribute("aria-pressed", String(thinkModeEnabled));
+      ui.thinkModeButton.classList.toggle("is-active", thinkModeEnabled);
+      ui.thinkModeButton.title = thinkModeEnabled
+        ? "Think mode is on: compare answers from all connected AI providers"
+        : "Think mode is off: use the normal fast response route";
+    }
+  }
+
   function setBusy(value) {
     busy = value;
     ui.send.disabled = value || (!ui.input.value.trim() && !pendingFiles.length);
@@ -1909,6 +1921,7 @@
   }
   async function sendMessage(text, options) {
     const sendOptions = options || {};
+    const useThinkMode = typeof sendOptions.thinkMode === "boolean" ? sendOptions.thinkMode : thinkModeEnabled;
     const editRequest = sendOptions.replacement || pendingEdit;
     const rollbackMessages = editRequest
       ? (sendOptions.previousMessages || pendingEdit?.previousMessages || currentMessages.slice())
@@ -1942,6 +1955,10 @@
     currentMessages.push({ role: "user", content: userText });
     addMessage("user", sendOptions.displayText || userText, { files: selectedFiles, messageIndex: currentMessages.length - 1 });
     const typing = addMessage("assistant", "", { typing: true, messageIndex: currentMessages.length });
+    if (useThinkMode) {
+      const thinkLabel = typing.querySelector(".thinking-label");
+      if (thinkLabel) thinkLabel.textContent = "Think mode · checking AI answers";
+    }
     setBusy(true);
     activeRequestController = new AbortController();
     let uploadedAttachments = [];
@@ -1965,6 +1982,7 @@
         body: JSON.stringify({
           conversation_id: temporaryChatMode ? null : conversationId,
           temporary_chat: temporaryChatMode,
+          think_mode: useThinkMode,
           branch_context: branchRequest,
           custom_instructions: chatPreferences.customInstructions,
           response_style: chatPreferences.responseStyle,
@@ -2434,6 +2452,7 @@
     event.preventDefault();
     void sendMessage(ui.input.value);
   });
+  if (ui.thinkModeButton) ui.thinkModeButton.addEventListener("click", () => setThinkModeEnabled(!thinkModeEnabled));
   if (ui.stop) ui.stop.addEventListener("click", () => {
     if (activeRequestController && busy) activeRequestController.abort();
   });

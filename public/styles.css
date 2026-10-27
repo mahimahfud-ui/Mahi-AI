@@ -563,3 +563,14 @@ html[data-theme="light"] .stop-button{background:#fff0f2;color:#a22e49;border-co
   .stop-button{width:32px;padding:0}
 }
 @media(prefers-reduced-motion:reduce){.header-tool-button,.temporary-chat-button,.chat-search-wrap input{transition:none}}
+
+/* Think mode toggle */
+.think-mode-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:30px;padding:0 10px;border:1px solid rgba(169,179,215,.17);border-radius:9px;background:rgba(17,21,32,.9);color:#aab3c9;font:inherit;font-size:10px;white-space:nowrap;transition:background .18s,border-color .18s,color .18s,box-shadow .18s}
+.think-mode-button svg{width:15px;height:15px;flex:0 0 15px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.think-mode-button:hover{border-color:rgba(169,145,255,.42);background:#1a1c2b;color:#eae5ff}
+.think-mode-button[aria-pressed="true"],.think-mode-button.is-active{background:rgba(139,112,255,.17);border-color:rgba(169,145,255,.7);color:#d1c5ff;box-shadow:0 0 0 2px rgba(139,112,255,.07),0 0 18px rgba(139,112,255,.09)}
+.think-mode-button[aria-pressed="true"] svg{filter:drop-shadow(0 0 4px rgba(181,158,255,.3))}
+html[data-theme="light"] .think-mode-button{background:#f8f8ff;color:#555d79;border-color:#dfe2f1}
+html[data-theme="light"] .think-mode-button[aria-pressed="true"],html[data-theme="light"] .think-mode-button.is-active{background:#eee9ff;color:#5a45a2;border-color:#c9bcff}
+@media(max-width:760px){.think-mode-button{min-width:31px;padding:0 8px;gap:0}.think-mode-button span{display:none}.composer-left-actions{gap:6px}.composer-hint{display:none}}
+@media(prefers-reduced-motion:reduce){.think-mode-button{transition:none}}
