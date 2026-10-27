@@ -12,6 +12,13 @@ test("request handler compiles saved Admin Control instructions before routing",
   assert.match(source, /buildMahiAIAdminInstructionContext\(adminInstructionConfig\)/);
 });
 
+test("temporary admin-config database failures preserve last-known-good owner instructions", () => {
+  assert.match(source, /let lastGoodMahiAIAdminConfig: MahiAIAdminConfig \\| null = null/);
+  assert.match(source, /if \\(lastGoodMahiAIAdminConfig\\) \\{/);
+  assert.match(source, /admin_config_last_good_cache_used/);
+  assert.match(source, /lastGoodMahiAIAdminConfig = config/);
+});
+
 test("compiled Admin Control instructions are inserted into the system prompt", () => {
   assert.match(source, /\(adminInstructionContext \? "\\n\\n" \+ adminInstructionContext : ""\)/);
   assert.match(source, /systemPrompt\(task, name, adminInstructionContext\)/);
