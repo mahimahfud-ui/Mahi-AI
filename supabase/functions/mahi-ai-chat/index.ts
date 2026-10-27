@@ -6,5 +6,3 @@ const corsHeaders: Record<string, string> = {
   "Content-Type": "application/json; charset=utf-8",
   "Vary": "Origin"
 };
-
-// ... truncated for safety - will use full content from file
