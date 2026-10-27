@@ -1970,11 +1970,6 @@ type UsageReservation = {
   limitScope: string | null;
 };
 
-function boundedIntegerSetting(name: string, fallback: number, minimum: number, maximum: number): number {
-  const value = Number(envFirst([name]));
-  return Number.isInteger(value) && value >= minimum && value <= maximum ? value : fallback;
-}
-
 // Per-user minute/day caps are intentionally disabled. Keep the existing RPC parameters
 // for database/API compatibility, but send PostgreSQL's maximum integer and let the
 // reservation RPC record usage without rejecting requests based on request counts.
