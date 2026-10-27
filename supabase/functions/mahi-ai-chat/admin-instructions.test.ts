@@ -117,7 +117,7 @@ Deno.test("second lookup rule is parsed separately from the first", () => {
 Deno.test("English lookup intent honours an explicit Global Instruction rule", () => {
   assertEquals(
     matchAdminInstructionLookupRule(configuredLookupFixture, "Who is Jamil?"),
-    "According to the saved Global Instruction, the configured answer for this name is: shahriar tashin."
+    "According to the saved Global Instruction, the configured answer for this name is: Shahriar Tashin."
   );
 });
 
