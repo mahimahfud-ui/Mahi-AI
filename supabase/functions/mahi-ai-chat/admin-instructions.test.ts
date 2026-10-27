@@ -7,7 +7,7 @@ function assertEquals(actual: unknown, expected: unknown, message = "Values are 
 function assertStringIncludes(actual: string, expected: string): void {
   assert(actual.includes(expected), "Expected text to include: " + expected);
 }
-import { buildMahiAIAdminInstructionContext } from "./admin-instructions.ts";
+import { buildMahiAIAdminInstructionContext, matchAdminInstructionLookupRule } from "./admin-instructions.ts";
 
 Deno.test("global instructions are included for every request context", () => {
   const context = buildMahiAIAdminInstructionContext({
@@ -91,4 +91,46 @@ Deno.test("large valid instruction context is not truncated or left as malformed
   assertEquals(payload.categories.length, 10);
   assertEquals(payload.categories[9].instructions.length, categories[9].instructions.length);
   assertEquals(payload.categories[9].instructions, categories[9].instructions);
+});
+
+
+const configuredLookupFixture = {
+  enabled: true,
+  globalInstructions: "keu jodi jamil likhe search kore taile asbe shahriar tashin r zaryab likhe search korle asbe rumaiya.",
+  categories: []
+};
+
+Deno.test("explicit Banglish lookup rule answers a Bengali Jamil identity question", () => {
+  assertEquals(
+    matchAdminInstructionLookupRule(configuredLookupFixture, "জামিল কে?"),
+    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: shahriar tashin।"
+  );
+});
+
+Deno.test("second lookup rule is parsed separately from the first", () => {
+  assertEquals(
+    matchAdminInstructionLookupRule(configuredLookupFixture, "জারিয়াব কে?"),
+    "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: rumaiya।"
+  );
+});
+
+Deno.test("English lookup intent honours an explicit Global Instruction rule", () => {
+  assertEquals(
+    matchAdminInstructionLookupRule(configuredLookupFixture, "Who is Jamil?"),
+    "According to the saved Global Instruction, the configured answer for this name is: shahriar tashin."
+  );
+});
+
+Deno.test("explicit lookup rules are not applied when Admin Control is disabled", () => {
+  assertEquals(matchAdminInstructionLookupRule({
+    ...configuredLookupFixture,
+    enabled: false
+  }, "জামিল কে?"), null);
+});
+
+Deno.test("lookup rules do not hijack unrelated prompts that merely discuss names", () => {
+  assertEquals(matchAdminInstructionLookupRule(
+    configuredLookupFixture,
+    "Help me write a story about Jamil and his school."
+  ), null);
 });
