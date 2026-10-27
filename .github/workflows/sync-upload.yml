@@ -1,40 +1,27 @@
-name: Apply improved archive payload
+name: Clean abandoned archive staging
 on:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - ".sync-payload/**"
       - ".github/workflows/sync-upload.yml"
-
 permissions:
   contents: write
-
 jobs:
-  apply:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Verify and apply the prepared archive
+      - name: Remove only the failed temporary staging files
         shell: bash
         run: |
           set -euo pipefail
-          cat .sync-payload/part-*.txt | base64 --decode > /tmp/mahi-update.tar.xz
-          echo "02f50a10a6df21eac8819c24c97612f6fd925ad6470f52288957e448cab1a3ce  /tmp/mahi-update.tar.xz" | sha256sum --check
-          tar -tzf /tmp/mahi-update.tar.xz >/dev/null 2>&1 && { echo "Unexpected archive compression"; exit 1; } || true
-          tar -tJf /tmp/mahi-update.tar.xz | grep -Eq '(^/|(^|/)\.\.(/|$))' && { echo "Unsafe archive path"; exit 1; } || true
-          mkdir -p /tmp/mahi-update
-          tar -xJf /tmp/mahi-update.tar.xz -C /tmp/mahi-update
-          test -f /tmp/mahi-update/supabase/functions/mahi-ai-chat/index.ts
-          test -f /tmp/mahi-update/public/admin-providers.js
-          cp -a /tmp/mahi-update/. .
           rm -rf .sync-payload
           rm -f .github/workflows/sync-upload.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Apply Mahi-AI improved archive"
+          git commit -m "Remove failed temporary archive staging"
           git push origin HEAD:main
