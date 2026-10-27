@@ -68,6 +68,8 @@ jobs:
         run: deno check supabase/functions/mahi-ai-chat/index.ts
       - name: Test image intent routing
         run: deno test supabase/functions/mahi-ai-chat/image-intent.test.ts
+      - name: Test Admin Control instruction compilation
+        run: deno test supabase/functions/mahi-ai-chat/admin-instructions.test.ts
       - name: Check Node server syntax
         run: node --check server.js
       - name: Check browser JavaScript syntax
