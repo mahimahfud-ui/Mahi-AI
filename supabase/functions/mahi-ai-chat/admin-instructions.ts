@@ -167,13 +167,17 @@ export function matchAdminInstructionLookupRule(config: AdminInstructionConfig, 
   for (const rule of rules) {
     if (!lookupAliases(rule.trigger).some((alias) => containsLookupName(prompt, alias))) continue;
     if (!lookupIntent && promptWordCount > 3) continue;
+    const response = presentLookupResponse(rule.response);
     if (/[\u0980-\u09FF]/.test(prompt)) {
-      return "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: " + presentLookupResponse(rule.response) + "।";
+      const names: Record<string, string> = { jamil: "জামিল", zaryab: "জারিয়াব", shahriar: "শাহরিয়ার", tashin: "তাশিন", rumaiya: "রুমাইয়া" };
+      const trigger = presentLookupResponse(rule.trigger).replace(/[a-z]+/gi, (word) => names[word.toLowerCase()] || word);
+      const answer = response.replace(/[a-z]+/gi, (word) => names[word.toLowerCase()] || word);
+      return trigger + " বলতে " + answer + "-কেই বোঝায়।";
     }
-    if (/\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbe|hobe|nai|lagbe|kibhabe|keno|bolo|dao|daw|ache|hoy|hocche|chai|jante chai)\b/i.test(prompt)) {
-      return "Global Instruction অনুযayi, ei name-er jonno set kora answer: " + presentLookupResponse(rule.response) + ".";
+    if (/\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbe|hobe|nai|lagbe|kibhabe|keno|bolo|dao|daw|ache|hoy|hocche|chai|jante chai|ke)\b/i.test(prompt)) {
+      return presentLookupResponse(rule.trigger) + " bolte " + response + "-kei bojhay.";
     }
-    return "According to the saved Global Instruction, the configured answer for this name is: " + presentLookupResponse(rule.response) + ".";
+    return presentLookupResponse(rule.trigger) + " refers to " + response + ".";
   }
   return null;
 }
