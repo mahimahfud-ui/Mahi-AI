@@ -13,10 +13,10 @@ test("request handler compiles saved Admin Control instructions before routing",
 });
 
 test("temporary admin-config database failures preserve last-known-good owner instructions", () => {
-  assert.match(source, /let lastGoodMahiAIAdminConfig: MahiAIAdminConfig \\| null = null/);
-  assert.match(source, /if \\(lastGoodMahiAIAdminConfig\\) \\{/);
-  assert.match(source, /admin_config_last_good_cache_used/);
-  assert.match(source, /lastGoodMahiAIAdminConfig = config/);
+  assert.ok(source.includes("let lastGoodMahiAIAdminConfig: MahiAIAdminConfig | null = null"));
+  assert.ok(source.includes("if (lastGoodMahiAIAdminConfig) {"));
+  assert.ok(source.includes("admin_config_last_good_cache_used"));
+  assert.ok(source.includes("lastGoodMahiAIAdminConfig = config"));
 });
 
 test("compiled Admin Control instructions are inserted into the system prompt", () => {
