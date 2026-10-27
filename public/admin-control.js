@@ -20,6 +20,7 @@
   let dirty = false;
   let saving = false;
   let authClient = null;
+  let providerRuntime = [];
 
   if (!overlay || !openButton || !closeButton || !loginView || !loginForm || !consoleView || !editor || !categoryList) return;
 
@@ -134,7 +135,23 @@
         })) : []
       };
     }) : [];
-    return { enabled: source.enabled !== false, globalInstructions: String(source.globalInstructions || ""), categories };
+    const knownProviders = ["gemini","groq","openrouter","cloudflare","shannon","deepseek","nvidia","mistral","venice","anthropic","openai"];
+    const rawProviders = source.providers && typeof source.providers === "object" ? source.providers : {};
+    const providers = {};
+    knownProviders.forEach((name) => {
+      const value = rawProviders[name] && typeof rawProviders[name] === "object" ? rawProviders[name] : {};
+      providers[name] = { enabled: value.enabled !== false, weight: Math.max(1, Math.min(10, Number(value.weight) || 5)) };
+    });
+    const rawMaintenance = source.maintenance && typeof source.maintenance === "object" ? source.maintenance : {};
+    return {
+      enabled: source.enabled !== false, globalInstructions: String(source.globalInstructions || ""), categories, providers,
+      loadBalance: source.loadBalance !== false, showSteps: source.showSteps !== false, showProviderNames: source.showProviderNames === true,
+      rateLimitPerMinute: Number(source.rateLimitPerMinute) || undefined, rateLimitPerDay: Number(source.rateLimitPerDay) || undefined,
+      blockedUsers: Array.isArray(source.blockedUsers) ? source.blockedUsers : [],
+      maintenance: { enabled: rawMaintenance.enabled === true, message: String(rawMaintenance.message || "MahiCloud is under maintenance.") },
+      announcement: String(source.announcement || ""),
+      templates: Array.isArray(source.templates) ? source.templates.slice(0,8) : []
+    };
   }
   function newId(prefix) {
     let raw = "";
@@ -240,6 +257,82 @@
       host.appendChild(empty);
     }
   }
+  function renderProviderControls() {
+    if (!adminConfig) return;
+    const host = editor;
+    const panel = document.createElement("section");
+    panel.className = "ap-card";
+    const heading = document.createElement("h5");
+    heading.textContent = "Provider routing and live controls";
+    panel.appendChild(heading);
+    const description = document.createElement("p");
+    description.textContent = "Provider preferences apply to new requests. Higher weight rotates the most-used providers more often.";
+    panel.appendChild(description);
+    const toggles = document.createElement("div");
+    toggles.className = "ap-toggles";
+    const addCheck = (labelText, key, checked) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "checkbox"; input.checked = !!checked; input.dataset.providerFlag = key;
+      label.append(input, document.createTextNode(" " + labelText)); toggles.appendChild(label);
+    };
+    addCheck("Load-balance top providers", "loadBalance", adminConfig.loadBalance);
+    addCheck("Show live progress timeline", "showSteps", adminConfig.showSteps);
+    addCheck("Show provider names in timeline", "showProviderNames", adminConfig.showProviderNames);
+    panel.appendChild(toggles);
+    const field = (labelText, type, value, dataAttr, dataKey) => {
+      const label = document.createElement("label"); label.className = "admin-field";
+      const title = document.createElement("span"); title.className = "admin-field-label"; title.textContent = labelText;
+      const input = document.createElement(type === "textarea" ? "textarea" : "input");
+      if (type !== "textarea") input.type = type;
+      if (type === "textarea") input.rows = 3;
+      input.value = value == null ? "" : String(value); input.dataset[dataAttr] = dataKey;
+      label.append(title, input); return label;
+    };
+    const maintenanceLabel = document.createElement("label"); maintenanceLabel.className = "admin-toggle-row";
+    const maintenanceCheck = document.createElement("input"); maintenanceCheck.type = "checkbox";
+    maintenanceCheck.checked = adminConfig.maintenance.enabled; maintenanceCheck.dataset.providerMaintenance = "enabled";
+    maintenanceLabel.append(document.createTextNode("Maintenance mode "), maintenanceCheck); panel.appendChild(maintenanceLabel);
+    panel.appendChild(field("Maintenance message", "text", adminConfig.maintenance.message, "providerMaintenance", "message"));
+    panel.appendChild(field("Public announcement", "text", adminConfig.announcement, "providerSetting", "announcement"));
+    panel.appendChild(field("Prompt templates (Title | Prompt, one per line)", "textarea",
+      (adminConfig.templates || []).map((item) => item.title + " | " + item.prompt).join("\n"), "providerTemplates", "templates"));
+    panel.appendChild(field("Requests per minute per user", "number", adminConfig.rateLimitPerMinute, "providerLimit", "rateLimitPerMinute"));
+    panel.appendChild(field("Requests per day per user", "number", adminConfig.rateLimitPerDay, "providerLimit", "rateLimitPerDay"));
+    const providerList = document.createElement("div");
+    providerList.className = "ap-provider-list";
+    Object.keys(adminConfig.providers || {}).forEach((name) => {
+      const pref = adminConfig.providers[name];
+      const runtime = providerRuntime.find((item) => item.name === name) || {};
+      const row = document.createElement("div"); row.className = "ap-row";
+      const label = document.createElement("label");
+      const enabled = document.createElement("input"); enabled.type = "checkbox"; enabled.checked = pref.enabled;
+      enabled.dataset.providerPref = name; enabled.dataset.providerField = "enabled";
+      label.append(enabled, document.createTextNode(" " + name)); row.appendChild(label);
+      const badge = document.createElement("span"); badge.className = "ap-badge";
+      badge.textContent = !runtime.configured ? "No key" : runtime.cooling ? "Cooling" : "Ready";
+      const weight = document.createElement("input"); weight.type = "range"; weight.min = "1"; weight.max = "10";
+      weight.value = String(pref.weight); weight.dataset.providerPref = name; weight.dataset.providerField = "weight";
+      const weightLabel = document.createElement("label"); weightLabel.append(document.createTextNode("Weight "), weight);
+      const health = document.createElement("small"); health.textContent = runtime.configured ?
+        (runtime.successes || 0) + " ok · " + (runtime.failures || 0) + " fail · " + (runtime.avg_ms || 0) + "ms" : "Add secret in Supabase";
+      row.append(badge, health, weightLabel); providerList.appendChild(row);
+    });
+    panel.appendChild(providerList);
+    const footer = document.createElement("div"); footer.className = "ap-foot";
+    const stats = document.createElement("button"); stats.type = "button"; stats.textContent = "Refresh usage stats";
+    const statText = document.createElement("span"); statText.setAttribute("data-provider-stats", "true");
+    stats.addEventListener("click", async () => {
+      statText.textContent = "Loading stats…";
+      try {
+        const result = await adminRequest("stats", { admin_session: adminToken, days: 7 });
+        statText.textContent = (result.total || 0) + " requests · " + (result.success || 0) + " successful · " + (result.users || 0) + " users";
+      } catch (error) { statText.textContent = error instanceof Error ? error.message : "Usage stats unavailable."; }
+    });
+    footer.append(stats, statText); panel.appendChild(footer);
+    host.appendChild(panel);
+  }
+
   function renderEditor() {
     editor.textContent = "";
     if (!adminConfig) return;
@@ -247,6 +340,7 @@
       editor.innerHTML = '<div class="admin-editor-head"><div><h5>Global instructions</h5><p>These instructions are attached to all new chat and coding requests for all users.</p></div></div><label class="admin-toggle-row"><span><strong>Enable owner instructions</strong><small>Pause or resume global and topic-specific instruction rules without deleting them.</small></span><input id="adminConfigEnabled" type="checkbox"></label><label class="admin-field"><span class="admin-field-copy"><span class="admin-field-label">Global custom instructions</span><span class="admin-field-help">Write the assistant\'s default behavior, response format, tone, preferred language, or project-specific rules. Maximum 12,000 characters.</span></span><textarea id="adminGlobalInstructions" rows="11" maxlength="12000" placeholder="Example: Answer Banglish messages in natural Banglish. Be direct, verify claims, and prioritize the exact task."></textarea></label><div class="admin-security-note">Your global instructions affect every user. They cannot replace platform safety requirements or make the AI claim actions it did not perform.</div>';
       $("adminConfigEnabled").checked = adminConfig.enabled !== false;
       $("adminGlobalInstructions").value = adminConfig.globalInstructions || "";
+      renderProviderControls();
       return;
     }
     const category = adminConfig.categories.find((item) => item.id === selectedCategoryId);
@@ -300,6 +394,7 @@
   }
   async function loadConfig() {
     const result = await adminRequest("get", { admin_session: adminToken });
+    providerRuntime = Array.isArray(result.runtime) ? result.runtime : [];
     adminConfig = normalizeConfig(result.config);
     dirty = false;
     renderCategoryList();
@@ -359,6 +454,31 @@
     if (!(control instanceof HTMLInputElement || control instanceof HTMLTextAreaElement)) return;
     if (control.id === "adminGlobalInstructions") {
       adminConfig.globalInstructions = control.value;
+      markDirty(); return;
+    }
+    if (control.dataset.providerPref) {
+      const pref = adminConfig.providers[control.dataset.providerPref];
+      if (pref) pref[control.dataset.providerField] = control.dataset.providerField === "weight" ? Number(control.value) : control.checked;
+      markDirty(); return;
+    }
+    if (control.dataset.providerFlag) {
+      adminConfig[control.dataset.providerFlag] = control.checked; markDirty(); return;
+    }
+    if (control.dataset.providerMaintenance) {
+      adminConfig.maintenance = adminConfig.maintenance || {};
+      adminConfig.maintenance[control.dataset.providerMaintenance] = control.type === "checkbox" ? control.checked : control.value;
+      markDirty(); return;
+    }
+    if (control.dataset.providerSetting) {
+      adminConfig[control.dataset.providerSetting] = control.value; markDirty(); return;
+    }
+    if (control.dataset.providerLimit) {
+      adminConfig[control.dataset.providerLimit] = control.value ? Number(control.value) : undefined; markDirty(); return;
+    }
+    if (control.dataset.providerTemplates) {
+      adminConfig.templates = control.value.split("\n").map((line) => line.split("|")).filter((parts) => parts.length > 1)
+        .map((parts) => ({ title: parts[0].trim(), prompt: parts.slice(1).join("|").trim() }))
+        .filter((item) => item.title && item.prompt).slice(0, 8);
       markDirty(); return;
     }
     const fieldName = control.getAttribute("data-admin-field");
@@ -449,6 +569,7 @@
   adminToken = readSessionToken();
   if (adminToken) {
     adminRequest("get", { admin_session: adminToken }).then((result) => {
+      providerRuntime = Array.isArray(result.runtime) ? result.runtime : [];
       adminConfig = normalizeConfig(result.config);
       dirty = false;
       renderCategoryList();
