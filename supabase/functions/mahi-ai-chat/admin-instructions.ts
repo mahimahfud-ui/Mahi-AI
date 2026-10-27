@@ -127,6 +127,12 @@ function lookupAliases(trigger: string): string[] {
   return [trigger, ...(aliases[trigger] || [])];
 }
 
+function presentLookupResponse(value: string): string {
+  const trimmed = value.trim();
+  if (!/^[a-z0-9]+(?:[ _-]+[a-z0-9]+){0,5}$/i.test(trimmed)) return trimmed;
+  return trimmed.replace(/[a-z0-9]+/gi, (word) => word.charAt(0).toLocaleUpperCase() + word.slice(1));
+}
+
 function containsLookupName(prompt: string, name: string): boolean {
   const normalizedName = cleanLookupName(name);
   if (!normalizedName) return false;
@@ -162,10 +168,10 @@ export function matchAdminInstructionLookupRule(config: AdminInstructionConfig, 
     if (!lookupAliases(rule.trigger).some((alias) => containsLookupName(prompt, alias))) continue;
     if (!lookupIntent && promptWordCount > 3) continue;
     if (/[\u0980-\u09FF]/.test(prompt)) {
-      return "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: " + rule.response + "।";
+      return "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: " + presentLookupResponse(rule.response) + "।";
     }
     if (/\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbe|hobe|nai|lagbe|kibhabe|keno|bolo|dao|daw|ache|hoy|hocche|chai|jante chai)\b/i.test(prompt)) {
-      return "Global Instruction অনুযayi, ei name-er jonno set kora answer: " + rule.response + ".";
+      return "Global Instruction অনুযayi, ei name-er jonno set kora answer: " + presentLookupResponse(rule.response) + ".";
     }
     return "According to the saved Global Instruction, the configured answer for this name is: " + rule.response + ".";
   }
