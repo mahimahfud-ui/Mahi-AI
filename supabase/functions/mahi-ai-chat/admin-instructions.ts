@@ -86,3 +86,88 @@ export function buildMahiAIAdminInstructionContext(config: AdminInstructionConfi
     "[END OWNER-CONFIGURED MAHI AI INSTRUCTIONS]"
   ].join("\n\n");
 }
+
+export type AdminInstructionLookupRule = {
+  trigger: string;
+  response: string;
+};
+
+function cleanLookupName(value: string): string {
+  return value.toLocaleLowerCase().replace(/[.!?।,;:()[\]{}"'“”‘’]/g, " ").replace(/\s+/g, " ").trim();
+}
+
+function extractExplicitLookupRules(instructions: string): AdminInstructionLookupRule[] {
+  const rules: AdminInstructionLookupRule[] = [];
+  const text = String(instructions || "");
+  // Banglish style, e.g. "jamil likhe search korle asbe shahriar tashin r zaryab likhe search korle asbe rumaiya".
+  const banglish = /(?:keu\s+jodi\s+)?(?<trigger>[\p{L}\p{N}][\p{L}\p{N}_-]{1,39})\s+(?:likhe\s+)?search\s+(?:kore|korle)\s+(?:taile\s+)?(?:asbe|dekhabe|show\s+korbe|return\s+korbe)\s+(?<response>[\p{L}\p{N}][\p{L}\p{N}_-]*(?:\s+[\p{L}\p{N}_-]+){0,5}?)(?=\s+r\s+[\p{L}\p{N}_-]+\s+(?:likhe\s+)?search|\s*[.!?।,;]|$)/giu;
+  for (const match of text.matchAll(banglish)) {
+    const trigger = cleanLookupName(match.groups?.trigger || "");
+    const response = (match.groups?.response || "").trim();
+    if (trigger && response) rules.push({ trigger, response });
+  }
+
+  // English style, e.g. "if a user searches for Jamil, show Shahriar Tashin".
+  const english = /\b(?:if|when)\b[\s\S]{0,60}?\b(?:search(?:es|ed)?(?:\s+for)?|look\s+up|type|enter|mention|ask\s+about)\s+(?<trigger>[\p{L}\p{N}_-]{2,40})[\s\S]{0,60}?\b(?:show|return|answer(?:\s+with)?|respond\s+with|display)\s+(?<response>[\p{L}\p{N}][\p{L}\p{N}_-]*(?:\s+[\p{L}\p{N}_-]+){0,5}?)(?=;|\s+then\s+if\b|\s+if\b|\s*[.!?।,]|$)/giu;
+  for (const match of text.matchAll(english)) {
+    const trigger = cleanLookupName(match.groups?.trigger || "");
+    const response = (match.groups?.response || "").trim();
+    if (trigger && response && !rules.some((rule) => rule.trigger === trigger && rule.response === response)) {
+      rules.push({ trigger, response });
+    }
+  }
+  return rules.slice(0, 30);
+}
+
+function lookupAliases(trigger: string): string[] {
+  const aliases: Record<string, string[]> = {
+    jamil: ["জামিল"],
+    zaryab: ["জারিয়াব", "জারিয়াব"]
+  };
+  return [trigger, ...(aliases[trigger] || [])];
+}
+
+function containsLookupName(prompt: string, name: string): boolean {
+  const normalizedName = cleanLookupName(name);
+  if (!normalizedName) return false;
+  const normalizedPrompt = cleanLookupName(prompt);
+  if (/[\u0980-\u09FF]/.test(normalizedName)) {
+    return normalizedPrompt.split(" ").some((token) =>
+      token === normalizedName || token === normalizedName + "কে" ||
+      token === normalizedName + "র" || token === normalizedName + "এর"
+    );
+  }
+  const escaped = [...normalizedName].map((character) =>
+    /[.*+?^$()|[\]\\]/.test(character) ? "\\" + character : character
+  ).join("");
+  return new RegExp("(^|[^\\p{L}\\p{N}])" + escaped + "($|[^\\p{L}\\p{N}])", "u")
+    .test(prompt.toLocaleLowerCase());
+}
+
+/**
+ * Apply only explicit, simple "lookup name -> return response" rules deterministically.
+ * All other owner instructions remain in the model's system context as normal.
+ */
+export function matchAdminInstructionLookupRule(config: AdminInstructionConfig, prompt: string): string | null {
+  if (!config || config.enabled === false || typeof prompt !== "string" || !prompt.trim()) return null;
+  const rules = extractExplicitLookupRules(config.globalInstructions || "");
+  if (!rules.length) return null;
+
+  const normalizedPrompt = prompt.toLocaleLowerCase();
+  const lookupIntent = /(?:\bwho\s+is\b|\bwho's\b|\bwho\s+was\b|\bwhat\s+is\b|\btell\s+me\s+about\b|\bsearch\b|\blook\s+up\b|\blookup\b|\bfind\b|\bidentify\b|\bmeaning\b|\bke\b|\bki\b|\bbolo\b|\bjante\s+chai\b|কে|কী|কি|পরিচয়|পরিচয়|খুঁজ|সার্চ|বল)/iu.test(normalizedPrompt);
+  const promptWordCount = normalizedPrompt.trim().split(/\s+/).length;
+  if (!lookupIntent && promptWordCount > 3) return null;
+
+  for (const rule of rules) {
+    if (!lookupAliases(rule.trigger).some((alias) => containsLookupName(prompt, alias))) continue;
+    if (!lookupIntent && promptWordCount > 3) continue;
+    if (/[\u0980-\u09FF]/.test(prompt)) {
+      return "আপনার Global Instruction অনুযায়ী, এই নামের জন্য নির্ধারিত উত্তর: " + rule.response + "।";
+    }
+    if (/\b(?:ami|amar|tumi|apni|ki|koro|korbe|parbe|hobe|nai|lagbe|kibhabe|keno|bolo|dao|daw|ache|hoy|hocche|chai|jante chai)\b/i.test(prompt)) {
+      return "Global Instruction অনুযayi, ei name-er jonno set kora answer: " + rule.response + ".";
+    }
+    return "According to the saved Global Instruction, the configured answer for this name is: " + rule.response + ".";
+  }
+  return null;
+}
