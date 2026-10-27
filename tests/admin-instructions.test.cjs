@@ -29,6 +29,13 @@ test("normal provider and Think-mode routes receive the configured instruction c
   assert.match(source, /generateThinkModeAnswer\(available, providerMessages, task, attachments, adminInstructionContext/);
 });
 
-test("the backend imports the tested instruction compiler", () => {
-  assert.match(source, /import \{ buildMahiAIAdminInstructionContext \} from "\.\/admin-instructions\.ts"/);
+test("the backend imports the instruction compiler and deterministic lookup matcher", () => {
+  assert.ok(source.includes('import { buildMahiAIAdminInstructionContext, matchAdminInstructionLookupRule } from "./admin-instructions.ts";'));
+});
+
+test("explicit lookup rules short-circuit provider generation and use the normal response pipeline", () => {
+  assert.ok(source.includes("matchAdminInstructionLookupRule(adminInstructionConfig, displayPrompt)"));
+  assert.ok(source.includes('chosen = { provider: "admin-instruction", text: adminInstructionAnswer, reviewer: null }'));
+  assert.ok(source.includes("adminInstructionAnswer || \"\""));
+  assert.ok(source.includes("admin_instruction_rule_answered"));
 });
