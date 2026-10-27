@@ -951,6 +951,8 @@ const ADMIN_CONFIG_ID = "global";
 const ADMIN_CONFIG_CACHE_TTL_MS = 10000;
 let cachedMahiAIAdminConfig: MahiAIAdminConfig | null = null;
 let cachedMahiAIAdminConfigAt = 0;
+// Keep the last successfully loaded/saved settings if the database has a temporary outage.
+let lastGoodMahiAIAdminConfig: MahiAIAdminConfig | null = null;
 
 function defaultMahiAIAdminConfig(): MahiAIAdminConfig {
   return {
@@ -1047,10 +1049,17 @@ async function getCachedMahiAIAdminConfig(): Promise<MahiAIAdminConfig> {
   if (cachedMahiAIAdminConfig && Date.now() - cachedMahiAIAdminConfigAt < ADMIN_CONFIG_CACHE_TTL_MS) return cachedMahiAIAdminConfig;
   try {
     cachedMahiAIAdminConfig = await readMahiAIAdminConfig();
+    lastGoodMahiAIAdminConfig = cachedMahiAIAdminConfig;
     cachedMahiAIAdminConfigAt = Date.now();
     return cachedMahiAIAdminConfig;
   } catch (error) {
     console.warn("Mahi AI admin instruction settings could not be loaded:", error instanceof Error ? error.message : "database unavailable");
+    if (lastGoodMahiAIAdminConfig) {
+      cachedMahiAIAdminConfig = lastGoodMahiAIAdminConfig;
+      cachedMahiAIAdminConfigAt = Date.now();
+      logStructured("warn", "admin_config_last_good_cache_used", { stale_cache_used: true });
+      return cachedMahiAIAdminConfig;
+    }
     cachedMahiAIAdminConfig = defaultMahiAIAdminConfig();
     cachedMahiAIAdminConfigAt = Date.now();
     return cachedMahiAIAdminConfig;
@@ -1189,7 +1198,7 @@ async function handleMahiAIAdminAction(action: unknown, input: any, user: { id: 
   if (adminAction === "get") {
     try {
       const config = await readMahiAIAdminConfig();
-      cachedMahiAIAdminConfig = config; cachedMahiAIAdminConfigAt = Date.now();
+      cachedMahiAIAdminConfig = config; lastGoodMahiAIAdminConfig = config; cachedMahiAIAdminConfigAt = Date.now();
       const runtime = KNOWN_PROVIDERS.map((name) => {
         const health = providerHealth.get(name);
         return { name, configured: providerIsConfigured(name), cooling: providerIsCoolingDown(name),
@@ -1243,7 +1252,7 @@ async function handleMahiAIAdminAction(action: unknown, input: any, user: { id: 
       body: JSON.stringify({ id: ADMIN_CONFIG_ID, config, updated_at: new Date().toISOString(), updated_by: user.id })
     });
     if (!saved.ok) return json(503, { error: "Could not save admin settings. Confirm that the Mahi-AI admin migration is applied." }, responseCors);
-    cachedMahiAIAdminConfig = config; cachedMahiAIAdminConfigAt = Date.now();
+    cachedMahiAIAdminConfig = config; lastGoodMahiAIAdminConfig = config; cachedMahiAIAdminConfigAt = Date.now();
     logStructured("info", "admin_config_saved", { request_id: crypto.randomUUID(), user_id: user.id, categories: config.categories.length });
     return json(200, { ok: true, config }, responseCors);
   }
