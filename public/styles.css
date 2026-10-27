@@ -574,3 +574,19 @@ html[data-theme="light"] .think-mode-button{background:#f8f8ff;color:#555d79;bor
 html[data-theme="light"] .think-mode-button[aria-pressed="true"],html[data-theme="light"] .think-mode-button.is-active{background:#eee9ff;color:#5a45a2;border-color:#c9bcff}
 @media(max-width:760px){.think-mode-button{min-width:31px;padding:0 8px;gap:0}.think-mode-button span{display:none}.composer-left-actions{gap:6px}.composer-hint{display:none}}
 @media(prefers-reduced-motion:reduce){.think-mode-button{transition:none}}
+
+/* Mahi-AI improved live response progress and admin-provider controls. */
+.mahi-steps{margin:.45rem 0 .8rem;padding:.55rem .75rem;border:1px solid var(--line,rgba(255,255,255,.12));border-radius:12px;background:rgba(255,255,255,.025);font-size:.84rem}
+.mahi-steps-head{display:flex;width:100%;align-items:center;gap:.55rem;padding:.1rem 0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer}
+.mahi-steps-title{flex:1;opacity:.86}.mahi-steps-list{display:none;gap:.3rem;list-style:none;margin:.35rem 0 0;padding:0}
+.mahi-steps.is-open .mahi-steps-list{display:grid}.mahi-step{padding:.18rem 0;opacity:.88}.mahi-step.is-running:before{content:"◌ ";color:#60a5fa}
+.mahi-step.is-done:before{content:"✓ ";color:#34d399}.mahi-step.is-failed:before{content:"! ";color:#f87171}
+.mahi-steps.is-finished .mahi-steps-head{opacity:.8}
+.ap-card{margin:1rem 0 0;padding:1rem;border:1px solid rgba(255,255,255,.12);border-radius:16px;background:rgba(255,255,255,.03);display:grid;gap:.6rem}
+.ap-card button{cursor:pointer;padding:.45rem .8rem;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.07);color:inherit}
+.ap-card .ap-head{display:flex;justify-content:space-between;gap:1rem;align-items:center}.ap-card .ap-toggles{display:flex;flex-wrap:wrap;gap:.5rem 1rem}
+.ap-card .ap-row{display:grid;grid-template-columns:150px 75px 1fr 180px;gap:.5rem;align-items:center;padding:.45rem 0;border-top:1px solid rgba(255,255,255,.07)}
+.ap-card .ap-row small{opacity:.68}.ap-card .ap-row strong{text-transform:capitalize}.ap-card .ap-badge{font-size:.72rem;opacity:.8}
+.ap-card .ap-foot{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}.ap-card .ap-foot span{opacity:.8}
+@media(max-width:640px){.ap-card .ap-row{grid-template-columns:1fr 1fr}.ap-card .ap-row small{grid-column:1/-1}}
+@media(prefers-reduced-motion:reduce){.mahi-steps *{animation:none!important;transition:none!important}}
