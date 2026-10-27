@@ -1,5 +1,5 @@
 import { isImageGenerationTask } from "./image-intent.ts";
-import { buildMahiAIAdminInstructionContext } from "./admin-instructions.ts";
+import { buildMahiAIAdminInstructionContext, matchAdminInstructionLookupRule } from "./admin-instructions.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
@@ -3018,7 +3018,8 @@ async function streamChatResponse(
   attachments: PreparedAttachment[], displayUserText: string, responseCors: Record<string, string>,
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
   editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = [],
-  customInstructions = "", responseStyle = "default", adminInstructionContext = "", thinkMode = false
+  customInstructions = "", responseStyle = "default", adminInstructionContext = "", thinkMode = false,
+  adminInstructionAnswer = ""
 ): Promise<Response> {
   if (task === "image_generation") {
     return streamImageGenerationResponse(
@@ -3091,7 +3092,15 @@ async function streamChatResponse(
       }
       const contextText = providerMessages[providerMessages.length - 1]?.content || originalPrompt;
       try {
-        if (thinkMode) {
+        if (adminInstructionAnswer) {
+          chosen = { provider: "admin-instruction", text: adminInstructionAnswer, reviewer: null };
+          logStructured("info", "admin_instruction_rule_answered", {
+            request_id: requestId,
+            task_type: task,
+            rule_type: "explicit_lookup",
+            output_chars: adminInstructionAnswer.length
+          });
+        } else if (thinkMode) {
           const result = await generateThinkModeAnswer(available, providerMessages, task, attachments, adminInstructionContext, requestId, startedAt, totalProviderBudgetMs, () => cancelled, activeThinkStreams, (message) => sseEvent(controller, encoder, { type: "status", message }), failures);
           if (result) chosen = { provider: result.provider, text: result.text, reviewer: null, thinkProviders: result.providers };
           else failures.push("think_mode:no_provider_answer");
@@ -3490,6 +3499,16 @@ Deno.serve(async (req: Request) => {
     : classifyTask(displayPrompt);
   const adminInstructionConfig = await getCachedMahiAIAdminConfig();
   const adminInstructionContext = buildMahiAIAdminInstructionContext(adminInstructionConfig);
+  const adminInstructionAnswer = attachments.length === 0
+    ? matchAdminInstructionLookupRule(adminInstructionConfig, displayPrompt)
+    : null;
+  if (adminInstructionAnswer) {
+    logStructured("info", "admin_instruction_rule_matched", {
+      request_id: requestId,
+      rule_type: "explicit_lookup",
+      response_chars: adminInstructionAnswer.length
+    });
+  }
   const categoryInstructionCount = adminInstructionConfig.categories.reduce((count, category) =>
     count + (category.instructions ? 1 : 0), 0);
   const subcategoryInstructionCount = adminInstructionConfig.categories.reduce((count, category) =>
@@ -3671,6 +3690,7 @@ Deno.serve(async (req: Request) => {
   return await streamChatResponse(
     user.id, messagesForProvider, task, conversationId, usageId, attachments, displayUserText,
     responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent,
-    branchContext ? messages.slice(0, -1) : [], customInstructions, responseStyle, adminInstructionContext, thinkMode
+    branchContext ? messages.slice(0, -1) : [], customInstructions, responseStyle, adminInstructionContext, thinkMode,
+    adminInstructionAnswer || ""
   );
 });
