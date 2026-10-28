@@ -25,7 +25,7 @@ function isAllowedOrigin(origin: string): boolean {
         ["https:", "http:"].includes(parsed.protocol)) return true;
     if (parsed.protocol === "https:" &&
         /^https:\/\/mahi-ai(?:-[a-z0-9-]+)?\.onrender\.com$/.test(origin)) return true;
-    const configured = envFirst(["MAHI_AI_ALLOWED_ORIGINS"])
+    const configured = envFirst(["MAHI_AI_ALLOWED_ORIGINS", "ALLOWED_ORIGINS"])
       .split(",").map((value) => value.trim()).filter(Boolean);
     return configured.includes(origin);
   } catch (_) {
