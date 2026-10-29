@@ -72,7 +72,7 @@
     fileInput: $("fileInput"), attachButton: $("attachButton"), attachmentList: $("attachmentList"),
     chatSearch: $("chatSearch"), stop: $("stopButton"), draftNotice: $("draftNotice"),
     temporaryChatButton: $("temporaryChatButton"), exportMarkdownButton: $("exportMarkdownButton"), exportJsonButton: $("exportJsonButton"),
-    accountButton: $("accountButton"), accountModal: $("accountModal"), voiceModeButton: $("voiceModeButton"), thinkModeButton: $("thinkModeButton")
+    accountButton: $("accountButton"), accountModal: $("accountModal"), voiceModeButton: $("voiceModeButton"), thinkModeButton: $("thinkModeButton"), modelPicker: $("modelPicker")
   };
   const voiceUI = {
     overlay: $("voiceOverlay"), stage: $("voiceStage"), status: $("voiceStatus"), transcript: $("voiceTranscript"),
@@ -88,6 +88,7 @@
   let client = null, session = null, conversationId = null, conversations = [];
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let thinkModeEnabled = false;
+  let selectedModel = "auto";
   let activeRequestController = null, pendingEdit = null, temporaryChatMode = false;
   let branchSeedMessages = null, branchOrigin = null;
   let chatSearchMatches = null, chatSearchSequence = 0;
@@ -2035,7 +2036,8 @@
         body: JSON.stringify({
           conversation_id: temporaryChatMode ? null : conversationId,
           temporary_chat: temporaryChatMode,
-          think_mode: useThinkMode,
+          think_mode: useThinkMode && selectedModel === "auto",
+          selected_model: selectedModel === "auto" ? "" : selectedModel,
           branch_context: branchRequest,
           custom_instructions: chatPreferences.customInstructions,
           response_style: chatPreferences.responseStyle,
@@ -2508,7 +2510,21 @@
     event.preventDefault();
     void sendMessage(ui.input.value);
   });
-  if (ui.thinkModeButton) ui.thinkModeButton.addEventListener("click", () => setThinkModeEnabled(!thinkModeEnabled));
+  if (ui.modelPicker) {
+    selectedModel = ui.modelPicker.value || "auto";
+    ui.modelPicker.addEventListener("change", () => {
+      selectedModel = ui.modelPicker.value || "auto";
+      if (selectedModel !== "auto") setThinkModeEnabled(false);
+      if (ui.thinkModeButton) {
+        ui.thinkModeButton.disabled = selectedModel !== "auto";
+        ui.thinkModeButton.title = selectedModel !== "auto" ? "Think mode is available when Auto is selected" : "Think mode compares answers from connected models";
+      }
+    });
+    if (ui.thinkModeButton) ui.thinkModeButton.disabled = selectedModel !== "auto";
+  }
+  if (ui.thinkModeButton) ui.thinkModeButton.addEventListener("click", () => {
+    if (selectedModel === "auto") setThinkModeEnabled(!thinkModeEnabled);
+  });
   if (ui.stop) ui.stop.addEventListener("click", () => {
     if (activeRequestController && busy) activeRequestController.abort();
   });
