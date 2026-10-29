@@ -3100,7 +3100,7 @@ async function streamChatResponse(
       }
       const contextText = providerMessages[providerMessages.length - 1]?.content || originalPrompt;
       try {
-        if (adminInstructionAnswer) {
+        if (adminInstructionAnswer && !selectedModel) {
           chosen = { provider: "admin-instruction", text: adminInstructionAnswer, reviewer: null };
           logStructured("info", "admin_instruction_rule_answered", {
             request_id: requestId,
