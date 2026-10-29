@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="./code-blocks.css?v=20261025">
   <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
   <link rel="stylesheet" href="./mahi.css?v=claude-ui-20261029">
+  <link rel="stylesheet" href="./ai-intro.css?v=20261029introfix1">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
@@ -29,6 +30,7 @@
   <script src="./layout.js?v=20261024v2"></script>
   <script src="./motion.js" defer></script>
   <script src="./app.js?v=20261029realtimevoice1" defer></script>
+  <script src="./ai-intro.js?v=20261029introfix1" defer></script>
   <script src="./ui-adapter.js?v=20261029" defer></script>
   <script src="./live-voice.js?v=20261029realtimevoice1" defer></script>
   <script src="./admin-control.js?v=20261025admin1" defer></script>
@@ -36,6 +38,38 @@
   <script src="./motion-b.js" defer></script>
 </head>
 <body>
+  <section class="ai-intro" id="aiIntro" role="button" tabindex="0" aria-label="MahiCloud introduction. Tap or press Enter to continue.">
+    <div class="ai-intro-grid" aria-hidden="true"></div>
+    <div class="ai-intro-glow ai-intro-glow--left" aria-hidden="true"></div>
+    <div class="ai-intro-glow ai-intro-glow--right" aria-hidden="true"></div>
+    <div class="ai-intro-copy ai-intro-content">
+      <div class="ai-intro-core" aria-hidden="true">
+        <div class="ai-intro-ring ai-intro-ring--pulse"></div>
+        <div class="ai-intro-orbit ai-intro-orbit--outer"></div>
+        <div class="ai-intro-orbit ai-intro-orbit--inner"></div>
+        <div class="ai-intro-token ai-intro-token--chat">
+          <svg viewBox="0 0 24 24"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v7a2.5 2.5 0 0 1-2.5 2.5H10l-4.5 3v-3.4A2.5 2.5 0 0 1 4 12.5z"/><path d="M8 8h.1M12 8h.1M16 8h.1"/></svg>
+        </div>
+        <div class="ai-intro-token ai-intro-token--typing"><i></i><i></i><i></i></div>
+        <div class="ai-intro-token ai-intro-token--prompt"><span>＋</span></div>
+        <div class="ai-intro-token ai-intro-token--reply"><span>↗</span></div>
+        <div class="ai-intro-token ai-intro-token--spark">✦</div>
+        <div class="ai-intro-token ai-intro-token--code" aria-hidden="true">&lt;/&gt;</div>
+        <div class="ai-intro-logo-shell">
+          <div class="ai-intro-logo-aura"></div>
+          <img class="ai-intro-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud official logo">
+        </div>
+        <span class="ai-intro-particle ai-intro-particle--one"></span>
+        <span class="ai-intro-particle ai-intro-particle--two"></span>
+        <span class="ai-intro-particle ai-intro-particle--three"></span>
+      </div>
+      <div class="ai-intro-eyebrow"><span></span> YOUR THINKING SPACE</div>
+      <h1>MahiCloud <strong>AI</strong></h1>
+      <p>A quiet space to think, create, and get things done.</p>
+      <div class="ai-intro-progress" aria-hidden="true"><span></span></div>
+    </div>
+  </section>
+
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
