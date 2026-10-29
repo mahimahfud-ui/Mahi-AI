@@ -946,6 +946,8 @@ type MahiAIAdminConfig = {
   announcement?: string; templates?: { title: string; prompt: string }[];
 };
 const KNOWN_PROVIDERS = ["gemini","groq","openrouter","cloudflare","shannon","deepseek","nvidia","mistral","venice","anthropic","openai"];
+// Public nicknames intentionally hide upstream provider and model names.
+const PUBLIC_MODEL_PROVIDERS: Record<string, string> = { nova: "gemini", pulse: "groq", orbit: "openrouter", sage: "deepseek", ember: "venice" };
 let providerRotation = 0;
 const ADMIN_CONFIG_ID = "global";
 const ADMIN_CONFIG_CACHE_TTL_MS = 10000;
@@ -3019,7 +3021,7 @@ async function streamChatResponse(
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
   editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = [],
   customInstructions = "", responseStyle = "default", adminInstructionContext = "", thinkMode = false,
-  adminInstructionAnswer = ""
+  adminInstructionAnswer = "", selectedModel = ""
 ): Promise<Response> {
   if (task === "image_generation") {
     return streamImageGenerationResponse(
@@ -3031,7 +3033,13 @@ async function streamChatResponse(
   const hasInlineAttachments = attachments.some((item) => item.inline && item.base64);
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
   const routingConfig = await getCachedMahiAIAdminConfig();
-  const available = applyProviderPrefs(providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode), routingConfig);
+  const fixedProvider = selectedModel ? PUBLIC_MODEL_PROVIDERS[selectedModel] : "";
+  const available = selectedModel
+    ? (fixedProvider && providerIsConfigured(fixedProvider, task) ? applyProviderPrefs([fixedProvider], routingConfig) : [])
+    : applyProviderPrefs(providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode), routingConfig);
+  if (selectedModel && !available.length) {
+    return json(503, { error: "That model is currently unavailable. Please choose Auto or try again later." }, responseCors);
+  }
   // Internal-only telemetry: report which provider routes the runtime can see without logging any keys.
   logStructured("info", "provider_routes_prepared", {
     request_id: requestId,
@@ -3414,7 +3422,9 @@ Deno.serve(async (req: Request) => {
   if (input && typeof input.admin_action === "string") return await handleMahiAIAdminAction(input.admin_action, input, user, req, responseCors);
 
   const temporaryChat = input?.temporary_chat === true;
-  const thinkMode = input?.think_mode === true;
+  const selectedModel = typeof input?.selected_model === "string" && Object.prototype.hasOwnProperty.call(PUBLIC_MODEL_PROVIDERS, input.selected_model)
+    ? input.selected_model : "";
+  const thinkMode = !selectedModel && input?.think_mode === true;
   const branchContext = input?.branch_context === true;
   const customInstructions = typeof input?.custom_instructions === "string"
     ? input.custom_instructions.replace(/[\x00-\x1F\x7F]/g, "").trim().slice(0, 3000)
@@ -3691,6 +3701,6 @@ Deno.serve(async (req: Request) => {
     user.id, messagesForProvider, task, conversationId, usageId, attachments, displayUserText,
     responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent,
     branchContext ? messages.slice(0, -1) : [], customInstructions, responseStyle, adminInstructionContext, thinkMode,
-    adminInstructionAnswer || ""
+    adminInstructionAnswer || "", selectedModel
   );
 });
