@@ -21,7 +21,7 @@ test("existing feature scripts and key interface elements remain present", () =>
   for (const script of ["./app.js", "./live-voice.js", "./admin-control.js", "./code-blocks.js", "./themes.js"]) {
     assert.ok(html.includes(script), `missing existing script: ${script}`);
   }
-  for (const id of ["newChat", "chatList", "composerForm", "sendButton", "accountModal", "voiceOverlay", "apiExplorer", "openAdminControl"]) {
+  for (const id of ["newChat", "chatList", "chatForm", "sendButton", "accountModal", "voiceOverlay", "apiExplorer", "openAdminControl"]) {
     assert.ok(html.includes(`id="${id}"`), `missing existing UI element: ${id}`);
   }
 });
