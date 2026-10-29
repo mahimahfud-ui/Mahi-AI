@@ -40,3 +40,12 @@ Static checks cannot prove real authentication, provider streaming, Storage uplo
 ## Safe rollout / rollback
 
 Review and merge the pull request before deploying. For rollback, revert this pull request; the original public/app.js, voice/admin/code-block modules, server, database migrations and existing Supabase contracts were not changed by this UI integration. A rollback does not require a database migration.
+
+
+## Follow-up: permanent black theme and device frames
+
+The permanent-black follow-up adds `public/black-theme.css` and `public/black-theme.js` after the existing presentation scripts. The JavaScript locks `mahi-ai-theme` to dark, clears any persisted light/custom `mahicloud-theme` palette while preserving text-size/corner/effect settings, and blocks the old light/custom palette actions. The stylesheet independently pins the design tokens to black/dark values so legacy `data-theme="light"` or custom-theme CSS cannot wash the production surfaces out.
+
+The previous fake welcome mark is replaced by the official `Cybernetic Half-Face Portrait.png` logo in the welcome area and top bar; the sidebar logo remains unchanged. Responsive frame rules explicitly handle compact phones (320–380px), standard phones (381–600px), portrait tablets (601–760px), laptop/landscape tablet (761–1199px), desktop (1200–1599px) and large desktop (1600px+), including short/landscape mobile viewports. These rules correct the mobile main-panel height so the panel does not consume an additional full viewport above the anchored composer.
+
+The theme and frame change is still UI-only: no chat API contract, authentication, Supabase function, database schema or provider routing is changed. CI now syntax-checks the permanent-theme script; static contract tests cover the black lock, logo restoration and layout breakpoints. Live browser/device validation remains necessary before calling the rollout complete.
