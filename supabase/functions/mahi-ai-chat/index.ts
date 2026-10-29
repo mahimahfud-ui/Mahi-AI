@@ -819,8 +819,9 @@ function recordProviderOutcome(name: string, success: boolean, elapsedMs: number
 function providerCooldownMs(reason: string): number {
   const message = reason.toLowerCase();
   if (/\b401\b|\b403\b|invalid api key|authentication failed|rejected the api key/.test(message)) return 5 * 60_000;
-  if (/\b402\b|insufficient.{0,50}(?:balance|credits?)|(?:balance|credits?).{0,50}insufficient|free-models-per-day|tokens? per day|daily quota|per-day quota|daily limit/.test(message)) return 30 * 60_000;
-  if (/\b429\b|quota|rate limit|too many requests|resource.?exhausted/.test(message)) return 30_000;
+  if (/free-models-per-day|tokens? per day|daily quota|per-day quota|daily limit/.test(message)) return 6 * 60 * 60_000;
+  if (/\b402\b|insufficient.{0,50}(?:balance|credits?)|(?:balance|credits?).{0,50}insufficient/.test(message)) return 30 * 60_000;
+  if (/\b429\b|quota|rate limit|too many requests|resource.?exhausted/.test(message)) return 90_000;
   if (/\b404\b|model not found|model .*unavailable/.test(message)) return 2 * 60_000;
   if (/\b5\d\d\b|timeout|network error|temporarily unavailable|connection timeout/.test(message)) return 15_000;
   return 0;
