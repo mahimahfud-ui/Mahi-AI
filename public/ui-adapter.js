@@ -16,14 +16,13 @@
   };
 
   const syncThemeControl = () => {
-    const isLight = document.documentElement.getAttribute("data-theme") === "light";
-    quickTheme.textContent = isLight ? "☼" : "◐";
-    quickTheme.setAttribute("aria-pressed", String(isLight));
-    quickTheme.setAttribute("aria-label", isLight ? "Switch to dark appearance" : "Switch to light appearance");
-    quickTheme.setAttribute("title", isLight ? "Switch to dark appearance" : "Switch to light appearance");
+    quickTheme.textContent = "☾";
+    quickTheme.disabled = true;
+    quickTheme.setAttribute("aria-pressed", "true");
+    quickTheme.setAttribute("aria-label", "Dark theme is permanently enabled");
+    quickTheme.setAttribute("title", "Dark theme is permanently enabled");
   };
 
-  quickTheme.addEventListener("click", () => existingThemeToggle.click());
   new MutationObserver(syncThemeControl).observe(document.documentElement, {
     attributes: true,
     attributeFilter: ["data-theme"]
