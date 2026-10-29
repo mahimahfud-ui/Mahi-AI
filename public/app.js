@@ -160,7 +160,7 @@
       ui.thinkModeButton.setAttribute("aria-pressed", String(thinkModeEnabled));
       ui.thinkModeButton.classList.toggle("is-active", thinkModeEnabled);
       ui.thinkModeButton.title = thinkModeEnabled
-        ? "Think mode is on: compare answers from all connected AI providers"
+        ? "Think mode is on: compare candidate answers and choose the strongest response"
         : "Think mode is off: use the normal fast response route";
     }
   }
