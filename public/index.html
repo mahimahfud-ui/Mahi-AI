@@ -27,7 +27,8 @@
   <script src="./themes.js?v=20261024v2"></script>
   <script src="./layout.js?v=20261024v2"></script>
   <script src="./motion.js" defer></script>
-  <script src="./app.js?v=20261029modelpicker1" defer></script>
+  <script src="./app.js?v=20261029realtimevoice1" defer></script>
+  <script src="./live-voice.js?v=20261029realtimevoice1" defer></script>
   <script src="./admin-control.js?v=20261025admin1" defer></script>
   <script src="./code-blocks.js?v=20261025" defer></script>
   <script src="./motion-b.js" defer></script>
@@ -275,7 +276,8 @@
         <button class="voice-mic-button" id="voiceMicButton" type="button" aria-label="Start listening" title="Start or pause listening"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg></button>
         <button class="voice-end-button" id="voiceEndButton" type="button">End voice</button>
       </footer>
-      <p class="voice-privacy-note">When you start voice mode, your browser asks for microphone access if needed. Pause briefly after speaking; MahiCloud detects your language, replies aloud, then listens for your next turn. Speech voice availability depends on your device.</p>
+      <div class="voice-fallback-row"><button class="text-button" id="voiceBasicFallback" type="button" hidden>Use basic voice instead</button></div>
+      <p class="voice-privacy-note">Live Voice streams microphone audio to Google Gemini Live for real-time replies. Your long-lived API key stays on the server; the browser uses a short-lived session token. Microphone permission is required.</p>
     </section>
   </div>
   <div class="api-explorer" id="apiExplorer" hidden>
