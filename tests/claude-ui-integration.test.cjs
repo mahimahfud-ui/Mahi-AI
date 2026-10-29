@@ -2,6 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -78,6 +79,7 @@ test("account, voice, code-block and protected admin integrations remain product
   assert.match(admin, /functions\/v1\/mahi-ai-chat/);
   assert.match(codeBlocks, /sandbox/);
   assert.match(adapter, /existingThemeToggle\.click\(\)/);
+  assert.doesNotThrow(() => new vm.Script(adapter), "theme adapter must parse as browser JavaScript");
   assert.match(adapter, /MutationObserver/);
   assert.match(adapter, /\.chat-item\.active \.chat-title/);
 });
