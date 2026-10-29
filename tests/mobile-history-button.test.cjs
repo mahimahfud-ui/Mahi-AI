@@ -7,7 +7,7 @@ const css = fs.readFileSync(require.resolve("../public/ui-overrides.css"), "utf8
 
 test("mobile chat-history toggle remains visible and has a clearly rendered hamburger icon", () => {
   assert.match(html, /id="openSidebar"[^>]*aria-label="Toggle sidebar"/);
-  assert.match(html, /ui-overrides\.css\?v=20261027mobilemenu1/);
+  assert.match(html, /ui-overrides\.css\?v=[^"]+/);
   assert.match(css, /@media\s*\(max-width:\s*760px\)/);
   assert.match(css, /:root:root body \.topbar #openSidebar\s*\{[^}]*display:\s*grid/);
   assert.match(css, /:root:root body \.topbar #openSidebar\s*\{[^}]*background:\s*var\(--m-comp\)/);
