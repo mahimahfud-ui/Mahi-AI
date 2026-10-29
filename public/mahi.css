@@ -134,3 +134,40 @@ dialog,.modal,.modal-content,.settings-modal,.account-modal,.api-explorer,.api-e
   .sidebar{width:245px;flex-basis:245px}
   .topbar{padding-inline:18px}
 }
+
+
+/* Claude-generated MahiCloud welcome and topbar refinement. Additive only. */
+.topbar-title{display:flex;align-items:center;min-width:0;gap:10px}
+.topbar-title .small-mark{display:none}
+.topbar-title-text{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:550 16px/1.25 var(--lagoon-font);letter-spacing:-.02em;color:var(--m-text,var(--text,#e9eef7))}
+.quick-theme-button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 36px;width:36px;height:36px;border:1px solid var(--lagoon-line);border-radius:11px;background:transparent;color:var(--m-text);font-size:19px;line-height:1;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.quick-theme-button:hover{background:color-mix(in srgb,var(--lagoon-accent) 10%,transparent);border-color:color-mix(in srgb,var(--lagoon-accent) 32%,var(--lagoon-line))}
+.quick-theme-button:active{transform:scale(.96)}
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;width:min(790px,100%);min-height:100%;margin:auto;padding:28px 0 34px;text-align:center}
+.welcome-brand-mark{display:grid;place-items:center;width:44px;height:44px;margin:0 auto 16px;border-radius:13px;box-shadow:0 8px 30px color-mix(in srgb,var(--lagoon-accent) 15%,transparent)}
+.welcome-brand-mark svg{display:block;width:44px;height:44px}
+.welcome h1{max-width:100%;margin:0;color:var(--m-text,var(--text,#e9eef7));font-family:var(--lagoon-display);font-size:clamp(34px,4.1vw,50px);font-weight:500;letter-spacing:-.035em;line-height:1.12;text-wrap:balance}
+.welcome-copy{max-width:46ch;margin:14px auto 28px;text-align:center;font-size:15px;line-height:1.6;color:var(--lagoon-muted)}
+.suggestion-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 11px;width:min(750px,100%);margin-inline:auto}
+.suggestion-card{display:block;min-width:0;min-height:78px;padding:14px 15px;text-align:left;border-radius:15px}
+.suggestion-card .suggestion-icon,.suggestion-card .suggestion-arrow{display:none}
+.suggestion-card>span:nth-child(2){display:block;min-width:0}
+.suggestion-card strong{display:block;margin:0 0 5px;font-size:13px;line-height:1.35;font-weight:650;color:var(--m-text)}
+.suggestion-card small{display:block;font-size:13px;line-height:1.45;color:var(--lagoon-muted);overflow-wrap:anywhere}
+@media (max-width:600px){
+  .topbar-title-text{font-size:15px}
+  .quick-theme-button{width:33px;height:33px;flex-basis:33px;border-radius:10px}
+  .welcome{min-height:0;padding:18px 0 20px}
+  .welcome-brand-mark,.welcome-brand-mark svg{width:40px;height:40px}
+  .welcome-brand-mark{margin-bottom:13px}
+  .welcome h1{font-size:clamp(31px,8.3vw,40px);letter-spacing:-.04em;line-height:1.1}
+  .welcome-copy{font-size:14px;margin:12px auto 21px;max-width:38ch}
+  .suggestion-grid{grid-template-columns:1fr;gap:8px}
+  .suggestion-card{min-height:65px;padding:12px 14px}
+}
+@media (max-width:360px){
+  .topbar-title-text{font-size:14px}
+  .quick-theme-button{width:31px;height:31px;flex-basis:31px}
+  .welcome h1{font-size:30px}
+  .suggestion-card small{font-size:12px}
+}
