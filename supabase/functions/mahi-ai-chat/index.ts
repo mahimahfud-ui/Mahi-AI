@@ -864,8 +864,8 @@ function shouldPreferVenice(prompt: string): boolean {
 function providerOrder(task: string, hasInlineAttachments = false, hasInlineImages = false, prompt = "", includeCoolingDown = false): string[] {
   let preferred: string[];
   if (isPornRelatedPrompt(prompt) && !hasInlineAttachments) {
-    // Uncensored: OpenRouter first, then Venice
-    preferred = ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];
+    // Prefer Venice for adult text prompts, keeping the rest of the configured providers as fallbacks.
+    preferred = ["venice", "openrouter", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];
   } else if (hasInlineAttachments) {
     preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];
     if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
@@ -882,12 +882,12 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   }
 
   const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments
-    ? ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"]
+    ? ["venice", "openrouter", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"]
     : ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
-  // Provider routing: no provider is excluded. Every configured provider is eligible
-  // for every task, attachments and porn prompts included.
+  // Include every configured provider as a fallback, but do not send inline files to
+  // text-only providers. Venice and Shannon remain eligible for ordinary text requests.
   const configured = [...new Set([...preferred, ...fallback])]
-    .filter((name) => providerIsConfigured(name, task));
+    .filter((name) => providerIsConfigured(name, task) && !(hasInlineAttachments && (name === "venice" || name === "shannon")));
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
   const candidates = includeCoolingDown ? configured : (healthy.length ? healthy : configured);
   const preferredRank = new Map<string, number>(preferred.map((name, index) => [name, index] as const));
@@ -3036,7 +3036,7 @@ async function streamChatResponse(
   const routingConfig = await getCachedMahiAIAdminConfig();
   const fixedProvider = selectedModel ? PUBLIC_MODEL_PROVIDERS[selectedModel] : "";
   const available = selectedModel
-    ? (fixedProvider && providerIsConfigured(fixedProvider, task) ? applyProviderPrefs([fixedProvider], routingConfig) : [])
+    ? (fixedProvider && providerIsConfigured(fixedProvider, task) && !(hasInlineAttachments && (fixedProvider === "venice" || fixedProvider === "shannon")) ? applyProviderPrefs([fixedProvider], routingConfig) : [])
     : applyProviderPrefs(providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode), routingConfig);
   if (selectedModel && !available.length) {
     return json(503, { error: "That model is currently unavailable. Please choose Auto or try again later." }, responseCors);
@@ -3185,7 +3185,7 @@ async function streamChatResponse(
             });
 
             const requiresReview = shouldRequireIndependentReview(task, originalPrompt) &&
-              !isPornRelatedPrompt(originalPrompt);
+              !(isPornRelatedPrompt(originalPrompt) && provider === "venice");
             const reviewBudgetMs = Math.max(
               0,
               Math.min(6000, totalProviderBudgetMs - (Date.now() - startedAt) - 3000)
