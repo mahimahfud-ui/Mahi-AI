@@ -3076,7 +3076,7 @@ async function streamChatResponse(
       let bestDraft: { provider: string; text: string } | null = null;
       let liveStreamText = "";
       const startedAt = Date.now();
-      const totalProviderBudgetMs = (task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 180000 : 120000;
+      const totalProviderBudgetMs = (task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 105000 : 60000;
       const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
       const providerMessages = messages.map((message) => ({ ...message }));
       const styleInstructions: Record<string, string> = {
