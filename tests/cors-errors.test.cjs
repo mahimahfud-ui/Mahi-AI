@@ -5,8 +5,25 @@ const vm = require("node:vm");
 
 const appJs = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
 const appStart = appJs.indexOf("function plainError(error) {");
-const appEnd = appJs.indexOf("\n  function setBusy(", appStart);
-assert.ok(appStart >= 0 && appEnd > appStart, "plainError must exist");
+assert.ok(appStart >= 0, "plainError must exist");
+const appOpen = appJs.indexOf("{", appStart);
+let appDepth = 0;
+let appQuote = "";
+let appEscaped = false;
+let appEnd = -1;
+for (let i = appOpen; i < appJs.length; i++) {
+  const ch = appJs[i];
+  if (appQuote) {
+    if (appEscaped) appEscaped = false;
+    else if (ch === "\\") appEscaped = true;
+    else if (ch === appQuote) appQuote = "";
+    continue;
+  }
+  if (ch === "'" || ch === '"' || ch === "`") appQuote = ch;
+  else if (ch === "{") appDepth++;
+  else if (ch === "}" && --appDepth === 0) { appEnd = i + 1; break; }
+}
+assert.ok(appEnd > appOpen, "plainError function should be extractable");
 const plainErrorSource = appJs.slice(appStart, appEnd).trim();
 
 function makePlainError(onLine, origin) {
