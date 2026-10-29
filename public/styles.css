@@ -590,3 +590,12 @@ html[data-theme="light"] .think-mode-button[aria-pressed="true"],html[data-theme
 .ap-card .ap-foot{display:flex;align-items:center;gap:.7rem;flex-wrap:wrap}.ap-card .ap-foot span{opacity:.8}
 @media(max-width:640px){.ap-card .ap-row{grid-template-columns:1fr 1fr}.ap-card .ap-row small{grid-column:1/-1}}
 @media(prefers-reduced-motion:reduce){.mahi-steps *{animation:none!important;transition:none!important}}
+
+
+/* Private model nicknames: fixed model selection without exposing provider brands. */
+.model-picker-wrap{display:inline-flex;align-items:center;min-width:0}
+.model-picker{max-width:112px;min-height:34px;padding:0 26px 0 10px;border:1px solid var(--line,rgba(255,255,255,.16));border-radius:10px;background:var(--surface-2,rgba(255,255,255,.055));color:var(--text,inherit);font:inherit;font-size:.84rem;cursor:pointer;outline-offset:2px}
+.model-picker:focus-visible{outline:2px solid var(--accent,#8b7bff)}
+.model-picker option{background:#171923;color:#f7f7fb}
+.think-mode-button:disabled{opacity:.42;cursor:not-allowed}
+@media(max-width:760px){.model-picker{max-width:88px;min-height:32px;padding-left:7px;padding-right:20px;font-size:.78rem}.composer-left-actions{gap:5px}}
