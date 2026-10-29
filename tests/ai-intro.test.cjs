@@ -12,8 +12,8 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
   const appStart = html.indexOf('class="app-shell"');
   assert.ok(introStart >= 0, "intro overlay must exist");
   assert.ok(appStart > introStart, "intro overlay should precede the chat shell");
-  assert.match(html, /href="\.\/ai-intro\.css\?v=20261027tapmaruf1"/);
-  assert.match(html, /src="\.\/ai-intro\.js\?v=20261027tapmaruf1" defer/);
+  assert.match(html, /href="\.\/ai-intro\.css\?v=20261029introfix1"/);
+  assert.match(html, /src="\.\/ai-intro\.js\?v=20261029introfix1" defer/);
   const officialLogo = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   assert.ok(html.includes(`<img class="ai-intro-logo" src="${officialLogo}" alt="MahiCloud official logo">`));
   assert.ok(html.includes(`<img class="brand-logo" src="${officialLogo}"`));
