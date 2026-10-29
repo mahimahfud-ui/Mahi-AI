@@ -2611,7 +2611,7 @@
   window.MahiCloudRequestLiveVoiceToken = async function () {
     if (!client) throw new Error("MahiCloud is still starting. Please try again in a moment.");
     const authSession = await ensureSession();
-    const response = await fetch(cfg.supabaseUrl.replace(/\\/+$/, "") + "/functions/v1/mahi-ai-live-token", {
+    const response = await fetch(cfg.supabaseUrl.replace(/\/+$/, "") + "/functions/v1/mahi-ai-live-token", {
       method: "POST",
       headers: {
         "Authorization": "Bearer " + authSession.access_token,
