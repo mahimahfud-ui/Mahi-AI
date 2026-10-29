@@ -224,7 +224,7 @@
           setup: {
             model: "models/gemini-3.8-live",
             responseModalities: ["AUDIO"],
-            systemInstruction: { parts: [{ text: "You are MahiCloud, a warm real-time voice assistant. Automatically detect language. Reply naturally in Bangla when the user speaks Bangla, English when they speak English, and match mixed Bangla-English. Keep spoken replies conversational and concise unless asked for detail. The user may interrupt at any time; stop speaking and listen to the new request." }] },
+            systemInstruction: { parts: [{ text: "You are MahiCloud, a warm real-time voice assistant. Automatically detect the user's language. Reply naturally in Bangla when the user speaks Bangla, in English when they speak English, and match mixed Bangla-English naturally. Keep spoken replies conversational and concise unless asked for detail. The user may interrupt at any time; stop speaking and listen to the new request." }] },
             speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Aoede" } } },
             inputAudioTranscription: {},
             outputAudioTranscription: {}
