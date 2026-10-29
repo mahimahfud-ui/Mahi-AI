@@ -14,6 +14,8 @@ on:
       - "public/config.js"
       - "public/index.html"
       - "public/mahi.css"
+      - "public/black-theme.css"
+      - "public/black-theme.js"
       - "public/ui-adapter.js"
       - "public/styles.css"
       - "public/theme.css"
@@ -42,6 +44,8 @@ on:
       - "public/config.js"
       - "public/index.html"
       - "public/mahi.css"
+      - "public/black-theme.css"
+      - "public/black-theme.js"
       - "public/ui-adapter.js"
       - "public/styles.css"
       - "public/theme.css"
@@ -80,6 +84,7 @@ jobs:
         run: |
           node --check public/app.js
           node --check public/ui-adapter.js
+          node --check public/black-theme.js
           node --check public/ai-intro.js
           node --check public/config.js
           node --check public/themes.js
