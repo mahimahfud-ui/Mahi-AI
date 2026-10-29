@@ -39,11 +39,13 @@ test("a primary Venice answer to a porn-related prompt is not sent to a second p
   assert.ok(edge.includes('!(isPornRelatedPrompt(originalPrompt) && provider === "venice");'));
 });
 
-test("paid fallback, origin allowlist and request-rate protections remain enabled", () => {
+test("configured paid fallbacks and usage reservation guards remain enabled", () => {
   assert.ok(edge.includes('if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);'));
   assert.ok(edge.includes('if (name === "anthropic") return configuredSecret(["ANTHROPIC_API_KEY"]);'));
   assert.ok(edge.includes("const configured = [...new Set([...preferred, ...fallback])]"));
   assert.ok(edge.includes("function isAllowedOrigin(origin: string): boolean"));
-  assert.ok(edge.includes("MAHI_AI_RATE_LIMIT_PER_MINUTE"));
-  assert.ok(edge.includes("MAHI_AI_RATE_LIMIT_PER_DAY"));
+  assert.ok(edge.includes("const UNLIMITED_PER_USER_REQUEST_LIMIT = 2_147_483_647;"));
+  assert.ok(edge.includes("async function reserveUsageRequest(userId: string, requestId: string): Promise<UsageReservation>"));
+  assert.ok(edge.includes('logStructured("warn", "request_rate_limited"'));
+  assert.ok(edge.includes('code: "rate_limited"'));
 });
