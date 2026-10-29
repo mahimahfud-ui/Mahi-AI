@@ -706,3 +706,159 @@ body {
     transform: scale(.96);
   }
 }
+
+
+/* Dedicated device frames: desktop workspace and mobile app are intentionally
+   different layouts, not a scaled copy of one another. */
+@media (min-width: 761px) {
+  html, body { overflow: hidden; }
+  body .app-shell {
+    display: grid;
+    grid-template-columns: var(--sidebar-width, 260px) minmax(0, 1fr);
+    width: 100%;
+    height: var(--app-height, 100dvh);
+    min-height: 0;
+    max-height: var(--app-height, 100dvh);
+  }
+  body .sidebar {
+    grid-column: 1;
+    grid-row: 1;
+    width: var(--sidebar-width, 260px) !important;
+    min-width: 220px;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    border-right: 1px solid var(--line);
+  }
+  body .main-panel {
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+  }
+  body .topbar {
+    min-width: 0;
+    padding-inline: clamp(20px, 2.5vw, 42px);
+  }
+  body .conversation-area {
+    min-height: 0;
+    padding: clamp(24px, 4vh, 52px) clamp(24px, 3.5vw, 56px) 24px;
+  }
+  body .messages { width: min(960px, 100%); }
+  body .welcome { width: min(840px, 100%); }
+  body .composer-wrap {
+    width: min(1040px, 100%);
+    padding: 0 clamp(22px, 3vw, 44px) max(14px, env(safe-area-inset-bottom));
+  }
+  body .sidebar-resize-handle { right: -4px; }
+}
+
+@media (max-width: 760px) {
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+  body .app-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: var(--app-height, 100dvh);
+    min-height: 0;
+    max-height: var(--app-height, 100dvh);
+    overflow: hidden;
+  }
+  body .main-panel {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+  }
+  body .topbar {
+    flex: 0 0 auto;
+    min-height: calc(58px + env(safe-area-inset-top));
+    height: auto;
+    padding: max(8px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) 8px max(10px, env(safe-area-inset-left));
+    gap: 8px;
+    align-items: center;
+  }
+  body .topbar-title { flex: 0 0 auto; }
+  body .topbar .topbar-title .small-mark { width: 32px; height: 32px; }
+  body .topbar-right { flex: 1 1 auto; min-width: 0; gap: 4px; }
+  body .topbar-right > * { flex-shrink: 0; }
+  body .conversation-area {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 14px max(13px, env(safe-area-inset-right)) 12px max(13px, env(safe-area-inset-left));
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  body .welcome { width: 100%; max-width: 540px; margin: auto 0; padding: 12px 0 18px; }
+  body .messages { width: 100%; max-width: 100%; gap: 18px; }
+  body .composer-wrap {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 8px max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    background: var(--bg, #090b10);
+  }
+  body .composer {
+    width: 100%;
+    padding: 10px 10px 8px;
+    border-radius: 16px;
+  }
+  body .composer textarea {
+    min-height: 28px;
+    max-height: min(28dvh, 180px);
+    font-size: 16px;
+  }
+  body .composer-bottom { gap: 6px; }
+  body .composer-left-actions,
+  body .composer-actions { min-width: 0; gap: 5px; }
+  body .model-picker { max-width: 88px; }
+  body .sidebar-resize-handle { display: none !important; }
+  body .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 80;
+    width: min(300px, 86vw) !important;
+    min-width: 0 !important;
+    height: var(--app-height, 100dvh);
+    max-height: var(--app-height, 100dvh);
+    padding: max(14px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-105%);
+    overflow-x: hidden;
+    overflow-y: auto;
+    box-shadow: 18px 0 55px rgba(0,0,0,.35);
+  }
+  body .sidebar.open { transform: translateX(0); }
+  body .sidebar .brand-row { margin-bottom: 18px; }
+  body .sidebar .chat-list { min-height: 60px; }
+  body .mobile-scrim.show { z-index: 70; }
+  body .sidebar .settings-panel {
+    max-height: 58dvh;
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 380px) {
+  body .topbar { gap: 5px; }
+  body .topbar .topbar-title .small-mark { width: 28px; height: 28px; }
+  body .topbar-right { gap: 3px; }
+  body .header-tool-button, body .temporary-chat-button { min-width: 28px; padding-inline: 5px; }
+  body .composer-wrap { padding-left: 7px; padding-right: 7px; }
+  body .composer { padding-inline: 8px; }
+}
