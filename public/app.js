@@ -2606,6 +2606,25 @@
     if (event.key === "Escape") { closeApiDirectory(); closeMobileSidebar(); closeAccountModal(); if (voiceModeActive) closeVoiceMode(); }
   });
   window.addEventListener("online", () => { if (!busy) setError(""); });
+  // Expose only a short-lived Gemini Live session token to the dedicated voice UI.
+  // The permanent provider API key remains in Supabase Edge Function Secrets.
+  window.MahiCloudRequestLiveVoiceToken = async function () {
+    if (!client) throw new Error("MahiCloud is still starting. Please try again in a moment.");
+    const authSession = await ensureSession();
+    const response = await fetch(cfg.supabaseUrl.replace(/\\/+$/, "") + "/functions/v1/mahi-ai-live-token", {
+      method: "POST",
+      headers: {
+        "Authorization": "Bearer " + authSession.access_token,
+        "apikey": cfg.supabasePublishableKey,
+        "Content-Type": "application/json"
+      },
+      body: "{}"
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.token) throw new Error(payload.error || "Could not prepare a secure Live Voice session.");
+    return payload;
+  };
+
   setupPreferences();
   boot();
 })();
