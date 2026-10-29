@@ -194,7 +194,7 @@
     showFallback(false);
     overlay.hidden = false;
     setStatus("Connecting to secure Live Voice…", "thinking");
-    if (transcript) transcript.textContent = "Connecting to MahiCloud Live Voice. Your audio is sent to Google Gemini Live for real-time replies.";
+    if (transcript) transcript.textContent = "Connecting to MahiCloud Live Voice. Your audio is processed securely to provide real-time replies.";
     if (interim) interim.textContent = "";
     const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
 
@@ -262,7 +262,7 @@
     } catch (error) {
       connecting = false;
       if (!active) { releaseResources(); return; }
-      setStatus(error && error.message ? error.message : "Could not start Live Voice.", "error");
+      setStatus("Could not start Live Voice. Please try again or use basic voice.", "error");
       showFallback(true);
       active = false;
       releaseResources();
