@@ -20,7 +20,7 @@ test("porn/NSFW text prompts prefer Venice first without locking the route", () 
   assert.ok(pornRoute >= 0, "porn-first routing branch should exist");
   assert.ok(attachmentRoute > pornRoute, "attachments must keep their compatible-provider path");
   assert.ok(codingRoute > pornRoute, "porn routing must override ordinary coding priority");
-  assert.ok(edge.includes('preferred = ["venice", "gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "anthropic", "openai"];'));
+  assert.ok(edge.includes('preferred = ["venice", "openrouter", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"];'));
   assert.ok(edge.includes("function isPornRelatedPrompt(prompt: string): boolean {"));
   assert.ok(edge.includes("function shouldPreferVenice(prompt: string): boolean {"));
   assert.ok(edge.includes("return isPornRelatedPrompt(prompt);"));
@@ -39,9 +39,13 @@ test("a primary Venice answer to a porn-related prompt is not sent to a second p
   assert.ok(edge.includes('!(isPornRelatedPrompt(originalPrompt) && provider === "venice");'));
 });
 
-test("paid fallback, origin allowlist and request-rate protections remain enabled", () => {
-  assert.ok(edge.includes('flagEnabled("ENABLE_PAID_FALLBACK")'));
+test("configured paid fallbacks and usage reservation guards remain enabled", () => {
+  assert.ok(edge.includes('if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);'));
+  assert.ok(edge.includes('if (name === "anthropic") return configuredSecret(["ANTHROPIC_API_KEY"]);'));
+  assert.ok(edge.includes("const configured = [...new Set([...preferred, ...fallback])]"));
   assert.ok(edge.includes("function isAllowedOrigin(origin: string): boolean"));
-  assert.ok(edge.includes("MAHI_AI_RATE_LIMIT_PER_MINUTE"));
-  assert.ok(edge.includes("MAHI_AI_RATE_LIMIT_PER_DAY"));
+  assert.ok(edge.includes("const UNLIMITED_PER_USER_REQUEST_LIMIT = 2_147_483_647;"));
+  assert.ok(edge.includes("async function reserveUsageRequest(userId: string, requestId: string): Promise<UsageReservation>"));
+  assert.ok(edge.includes('logStructured("warn", "request_rate_limited"'));
+  assert.ok(edge.includes('code: "rate_limited"'));
 });
