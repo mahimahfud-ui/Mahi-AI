@@ -78,7 +78,8 @@ test("account, voice, code-block and protected admin integrations remain product
   assert.match(voice, /MahiCloudRequestLiveVoiceToken/);
   assert.match(admin, /functions\/v1\/mahi-ai-chat/);
   assert.match(codeBlocks, /sandbox/);
-  assert.match(adapter, /existingThemeToggle\.click\(\)/);
+  assert.match(adapter, /quickTheme\.disabled = true/);
+  assert.match(adapter, /Dark theme is permanently enabled/);
   assert.doesNotThrow(() => new vm.Script(adapter), "theme adapter must parse as browser JavaScript");
   assert.match(adapter, /MutationObserver/);
   assert.match(adapter, /\.chat-item\.active \.chat-title/);
