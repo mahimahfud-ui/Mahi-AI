@@ -6,6 +6,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
 const lagoon = fs.readFileSync(path.join(root, "public", "mahi.css"), "utf8");
+const polish = fs.readFileSync(path.join(root, "public", "ui-polish.css"), "utf8");
 
 test("Lagoon is loaded after existing component styles", () => {
   const legacy = html.indexOf('./admin-control.css');
@@ -39,4 +40,20 @@ test("the redesign is presentation-only and does not remove legacy styles", () =
   for (const legacy of ["./styles.css", "./theme.css", "./motion.css", "./craft.css", "./motion-b.css", "./ui-overrides.css"]) {
     assert.ok(html.includes(legacy), `legacy stylesheet unexpectedly removed: ${legacy}`);
   }
+});
+
+
+test("the refined visual layer loads last and preserves chat readability and device fit", () => {
+  const blackTheme = html.indexOf("./black-theme.css?v=black-20261029");
+  const polishLink = html.indexOf("./ui-polish.css?v=20261029polish1");
+  assert.ok(blackTheme >= 0, "permanent black theme remains linked");
+  assert.ok(polishLink > blackTheme, "visual polish loads after the black theme");
+  assert.match(polish, /\.suggestion-card:hover/);
+  assert.match(polish, /\.composer:focus-within/);
+  assert.match(polish, /\.message-content/);
+  assert.match(polish, /\.account-modal-panel/);
+  assert.match(polish, /@media\s*\(max-width:\s*760px\)/);
+  assert.match(polish, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.doesNotMatch(polish, /body \.message\.user \.message-content\s*\{[^}]*background/s,
+    "the polish layer must not turn user messages back into boxed bubbles");
 });
