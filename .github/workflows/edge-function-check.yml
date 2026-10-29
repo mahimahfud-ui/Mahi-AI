@@ -13,6 +13,8 @@ on:
       - "public/code-blocks.css"
       - "public/config.js"
       - "public/index.html"
+      - "public/mahi.css"
+      - "public/ui-adapter.js"
       - "public/styles.css"
       - "public/theme.css"
       - "public/themes.js"
@@ -39,6 +41,8 @@ on:
       - "public/code-blocks.css"
       - "public/config.js"
       - "public/index.html"
+      - "public/mahi.css"
+      - "public/ui-adapter.js"
       - "public/styles.css"
       - "public/theme.css"
       - "public/themes.js"
@@ -75,6 +79,7 @@ jobs:
       - name: Check browser JavaScript syntax
         run: |
           node --check public/app.js
+          node --check public/ui-adapter.js
           node --check public/ai-intro.js
           node --check public/config.js
           node --check public/themes.js
