@@ -201,12 +201,14 @@
     try {
       audioContext = new AudioContextConstructor();
       await audioContext.resume();
+      if (!active) return;
       if (typeof window.MahiCloudRequestLiveVoiceToken !== "function") throw new Error("MahiCloud is still loading. Please close voice mode and try again.");
       const tokenPayload = await window.MahiCloudRequestLiveVoiceToken();
+      if (!active) return;
       stream = await navigator.mediaDevices.getUserMedia({
         audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
-      if (!active) return;
+      if (!active) { stream.getTracks().forEach((track) => track.stop()); stream = null; return; }
       sourceNode = audioContext.createMediaStreamSource(stream);
       processor = audioContext.createScriptProcessor(4096, 1, 1);
       silentGain = audioContext.createGain();
@@ -259,6 +261,7 @@
       connecting = false;
     } catch (error) {
       connecting = false;
+      if (!active) { releaseResources(); return; }
       setStatus(error && error.message ? error.message : "Could not start Live Voice.", "error");
       showFallback(true);
       active = false;
