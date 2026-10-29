@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <link rel="preconnect" href="https://husydmiujigyonlxbuuj.supabase.co" crossorigin>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="./code-blocks.css?v=20261025">
   <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
   <link rel="stylesheet" href="./mahi.css?v=claude-ui-20261029">
+  <link rel="stylesheet" href="./black-theme.css?v=black-20261029">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
@@ -34,6 +35,7 @@
   <script src="./admin-control.js?v=20261025admin1" defer></script>
   <script src="./code-blocks.js?v=20261025" defer></script>
   <script src="./motion-b.js" defer></script>
+  <script src="./black-theme.js?v=black-20261029" defer></script>
 </head>
 <body>
   <div class="app-shell">
@@ -71,9 +73,9 @@
           <section class="settings-group" aria-labelledby="generalSettingsTitle">
             <h3 class="settings-group-title" id="generalSettingsTitle">General</h3>
             <div class="setting-row">
-              <div class="setting-copy"><span class="setting-title">Appearance</span><small>Choose dark or light mode</small></div>
-              <button class="theme-toggle" id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="Toggle light mode">
-                <span class="theme-toggle-knob" aria-hidden="true"></span><span id="themeToggleLabel">Dark</span>
+              <div class="setting-copy"><span class="setting-title">Appearance</span><small>MahiCloud always uses the black theme on every device.</small></div>
+              <button class="theme-toggle" id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="Dark theme is permanently enabled" title="Dark theme is permanently enabled">
+                <span class="theme-toggle-knob" aria-hidden="true"></span><span id="themeToggleLabel">Dark · Always on</span>
               </button>
             </div>
             <div class="setting-row">
@@ -160,12 +162,12 @@
     <main class="main-panel">
       <header class="topbar">
         <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-        <div class="topbar-title"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
+        <div class="topbar-title"><img class="small-mark" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud logo" width="40" height="40"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
         <div class="topbar-right">
           <button class="header-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown">↓ <span>MD</span></button>
           <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
           <button class="temporary-chat-button" id="temporaryChatButton" type="button" aria-pressed="false" title="Start a temporary chat that is not saved to chat history or long-term memory">◌ <span>Temporary</span></button>
-          <button class="quick-theme-button" id="quickThemeToggle" type="button" aria-label="Switch to light appearance" title="Switch to light appearance" aria-pressed="false">◐</button>
+          <button class="quick-theme-button" id="quickThemeToggle" type="button" aria-label="Dark theme is permanently enabled" title="Dark theme is permanently enabled" aria-pressed="true" disabled>☾</button>
           <button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button>
           <span class="secure-label">Ready to help</span>
         </div>
@@ -175,11 +177,7 @@
         <section class="welcome" id="welcome">
           <div class="welcome-glow"></div>
           <div class="welcome-brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 24 24" focusable="false">
-              <defs><linearGradient id="welcomeBrandGradient" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#5eead4"/><stop offset="1" stop-color="#3b82f6"/></linearGradient></defs>
-              <rect width="24" height="24" rx="7" fill="url(#welcomeBrandGradient)"/>
-              <path d="M5 14.5c2-3 4-3 6 0s4 3 8-1" fill="none" stroke="#06222a" stroke-width="2" stroke-linecap="round"/>
-            </svg>
+            <img class="welcome-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" width="48" height="48" decoding="async" fetchpriority="high">
           </div>
           <h1>Quiet space for clear thinking.</h1>
           <p class="welcome-copy">Ask, draft, learn and plan. Your MahiCloud assistant is ready to help.</p>
