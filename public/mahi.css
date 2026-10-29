@@ -171,3 +171,10 @@ dialog,.modal,.modal-content,.settings-modal,.account-modal,.api-explorer,.api-e
   .welcome h1{font-size:30px}
   .suggestion-card small{font-size:12px}
 }
+
+
+/* The primary action uses the supplied frontend's saturated lagoon fill. */
+.new-chat{background:#2dd4bf;color:#062324;border-color:transparent;font-weight:650;box-shadow:0 5px 18px color-mix(in srgb,#2dd4bf 13%,transparent)}
+.new-chat .plus{color:inherit}
+.new-chat kbd{color:inherit;background:rgba(6,35,36,.09);border-color:rgba(6,35,36,.14)}
+.new-chat:hover{background:#25bcae;color:#062324;border-color:transparent;box-shadow:0 7px 22px color-mix(in srgb,#2dd4bf 18%,transparent)}
