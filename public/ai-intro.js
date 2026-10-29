@@ -19,6 +19,12 @@
   }
 
   intro.addEventListener("click", finishIntro);
+  intro.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      finishIntro();
+    }
+  });
   document.addEventListener("keydown", (event) => {
     if (!finished && event.key === "Escape") finishIntro();
   });
