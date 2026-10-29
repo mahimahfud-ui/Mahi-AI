@@ -38,7 +38,7 @@
   }
 
   function showFallback(show) {
-    if (fallbackButton) fallbackButton.hidden = !show;
+    if (fallbackButton) { fallbackButton.hidden = !show; fallbackButton.style.display = show ? "inline-flex" : "none"; }
   }
 
   function renderTranscript() {
