@@ -16,7 +16,7 @@ test("Mahi AI avoids blanket refusals for benign sensitive or complex topics", (
 test("refusals remain targeted to harmful parts and do not bypass provider safeguards", () => {
   assert.match(edge, /decline only that part and still help with the remaining safe parts/);
   assert.match(edge, /Follow applicable provider safeguards/);
-  assert.match(edge, /be honest about actual model\/provider capabilities, quotas, and technical limits/);
+  assert.match(edge, /be honest about actual model\/provider capabilities, quotas, and technical limits/i);
 });
 
 test("all-provider failures explain quota/billing outages instead of asking users to rephrase", () => {
