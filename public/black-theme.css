@@ -1,0 +1,312 @@
+/* MahiCloud permanent black theme + explicit device frame system.
+   Load after all legacy stylesheets so old light-theme presets cannot re-colour
+   the interface. Structural breakpoints keep the app frame fitted to each device. */
+:root,
+:root[data-theme="light"],
+:root[data-mytheme] {
+  color-scheme: dark !important;
+  --bg: #060a14 !important;
+  --panel: #0a0c14 !important;
+  --panel-2: #101421 !important;
+  --line: rgba(190,198,240,.13) !important;
+  --muted: #8a97b5 !important;
+  --text: #e8eefc !important;
+  --accent: #4f8cff !important;
+  --accent2: #38bdf8 !important;
+  --ink-0: #060a14 !important;
+  --ink-1: #03050b !important;
+  --ink-2: #0b0e17 !important;
+  --ink-3: #111625 !important;
+  --ink-4: #1a2030 !important;
+  --text-1: #e8eefc !important;
+  --text-2: #bcc6dc !important;
+  --text-3: #8a97b5 !important;
+  --text-4: #727f9c !important;
+  --m-bg: #060a14 !important;
+  --m-side: #03050b !important;
+  --m-comp: #0c1322 !important;
+  --m-bubble: #0f1c3a !important;
+  --m-hover: rgba(96,165,250,.10) !important;
+  --m-text: #e8eefc !important;
+  --m-mute: #8a97b5 !important;
+  --m-line: rgba(110,160,255,.15) !important;
+  --m-code: #040712 !important;
+  --m-send: #4f8cff !important;
+  --m-send-ic: #ffffff !important;
+  --c-bg: #060a14 !important;
+  --c-text: #e8eefc !important;
+  --c-accent: #4f8cff !important;
+  background-color: #060a14 !important;
+  color: #e8eefc !important;
+}
+html,
+html[data-theme="light"],
+body {
+  color-scheme: dark !important;
+  background: #060a14 !important;
+  color: #e8eefc;
+}
+body { min-width: 320px; }
+body .app-shell {
+  width: 100%;
+  min-width: 0;
+  height: var(--app-height, 100dvh);
+  min-height: 0;
+  max-height: var(--app-height, 100dvh);
+  overflow: hidden;
+  background: #060a14 !important;
+}
+body .sidebar { background: #03050b !important; }
+body .main-panel,
+body .conversation-area { background: #060a14 !important; }
+body .composer,
+body .settings-panel,
+body .account-modal-panel,
+body .api-explorer-panel,
+body .admin-overlay-dialog,
+body .voice-panel {
+  color: #e8eefc;
+  background-color: #0a0e18;
+}
+body :is(input, textarea, select, button):not(.send-button):not(.new-chat) {
+  color-scheme: dark;
+}
+html[data-theme="light"] .welcome h1,
+html[data-theme="light"] .welcome-copy,
+html[data-theme="light"] .topbar-title-text,
+html[data-theme="light"] .message-content,
+html[data-theme="light"] .setting-title,
+html[data-theme="light"] .setting-copy,
+html[data-theme="light"] .account-modal-panel,
+html[data-theme="light"] .api-explorer-panel,
+html[data-theme="light"] .admin-overlay-dialog,
+html[data-theme="light"] .voice-panel {
+  color: #e8eefc !important;
+}
+/* Theme controls stay present for the legacy app hooks, but are not a user-facing
+   light-mode path. Text size/corner/effect controls still remain available. */
+#settingsPanel [aria-labelledby="generalSettingsTitle"] > .setting-row:first-of-type,
+#settingsPanel .theme-picker .tp-group:nth-of-type(-n+4),
+#settingsPanel .theme-picker .tp-actions {
+  display: none !important;
+}
+.theme-picker { background: #080b13 !important; border-color: rgba(190,198,240,.13) !important; }
+.quick-theme-button:disabled {
+  opacity: 1 !important;
+  cursor: default !important;
+  color: #9baed6 !important;
+  background: rgba(79,140,255,.08) !important;
+  border-color: rgba(110,160,255,.18) !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+.quick-theme-button:disabled:hover,
+.quick-theme-button:disabled:active { transform: none !important; }
+
+/* Device frames: wide desktop, compact laptop/tablet landscape, and phone/tablet
+   portrait each get their own shell and control density. */
+html, body {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+body .app-shell > .main-panel { min-width: 0; min-height: 0; }
+
+/* Wide desktop / large monitor: persistent sidebar, centered readable chat column. */
+@media (min-width: 1200px) {
+  body .app-shell {
+    display: grid !important;
+    grid-template-columns: minmax(240px, min(var(--sidebar-width, 270px), 320px)) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  body .app-shell > .sidebar {
+    grid-column: 1; grid-row: 1;
+    width: var(--sidebar-width, 270px) !important;
+    min-width: 220px; height: 100%; max-height: 100%;
+  }
+  body .app-shell > .main-panel {
+    display: flex; flex-direction: column;
+    grid-column: 2; grid-row: 1;
+    width: 100%; height: 100%; max-height: 100%;
+    overflow: hidden;
+  }
+  body .main-panel > .topbar { flex: 0 0 64px; min-height: 64px; }
+  body .conversation-area {
+    flex: 1 1 0; width: 100%; min-height: 0;
+    padding: clamp(26px, 4vh, 54px) clamp(26px, 3.2vw, 58px) 24px;
+  }
+  body .composer-wrap { flex: 0 0 auto; width: min(1040px, 100%); margin-inline: auto; }
+  body .welcome { width: min(840px, 100%); }
+  body .messages { width: min(960px, 100%); }
+}
+
+/* Laptop / landscape tablet: reserve enough width for the chat area. */
+@media (min-width: 761px) and (max-width: 1199px) {
+  body .app-shell {
+    display: grid !important;
+    grid-template-columns: minmax(220px, min(25vw, 270px)) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+  }
+  body .app-shell > .sidebar {
+    grid-column: 1; grid-row: 1;
+    width: auto !important; min-width: 220px;
+    height: 100%; max-height: 100%;
+  }
+  body .app-shell > .main-panel {
+    display: flex; flex-direction: column;
+    grid-column: 2; grid-row: 1;
+    width: 100%; height: 100%; max-height: 100%;
+    overflow: hidden;
+  }
+  body .main-panel > .topbar { flex: 0 0 58px; min-height: 58px; padding-inline: 16px; }
+  body .topbar-right { min-width: 0; gap: 4px; }
+  body .conversation-area { flex: 1 1 0; min-height: 0; padding: 24px clamp(16px, 2vw, 28px) 18px; }
+  body .composer-wrap { flex: 0 0 auto; width: 100%; padding-inline: clamp(14px, 2vw, 24px); }
+}
+@media (min-width: 761px) and (max-width: 900px) {
+  body .topbar-right #exportMarkdownButton,
+  body .topbar-right #exportJsonButton { display: none !important; }
+  body .topbar-title { flex: 0 1 150px; }
+}
+
+/* Phones and portrait tablets: one viewport frame with independently scrolling
+   conversation and an anchored composer; the history drawer overlays the frame. */
+@media (max-width: 760px) {
+  html, body { width: 100%; height: 100%; overflow: hidden; }
+  body .app-shell {
+    display: flex !important; flex-direction: column !important;
+    width: 100%; height: var(--app-height, 100dvh);
+    min-height: 0; max-height: var(--app-height, 100dvh);
+  }
+  body .app-shell > .main-panel {
+    display: flex !important; flex: 1 1 auto !important; flex-direction: column !important;
+    width: 100%; height: auto !important; min-width: 0; min-height: 0;
+    max-height: none !important; overflow: hidden;
+  }
+  body .main-panel > .topbar {
+    display: flex; flex: 0 0 auto; flex-wrap: nowrap; align-items: center;
+    width: 100%; min-width: 0; height: auto; min-height: calc(54px + env(safe-area-inset-top));
+    padding: max(8px, env(safe-area-inset-top)) max(9px, env(safe-area-inset-right)) 8px max(9px, env(safe-area-inset-left));
+    gap: 7px;
+  }
+  body .topbar #openSidebar { flex: 0 0 38px; width: 38px; min-width: 38px; height: 38px; }
+  body .topbar-title { display: flex; flex: 0 1 auto; min-width: 0; max-width: 45%; gap: 7px; }
+  body .topbar .topbar-title .small-mark { display: block !important; width: 30px; height: 30px; flex: 0 0 30px; object-fit: cover; }
+  body .topbar-title-text { min-width: 0; font-size: 14px; }
+  body .topbar-right {
+    display: flex; flex: 1 1 auto; justify-content: flex-end; align-items: center;
+    width: auto; max-width: none; min-width: 0; overflow: visible; gap: 4px;
+  }
+  body .topbar-right > * { flex-shrink: 0; }
+  body .topbar-right #exportMarkdownButton,
+  body .topbar-right #exportJsonButton { display: none !important; }
+  body .temporary-chat-button { width: 34px; min-width: 34px; height: 34px; padding: 0; justify-content: center; font-size: 0; }
+  body .temporary-chat-button span { display: none; }
+  body .quick-theme-button { flex: 0 0 32px; width: 32px; height: 32px; font-size: 17px; }
+  body .account-button { flex: 0 0 34px; width: 34px; min-width: 34px; height: 34px; min-height: 34px; padding: 0; justify-content: center; }
+  body #accountButtonLabel { display: none !important; }
+  body .conversation-area {
+    display: flex; flex: 1 1 auto; flex-direction: column;
+    width: 100%; min-width: 0; min-height: 0; overflow-x: hidden; overflow-y: auto;
+    padding: clamp(10px, 2dvh, 18px) max(12px, env(safe-area-inset-right)) 12px max(12px, env(safe-area-inset-left));
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-gutter: auto;
+  }
+  body .welcome { width: 100%; max-width: 540px; margin: auto 0; padding: 12px 0 18px; }
+  body .welcome h1 { font-size: clamp(29px, 6.8vw, 42px); line-height: 1.12; text-wrap: balance; overflow-wrap: normal; }
+  body .welcome-copy { max-width: 40ch; margin: 12px auto 19px; font-size: 13px; line-height: 1.55; }
+  body .suggestion-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); width: 100%; gap: 8px; }
+  body .suggestion-card { min-width: 0; min-height: 62px; padding: 10px 11px; }
+  body .suggestion-card strong { font-size: 12px; }
+  body .suggestion-card small { display: block; font-size: 11px; }
+  body .messages { width: 100%; min-width: 0; max-width: 100%; gap: 17px; }
+  body .message, body .message-body, body .message-content { min-width: 0; max-width: 100%; }
+  body .message-content { overflow-wrap: anywhere; font-size: 15px; line-height: 1.7; }
+  body .message-content :is(pre, table) { max-width: 100%; overflow-x: auto; }
+  body .composer-wrap {
+    display: block; flex: 0 0 auto; width: 100%; max-width: none; min-width: 0;
+    margin: 0; padding: 7px max(9px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(9px, env(safe-area-inset-left));
+    background: #060a14 !important;
+  }
+  body .composer { width: 100%; min-width: 0; padding: 10px 10px 8px; border-radius: 17px; }
+  body .composer textarea { width: 100%; min-height: 28px; max-height: min(26dvh, 170px); font-size: 16px; }
+  body .composer-bottom { display: flex; align-items: center; flex-wrap: nowrap; gap: 5px; min-width: 0; }
+  body .composer-left-actions { display: flex; flex: 1 1 auto; min-width: 0; gap: 5px; overflow: hidden; }
+  body .model-picker { max-width: clamp(72px, 21vw, 104px); min-width: 0; }
+  body .attach-button, body .voice-mode-button { min-height: 34px; padding-inline: 8px; }
+  body .attach-button span, body .voice-mode-button span { font-size: 11px; }
+  body .think-mode-button { min-height: 34px; padding-inline: 7px; }
+  body .composer-hint, body .char-count, body .footer-note { display: none !important; }
+  body .composer-actions { display: flex; flex: 0 0 auto; min-width: 0; gap: 5px; }
+  body .send-button { flex: 0 0 36px; width: 36px; height: 36px; }
+  body .attachment-list { max-height: min(100px, 16dvh); overflow-y: auto; }
+  body .sidebar {
+    position: fixed !important; inset: 0 auto 0 0; z-index: 80;
+    width: min(300px, 86vw) !important; min-width: 0 !important;
+    height: var(--app-height, 100dvh); max-height: var(--app-height, 100dvh);
+    padding: max(14px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+    transform: translateX(-105%); overflow-x: hidden; overflow-y: auto;
+    overscroll-behavior: contain; box-shadow: 18px 0 55px rgba(0,0,0,.4);
+  }
+  body .sidebar.open { transform: translateX(0); }
+  body .sidebar-resize-handle { display: none !important; }
+  body .mobile-scrim.show { position: fixed; inset: 0; width: 100%; height: var(--app-height, 100dvh); z-index: 70; }
+}
+
+/* Compact phones (320–380px): shed low-priority controls before content clips. */
+@media (max-width: 380px) {
+  body .main-panel > .topbar { gap: 5px; }
+  body .topbar #openSidebar { flex-basis: 35px; width: 35px; min-width: 35px; height: 35px; }
+  body .topbar-title { max-width: 37%; gap: 5px; }
+  body .topbar .topbar-title .small-mark { width: 27px; height: 27px; flex-basis: 27px; }
+  body .topbar-title-text { font-size: 12px; }
+  body .topbar-right { gap: 3px; }
+  body .quick-theme-button { flex-basis: 29px; width: 29px; height: 29px; }
+  body .temporary-chat-button { flex-basis: 30px; width: 30px; min-width: 30px; height: 30px; }
+  body .account-button { flex-basis: 31px; width: 31px; min-width: 31px; height: 31px; }
+  body .suggestion-grid { gap: 7px; }
+  body .suggestion-card { min-height: 58px; padding: 8px; }
+  body .suggestion-card strong { font-size: 11px; }
+  body .suggestion-card small { font-size: 10px; }
+  body .composer { padding-inline: 8px; }
+  body .composer-left-actions { gap: 4px; }
+  body .attach-button, body .voice-mode-button, body .think-mode-button { padding-inline: 6px; }
+}
+/* Standard phones (381–600px). */
+@media (min-width: 381px) and (max-width: 600px) {
+  body .topbar-title { max-width: 42%; }
+  body .topbar-title-text { font-size: 13px; }
+  body .welcome h1 { font-size: clamp(31px, 7.6vw, 40px); }
+}
+/* Tablet portrait (601–760px): same anchored composer, more breathing room. */
+@media (min-width: 601px) and (max-width: 760px) {
+  body .main-panel > .topbar { min-height: calc(60px + env(safe-area-inset-top)); padding-inline: 16px; }
+  body .topbar .topbar-title .small-mark { width: 34px; height: 34px; flex-basis: 34px; }
+  body .topbar-title-text { font-size: 16px; }
+  body .topbar-right #exportMarkdownButton,
+  body .topbar-right #exportJsonButton { display: inline-flex !important; }
+  body .topbar-right .header-tool-button { padding-inline: 7px; }
+  body .welcome { max-width: 620px; margin-inline: auto; }
+  body .welcome h1 { font-size: clamp(36px, 5.8vw, 48px); }
+  body .suggestion-card { min-height: 70px; padding: 12px; }
+}
+/* Taller phones and landscape orientation retain the same safe-area frame. */
+@media (max-width: 760px) and (max-height: 520px) {
+  body .main-panel > .topbar { min-height: calc(42px + env(safe-area-inset-top)); padding-block: 4px; }
+  body .topbar #openSidebar { width: 32px; height: 32px; }
+  body .conversation-area { padding-top: 5px; padding-bottom: 5px; }
+  body .welcome { padding-block: 4px 8px; }
+  body .welcome-brand-mark { margin-bottom: 7px; }
+  body .welcome-brand-mark, body .welcome-logo { width: 32px; height: 32px; }
+  body .welcome h1 { font-size: clamp(25px, 5vw, 34px); }
+  body .welcome-copy { margin: 6px auto 8px; }
+  body .suggestion-card { min-height: 46px; padding: 6px 8px; }
+  body .composer textarea { max-height: min(18dvh, 90px); }
+}
+/* Full desktop monitor (1600px+): keep long content constrained and centered. */
+@media (min-width: 1600px) {
+  body .main-panel > .topbar { padding-inline: clamp(42px, 4vw, 76px); }
+  body .conversation-area { padding-inline: clamp(48px, 5vw, 88px); }
+  body .composer-wrap { width: min(1120px, 100%); }
+}
