@@ -108,6 +108,6 @@ test("chat markdown heading levels are normalized after sanitization", () => {
   assert.match(app, /const clean = DOMPurify\.sanitize\(parsed, \{ USE_PROFILES: \{ html: true \} \}\)/);
   assert.match(app, /querySelectorAll\("h1, h2, h3, h4, h5, h6"\)/);
   assert.match(app, /Math\.min\(requestedLevel \+ 1, previousLevel \+ 1, 6\)/);
-  assert.match(app, /replacement\.replaceWith\(replacement\)/);
+  assert.match(app, /heading\.replaceWith\(replacement\)/);
   assert.doesNotThrow(() => new vm.Script(app), "app.js must parse after heading normalization");
 });
