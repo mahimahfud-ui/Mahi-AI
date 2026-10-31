@@ -7,7 +7,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="theme-color" content="#090b10">
   <meta name="description" content="MahiCloud — one helpful assistant for your everyday tasks.">
+  <meta name="mahicloud-brand-logo" content="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
   <title>MahiCloud</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -42,6 +44,7 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
+        <img class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high">
         <div class="brand-copy"><strong>MahiCloud</strong><span>Your everyday assistant</span></div>
         <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
@@ -154,7 +157,7 @@
       </section>
       <div class="sidebar-bottom">
         <div class="privacy-note"><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
-        <div class="profile-row"><img class="avatar profile-avatar-logo" id="profileAvatar" src="./mahi-ai-logo.svg" alt="MahiCloud profile logo" width="42" height="42" decoding="async" fetchpriority="high"><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
+        <div class="profile-row"><img class="avatar profile-avatar-logo mahi-brand-logo" id="profileAvatar" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="42" height="42" decoding="async" fetchpriority="high"><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
       </div>
       <div class="sidebar-resize-handle" id="sidebarResizeHandle" role="separator" tabindex="0" aria-label="Resize chat history sidebar" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="440" aria-valuenow="260" title="Drag to resize chat history"></div>
     </aside>
@@ -162,7 +165,7 @@
     <main class="main-panel">
       <header class="topbar">
         <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-        <div class="topbar-title"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
+        <div class="topbar-title"><img class="small-mark mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
         <div class="topbar-right">
           <button class="header-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown">↓ <span>MD</span></button>
           <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
@@ -177,7 +180,7 @@
         <section class="welcome" id="welcome">
           <div class="welcome-glow"></div>
           <div class="welcome-brand-mark" aria-hidden="true">
-            <img class="welcome-logo" src="./mahi-ai-logo.svg" alt="" width="48" height="48" decoding="async" fetchpriority="high">
+            <img class="welcome-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" width="48" height="48" decoding="async" fetchpriority="high">
           </div>
           <h1>Quiet space for clear thinking.</h1>
           <p class="welcome-copy">Ask, draft, learn and plan. Your MahiCloud assistant is ready to help.</p>
@@ -268,7 +271,7 @@
     <section class="voice-panel" role="dialog" aria-modal="true" aria-labelledby="voiceModeTitle" aria-describedby="voiceModeDescription">
       <header class="voice-panel-header">
         <div class="voice-brand">
-          <div class="voice-brand-mark" aria-hidden="true"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt=""></div>
+          <div class="voice-brand-mark" aria-hidden="true"><img class="mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" width="40" height="40" decoding="async"></div>
           <div><h2 id="voiceModeTitle">Voice with MahiCloud</h2><p id="voiceModeDescription">Talk in any language. I’ll detect it and reply aloud.</p></div>
         </div>
         <button class="icon-button voice-close" type="button" data-voice-close aria-label="End voice conversation" title="Close voice mode"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
