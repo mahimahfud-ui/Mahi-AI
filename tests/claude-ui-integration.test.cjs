@@ -47,7 +47,7 @@ test("the live production scripts and styles remain wired in safe order", () => 
   for (const asset of ["./config.js", "./themes.js", "./app.js", "./live-voice.js", "./admin-control.js", "./code-blocks.js", "./ui-adapter.js"]) {
     assert.ok(html.includes(asset), "missing script: " + asset);
   }
-  assert.ok(html.indexOf("./mahi.css?v=claude-ui-20261029") > html.indexOf("./admin-control.css"));
+  assert.ok(html.indexOf("./mahi.css?v=20261031fontsystem1") > html.indexOf("./admin-control.css"));
   assert.ok(html.indexOf("./ui-adapter.js?v=20261029") > html.indexOf("./app.js"));
   assert.doesNotMatch(html, /js\/app\.js|mahicloud\.part1|data-form="admin"/);
 });

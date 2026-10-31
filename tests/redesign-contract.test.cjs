@@ -9,7 +9,7 @@ const lagoon = fs.readFileSync(path.join(root, "public", "mahi.css"), "utf8");
 
 test("Lagoon is loaded after existing component styles", () => {
   const legacy = html.indexOf('./admin-control.css');
-  const overlay = html.indexOf('./mahi.css?v=claude-ui-20261029');
+  const overlay = html.indexOf('./mahi.css?v=20261031fontsystem1');
   assert.ok(legacy >= 0, "existing admin stylesheet remains linked");
   assert.ok(overlay > legacy, "Lagoon override loads after existing styles");
   assert.match(html, /\.\/styles\.css/);

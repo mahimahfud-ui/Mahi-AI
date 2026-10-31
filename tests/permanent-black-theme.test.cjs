@@ -38,7 +38,7 @@ test("MahiCloud uses text-only top branding and sharp vector logos below the hea
   assert.ok(html.includes('<div class="topbar-title"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>'));
   assert.doesNotMatch(html, /class="small-mark"/);
   assert.doesNotMatch(html, /class="brand-logo"/);
-  assert.ok(html.includes('class="profile-avatar-logo" id="profileAvatar" src="./mahi-ai-logo.svg"'));
+  assert.ok(html.includes('class="avatar profile-avatar-logo" id="profileAvatar" src="./mahi-ai-logo.svg"'));
   assert.ok(html.includes('class="welcome-logo" src="./mahi-ai-logo.svg"'));
   assert.doesNotMatch(html, /welcomeBrandGradient/);
 });
