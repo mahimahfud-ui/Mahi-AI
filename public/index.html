@@ -22,6 +22,7 @@
   <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
   <link rel="stylesheet" href="./mahi.css?v=claude-ui-20261029">
   <link rel="stylesheet" href="./black-theme.css?v=black-20261029">
+  <link rel="stylesheet" href="./header-layout.css?v=20261031profileheader1">
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
@@ -41,7 +42,6 @@
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
-        <img class="brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true">
         <div class="brand-copy"><strong>MahiCloud</strong><span>Your everyday assistant</span></div>
         <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
       </div>
@@ -65,7 +65,7 @@
       
       <section class="sidebar-settings" aria-label="Settings and preferences">
         <button class="settings-trigger" id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.4a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2Z"/><path d="m19.4 13.5 1.1.9-1.7 2.9-1.4-.5a7.6 7.6 0 0 1-1.6.9l-.2 1.5h-3.3l-.2-1.5a7.6 7.6 0 0 1-1.6-.9l-1.4.5-1.7-2.9 1.1-.9a7.1 7.1 0 0 1 0-1.8l-1.1-.9 1.7-2.9 1.4.5a7.6 7.6 0 0 1 1.6-.9l.2-1.5h3.3l.2 1.5a7.6 7.6 0 0 1 1.6.9l1.4-.5 1.7 2.9-1.1.9a7.1 7.1 0 0 1 0 1.8Z"/></svg>
+          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m6 0h5M4 17h3m6 0h7M4 12h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
           <span>Settings &amp; preferences</span>
           <svg class="settings-chevron ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
         </button>
@@ -154,7 +154,7 @@
       </section>
       <div class="sidebar-bottom">
         <div class="privacy-note"><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
-        <div class="profile-row"><div class="avatar" id="profileAvatar">Y</div><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
+        <div class="profile-row"><img class="avatar profile-avatar-logo" id="profileAvatar" src="./mahi-ai-logo.svg" alt="MahiCloud profile logo" width="42" height="42" decoding="async" fetchpriority="high"><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
       </div>
       <div class="sidebar-resize-handle" id="sidebarResizeHandle" role="separator" tabindex="0" aria-label="Resize chat history sidebar" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="440" aria-valuenow="260" title="Drag to resize chat history"></div>
     </aside>
@@ -162,7 +162,7 @@
     <main class="main-panel">
       <header class="topbar">
         <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-        <div class="topbar-title"><img class="small-mark" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud logo" width="40" height="40"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
+        <div class="topbar-title"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
         <div class="topbar-right">
           <button class="header-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown">↓ <span>MD</span></button>
           <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
@@ -177,7 +177,7 @@
         <section class="welcome" id="welcome">
           <div class="welcome-glow"></div>
           <div class="welcome-brand-mark" aria-hidden="true">
-            <img class="welcome-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" width="48" height="48" decoding="async" fetchpriority="high">
+            <img class="welcome-logo" src="./mahi-ai-logo.svg" alt="" width="48" height="48" decoding="async" fetchpriority="high">
           </div>
           <h1>Quiet space for clear thinking.</h1>
           <p class="welcome-copy">Ask, draft, learn and plan. Your MahiCloud assistant is ready to help.</p>

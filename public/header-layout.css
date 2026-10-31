@@ -1,0 +1,118 @@
+/* MahiCloud header and profile placement polish.
+   Loaded last so legacy theme rules cannot reintroduce the header image. */
+
+body .topbar .topbar-title {
+  min-width: 0;
+  gap: 0 !important;
+}
+
+body .topbar .topbar-title .small-mark {
+  display: none !important;
+}
+
+body .topbar .topbar-title-text {
+  display: block;
+  min-width: 0;
+  color: #eef0f8 !important;
+  font-family: var(--display, Manrope, sans-serif);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.55px;
+  white-space: nowrap;
+}
+
+body .profile-row > .profile-avatar-logo.avatar {
+  display: block;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  object-fit: contain;
+  object-position: center;
+  background: transparent;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .22);
+  filter: none;
+  image-rendering: auto;
+}
+
+body .profile-row > .sidebar-settings {
+  position: static !important;
+  display: block;
+  width: 40px;
+  flex: 0 0 40px;
+  align-self: center;
+  margin: 0 -7px 0 auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+body .profile-row .settings-trigger {
+  display: grid !important;
+  place-items: center;
+  width: 40px !important;
+  min-width: 40px;
+  height: 40px !important;
+  min-height: 40px !important;
+  padding: 0 !important;
+  gap: 0;
+  border: 1px solid rgba(158, 174, 211, .16) !important;
+  border-radius: 13px !important;
+  color: #aebbd5;
+  background: linear-gradient(145deg, rgba(23, 31, 49, .92), rgba(13, 19, 32, .9));
+  box-shadow: 0 5px 16px rgba(0, 0, 0, .18);
+  transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease, box-shadow .18s ease;
+}
+
+body .profile-row .settings-trigger > span,
+body .profile-row .settings-trigger .settings-chevron {
+  display: none !important;
+}
+
+body .profile-row .settings-trigger .ico {
+  display: block;
+  width: 19px;
+  height: 19px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+body .profile-row .settings-trigger:hover,
+body .profile-row .settings-trigger[aria-expanded="true"] {
+  color: #d2c9ff;
+  border-color: rgba(169, 145, 255, .42) !important;
+  background: linear-gradient(145deg, rgba(90, 74, 151, .32), rgba(35, 44, 70, .9));
+  box-shadow: 0 0 0 3px rgba(150, 130, 255, .07), 0 8px 22px rgba(0, 0, 0, .24);
+  transform: translateY(-1px);
+}
+
+body .profile-row .settings-trigger:focus-visible {
+  outline: 2px solid #a99aff;
+  outline-offset: 3px;
+}
+
+@media (max-width: 760px) {
+  body .topbar .topbar-title-text {
+    font-size: 15px;
+    letter-spacing: -.35px;
+  }
+  body .profile-row > .profile-avatar-logo.avatar {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+  body .profile-row > .sidebar-settings {
+    margin-right: -4px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body .profile-row .settings-trigger {
+    transition: none;
+  }
+}

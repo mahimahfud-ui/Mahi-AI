@@ -1328,7 +1328,13 @@
     const profile = $("profileDisplayName");
     if (profile) profile.textContent = clean;
     const avatar = $("profileAvatar");
-    if (avatar) avatar.textContent = clean === "You" ? "Y" : Array.from(clean)[0].toLocaleUpperCase();
+    if (avatar) {
+      if (avatar.tagName === "IMG") {
+        avatar.alt = clean === "You" ? "MahiCloud profile logo" : `${clean} profile logo`;
+      } else {
+        avatar.textContent = clean === "You" ? "Y" : Array.from(clean)[0].toLocaleUpperCase();
+      }
+    }
     document.querySelectorAll(".message.user .message-heading").forEach((heading) => { heading.textContent = clean; });
   }
   function applyTheme(theme, persist) {
