@@ -34,12 +34,13 @@ test("light/custom theme actions are blocked but non-colour preferences are pres
   assert.doesNotThrow(() => new vm.Script(adapter), "theme/title adapter must parse");
 });
 
-test("MahiCloud uses text-only top branding and sharp vector logos below the header", () => {
-  assert.ok(html.includes('<div class="topbar-title"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>'));
-  assert.doesNotMatch(html, /class="small-mark"/);
-  assert.doesNotMatch(html, /class="brand-logo"/);
-  assert.ok(html.includes('class="avatar profile-avatar-logo" id="profileAvatar" src="./mahi-ai-logo.svg"'));
-  assert.ok(html.includes('class="welcome-logo" src="./mahi-ai-logo.svg"'));
+test("the top logos remain visible while the duplicate welcome-heading logo is removed", () => {
+  const logo = "Cybernetic%20Half-Face%20Portrait.png";
+  assert.ok(html.includes('class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
+  assert.ok(html.includes('class="small-mark mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
+  assert.ok(html.includes('class="topbar-title-text" id="chatTitle">MahiCloud</span>'));
+  assert.ok(html.includes('class="profile-avatar-logo mahi-brand-logo" id="profileAvatar"'));
+  assert.doesNotMatch(html, /welcome-brand-mark|welcome-logo/);
   assert.doesNotMatch(html, /welcomeBrandGradient/);
 });
 
