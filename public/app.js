@@ -55,7 +55,7 @@
       state.header.setAttribute("aria-expanded", "false");
     }
   };
-  const OFFICIAL_LOGO_URL = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
+  const OFFICIAL_LOGO_URL = document.querySelector('meta[name="mahicloud-brand-logo"]')?.content || "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   const THEME_STORAGE_KEY = "mahi-ai-theme";
   const DISPLAY_NAME_STORAGE_KEY = "mahi-ai-display-name";
   const CHAT_PREFERENCES_STORAGE_KEY = "mahi-ai-chat-preferences";
@@ -1350,7 +1350,9 @@
     const avatar = $("profileAvatar");
     if (avatar) {
       if (avatar.tagName === "IMG") {
-        avatar.alt = clean === "You" ? "MahiCloud profile logo" : `${clean} profile logo`;
+        // The adjacent display name already labels the profile; the brand mark is decorative.
+        avatar.alt = "";
+        avatar.setAttribute("aria-hidden", "true");
       } else {
         avatar.textContent = clean === "You" ? "Y" : Array.from(clean)[0].toLocaleUpperCase();
       }
