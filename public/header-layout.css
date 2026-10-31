@@ -3,11 +3,19 @@
 
 body .topbar .topbar-title {
   min-width: 0;
-  gap: 0 !important;
+  gap: 9px !important;
 }
 
 body .topbar .topbar-title .small-mark {
-  display: none !important;
+  display: block !important;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  margin: 0;
+  border-radius: 10px;
+  object-fit: cover;
+  object-position: center;
+  background: transparent;
 }
 
 body .topbar .topbar-title-text {
@@ -97,6 +105,11 @@ body .profile-row .settings-trigger:focus-visible {
 }
 
 @media (max-width: 760px) {
+  body .topbar .topbar-title .small-mark {
+    flex-basis: 30px;
+    width: 30px;
+    height: 30px;
+  }
   body .topbar .topbar-title-text {
     font-size: 15px;
     letter-spacing: -.35px;
@@ -115,4 +128,19 @@ body .profile-row .settings-trigger:focus-visible {
   body .profile-row .settings-trigger {
     transition: none;
   }
+}
+
+
+/* One shared MahiCloud brand asset in every brand placement. */
+body .mahi-brand-logo {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  image-rendering: auto;
+}
+body .brand-row > .mahi-brand-logo {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
 }
