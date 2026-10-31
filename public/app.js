@@ -194,7 +194,27 @@
         (title ? ' title="' + escapeHtml(title) + '"' : "") + '>' + text + '</a>';
     };
     const parsed = marked.parse(String(value || ""), { breaks: true, gfm: true, renderer });
-    return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
+    const clean = DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } });
+
+    // Normalize headings inside chat messages: the page already has its own H1,
+    // and message headings should never skip a level.
+    const template = document.createElement("template");
+    template.innerHTML = clean;
+    let previousLevel = 1;
+    template.content.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((heading) => {
+      const requestedLevel = Number(heading.tagName.slice(1));
+      const nextLevel = Math.min(requestedLevel + 1, previousLevel + 1, 6);
+      if (nextLevel !== requestedLevel) {
+        const replacement = document.createElement("h" + nextLevel);
+        for (const attribute of Array.from(heading.attributes)) {
+          replacement.setAttribute(attribute.name, attribute.value);
+        }
+        replacement.append(...Array.from(heading.childNodes));
+        heading.replaceWith(replacement);
+      }
+      previousLevel = nextLevel;
+    });
+    return template.innerHTML;
   }
 
   function buildLivePreviewDocument(html, cssBlocks, jsBlocks) {

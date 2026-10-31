@@ -344,3 +344,253 @@ body .welcome-logo {
   body .welcome-brand-mark { width: 32px; height: 32px; margin-bottom: 7px; }
   body .welcome-logo { width: 32px; height: 32px; }
 }
+
+
+/* --------------------------------------------------------------------------
+   MahiCloud UI consistency system
+   Central tokens and semantic roles. Existing component structure, state
+   indicators, animation hooks and the permanent black / blue palette remain.
+   -------------------------------------------------------------------------- */
+:root {
+  /* Button roles */
+  --ui-btn-primary: var(--m-send, #4f8cff);
+  --ui-btn-surface: var(--m-comp, #0c1322);
+  --ui-btn-border: var(--m-line, rgba(110,160,255,.15));
+  --ui-btn-text: var(--m-text, #e8eefc);
+  --ui-btn-danger: #ff9baa;
+
+  /* Seven-step typography scale */
+  --ui-type-xs: 0.75rem;
+  --ui-type-sm: 0.8125rem;
+  --ui-type-body: 0.9375rem;
+  --ui-type-control: 1rem;
+  --ui-type-heading: 1.125rem;
+  --ui-type-title: 1.5rem;
+  --ui-type-display: clamp(2rem, 4vw, 3rem);
+
+  /* Semantic text palette */
+  --ui-text-primary: #e8eefc;
+  --ui-text-secondary: #bcc6dc;
+  --ui-text-muted: #8a97b5;
+  --ui-text-accent: #7fb2ff;
+  --ui-text-success: #69d7a0;
+  --ui-text-warning: #e6c58b;
+  --ui-text-danger: #ff9baa;
+
+  /* Component radii */
+  --ui-radius-none: 0;
+  --ui-radius-small: 8px;
+  --ui-radius-control: 10px;
+  --ui-radius-card: 14px;
+  --ui-radius-panel: 18px;
+  --ui-radius-pill: 9999px;
+}
+
+/* Shared button baseline; keep switch controls' pill shape and state styling. */
+:root:root body .app-shell button:not(.setting-switch):not(.theme-toggle) {
+  font-family: inherit;
+  font-size: var(--ui-type-sm);
+  border-radius: var(--ui-radius-control);
+  box-shadow: none;
+  transition:
+    background-color .16s ease,
+    border-color .16s ease,
+    color .16s ease,
+    box-shadow .16s ease,
+    transform .16s ease;
+}
+
+/* 1. Primary actions */
+:root:root body .app-shell :is(
+  .new-chat,
+  .send-button,
+  .account-submit-button,
+  .setting-save-button
+) {
+  background: var(--ui-btn-primary);
+  color: #fff;
+  border: 1px solid transparent;
+}
+
+/* 2. Secondary actions */
+:root:root body .app-shell :is(
+  .api-library-button,
+  .setting-action-button,
+  .name-setting-control button,
+  .attach-button,
+  .voice-mode-button,
+  .think-mode-button,
+  .stop-button,
+  .temporary-chat-button,
+  .account-button
+) {
+  background: var(--ui-btn-surface);
+  color: var(--ui-btn-text);
+  border: 1px solid var(--ui-btn-border);
+}
+
+/* Retain the distinct active states of temporary chat and Think mode. */
+:root:root body .app-shell .temporary-chat-button[aria-pressed="true"] {
+  background: rgba(153,91,39,.17);
+  border-color: rgba(255,190,138,.45);
+  color: #ffd8b3;
+}
+:root:root body .app-shell .think-mode-button[aria-pressed="true"],
+:root:root body .app-shell .think-mode-button.is-active {
+  background: color-mix(in srgb, var(--ui-btn-primary) 18%, var(--ui-btn-surface));
+  border-color: color-mix(in srgb, var(--ui-btn-primary) 58%, var(--ui-btn-border));
+  color: var(--ui-text-primary);
+}
+
+/* 3. Quiet / text actions */
+:root:root body .app-shell :is(
+  .text-button,
+  .settings-trigger,
+  .header-tool-button,
+  .draft-notice button
+) {
+  background: transparent;
+  color: var(--ui-btn-text);
+  border: 1px solid transparent;
+}
+
+/* 4. Icon controls */
+:root:root body .app-shell :is(
+  .icon-button,
+  .quick-theme-button,
+  .live-preview-icon-button,
+  .live-preview-expand
+) {
+  background: transparent;
+  color: var(--ui-btn-text);
+  border: 1px solid var(--ui-btn-border);
+}
+
+/* 5. Destructive action */
+:root:root body .app-shell .account-signout-button {
+  color: var(--ui-btn-danger);
+  background: rgba(255,155,170,.08);
+  border: 1px solid rgba(255,155,170,.2);
+}
+
+/* Preserve a visible keyboard focus ring. */
+:root:root body .app-shell button:focus-visible {
+  outline: 2px solid var(--ui-btn-primary);
+  outline-offset: 3px;
+}
+
+/* Apply the type scale to common roles without enlarging compact icon labels. */
+:root:root body .app-shell {
+  color: var(--ui-text-primary);
+  font-size: var(--ui-type-body);
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+:root:root body .app-shell :is(input, textarea, select) {
+  font-size: var(--ui-type-control);
+}
+:root:root body .app-shell :is(
+  .brand-copy span,
+  .eyebrow,
+  .history-heading,
+  .composer-hint,
+  .char-count,
+  .setting-status,
+  .footer-note
+) {
+  font-size: var(--ui-type-sm);
+}
+:root:root body .app-shell :is(
+  .message-content,
+  .welcome-copy,
+  .composer textarea
+) {
+  font-size: var(--ui-type-body);
+}
+:root:root body .app-shell :is(
+  .topbar-title-text,
+  .settings-group-title,
+  .message-content h3,
+  .message-content h4
+) {
+  font-size: var(--ui-type-heading);
+}
+:root:root body .app-shell :is(.message-content h1, .message-content h2) {
+  font-size: var(--ui-type-title);
+}
+:root:root body .app-shell .welcome h1 {
+  font-size: var(--ui-type-display);
+}
+
+/* Shared semantic text colours. */
+:root:root body .app-shell {
+  color: var(--ui-text-primary);
+}
+:root:root body .app-shell :is(
+  .message-heading,
+  .profile-copy strong,
+  .setting-title,
+  .brand-copy strong
+) {
+  color: var(--ui-text-secondary);
+}
+:root:root body .app-shell :is(
+  .brand-copy span,
+  .history-heading,
+  .footer-note,
+  .composer-hint,
+  .char-count,
+  .setting-status,
+  .secure-label,
+  .suggestion-card small,
+  .profile-copy small
+) {
+  color: var(--ui-text-muted);
+}
+:root:root body .app-shell a {
+  color: var(--ui-text-accent);
+}
+:root:root body .app-shell :is(.status-dot, .online-dot) {
+  background: var(--ui-text-success);
+}
+:root:root body .app-shell .error-banner {
+  color: var(--ui-text-danger);
+}
+
+/* Apply radii by component role. More specific than legacy theme layers. */
+:root:root body .app-shell :is(
+  button:not(.setting-switch):not(.theme-toggle),
+  input,
+  textarea,
+  select
+) {
+  border-radius: var(--ui-radius-control);
+}
+:root:root body .app-shell :is(.icon-button, .chat-item, .social-link) {
+  border-radius: var(--ui-radius-small) !important;
+}
+:root:root body .app-shell :is(
+  .suggestion-card,
+  .api-card,
+  .message.user .message-content
+) {
+  border-radius: var(--ui-radius-card) !important;
+}
+:root:root body .app-shell :is(
+  .modal-content,
+  .account-modal-panel,
+  .api-explorer-panel,
+  .admin-overlay-dialog,
+  .composer
+) {
+  border-radius: var(--ui-radius-panel) !important;
+}
+:root:root body .app-shell :is(.setting-switch, .theme-toggle) {
+  border-radius: var(--ui-radius-pill) !important;
+}
+
+/* Readable composer disclaimer; the existing mobile hide rule remains intact. */
+:root:root body .main-panel .composer-wrap .footer-note {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ui-text-muted);
+}

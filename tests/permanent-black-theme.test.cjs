@@ -13,7 +13,7 @@ const adapter = read("public/ui-adapter.js");
 
 test("black theme is pinned before paint and after all theme scripts", () => {
   assert.match(html, /<html lang="en" data-theme="dark">/);
-  assert.ok(html.indexOf("./black-theme.css?v=black-20261029") > html.indexOf("./mahi.css"));
+  assert.ok(html.indexOf("./black-theme.css?v=20261031uiconsistency1") > html.indexOf("./mahi.css"));
   assert.ok(html.indexOf("./black-theme.js?v=black-20261029") > html.indexOf("./themes.js"));
   assert.ok(html.indexOf("./black-theme.js?v=black-20261029") > html.indexOf("./motion-b.js"));
   assert.match(script, /localStorage\.setItem\(THEME_PREF, "dark"\)/);
@@ -34,11 +34,12 @@ test("light/custom theme actions are blocked but non-colour preferences are pres
   assert.doesNotThrow(() => new vm.Script(adapter), "theme/title adapter must parse");
 });
 
-test("the official logo is restored to sidebar, top bar and welcome screen", () => {
-  const logo = "Cybernetic%20Half-Face%20Portrait.png";
-  assert.ok(html.includes('class="brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
-  assert.ok(html.includes('class="small-mark" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
-  assert.ok(html.includes('class="welcome-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
+test("MahiCloud uses text-only top branding and sharp vector logos below the header", () => {
+  assert.ok(html.includes('<div class="topbar-title"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>'));
+  assert.doesNotMatch(html, /class="small-mark"/);
+  assert.doesNotMatch(html, /class="brand-logo"/);
+  assert.ok(html.includes('class="profile-avatar-logo" id="profileAvatar" src="./mahi-ai-logo.svg"'));
+  assert.ok(html.includes('class="welcome-logo" src="./mahi-ai-logo.svg"'));
   assert.doesNotMatch(html, /welcomeBrandGradient/);
 });
 
@@ -74,4 +75,39 @@ test("production backend hooks and integrations remain intact", () => {
   ]) assert.ok(html.includes('id="' + id + '"'), "missing production hook " + id);
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
   assert.equal(ids.length, new Set(ids).size, "production IDs must remain unique");
+});
+
+
+test("the interface imports only DM Sans and Manrope", () => {
+  const fontImport = html.match(/<link href="https:\/\/fonts\.googleapis\.com\/css2\?[^"]+" rel="stylesheet">/);
+  assert.ok(fontImport, "Google Fonts stylesheet must be present");
+  assert.match(fontImport[0], /family=DM\+Sans/);
+  assert.match(fontImport[0], /family=Manrope/);
+  assert.doesNotMatch(fontImport[0], /Instrument\+Sans|Fraunces/);
+  assert.match(read("public/mahi.css"), /--lagoon-font:"DM Sans", system-ui, sans-serif/);
+  assert.match(read("public/mahi.css"), /--lagoon-display:"Manrope", sans-serif/);
+});
+
+test("shared button, typography, colour and radius tokens are defined", () => {
+  for (const token of [
+    "--ui-btn-primary", "--ui-btn-surface", "--ui-btn-danger",
+    "--ui-type-xs", "--ui-type-sm", "--ui-type-body", "--ui-type-control",
+    "--ui-type-heading", "--ui-type-title", "--ui-type-display",
+    "--ui-text-primary", "--ui-text-secondary", "--ui-text-muted",
+    "--ui-text-accent", "--ui-text-success", "--ui-text-warning", "--ui-text-danger",
+    "--ui-radius-none", "--ui-radius-small", "--ui-radius-control",
+    "--ui-radius-card", "--ui-radius-panel", "--ui-radius-pill"
+  ]) assert.ok(css.includes(token), "missing UI design token " + token);
+  assert.match(css, /account-signout-button/);
+  assert.match(css, /setting-switch,\s*\.theme-toggle\)[\s\S]{0,120}border-radius: var\(--ui-radius-pill\) !important/);
+  assert.match(css, /composer-wrap \.footer-note[\s\S]{0,100}font-size: 14px/);
+});
+
+test("chat markdown heading levels are normalized after sanitization", () => {
+  const app = read("public/app.js");
+  assert.match(app, /const clean = DOMPurify\.sanitize\(parsed, \{ USE_PROFILES: \{ html: true \} \}\)/);
+  assert.match(app, /querySelectorAll\("h1, h2, h3, h4, h5, h6"\)/);
+  assert.match(app, /Math\.min\(requestedLevel \+ 1, previousLevel \+ 1, 6\)/);
+  assert.match(app, /replacement\.replaceWith\(replacement\)/);
+  assert.doesNotThrow(() => new vm.Script(app), "app.js must parse after heading normalization");
 });

@@ -8,8 +8,8 @@
   --lagoon-line:color-mix(in srgb,var(--m-text,#e9eef7) 12%,transparent);
   --lagoon-surface:color-mix(in srgb,var(--m-bg,#0a1018) 94%,var(--m-text,#e9eef7));
   --lagoon-muted:var(--m-mute,#929eae);
-  --lagoon-font:"Instrument Sans", "DM Sans", system-ui, sans-serif;
-  --lagoon-display:"Fraunces","Manrope",serif;
+  --lagoon-font:"DM Sans", system-ui, sans-serif;
+  --lagoon-display:"Manrope", sans-serif;
   font-family:var(--lagoon-font);
 }
 html,body{min-height:100%;font-family:var(--lagoon-font);text-rendering:optimizeLegibility}
