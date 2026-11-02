@@ -2630,6 +2630,28 @@
   $("openSidebar").addEventListener("click", toggleSidebar);
   $("closeSidebar").addEventListener("click", closeMobileSidebar);
   ui.scrim.addEventListener("click", closeMobileSidebar);
+  const mobileSidebarMedia = window.matchMedia("(max-width: 760px)");
+  const syncSidebarBreakpoint = () => {
+    if (mobileSidebarMedia.matches) {
+      closeMobileSidebar();
+      return;
+    }
+    ui.sidebar.classList.remove("open");
+    ui.scrim.classList.remove("show");
+    const button = $("openSidebar");
+    const shell = document.querySelector(".app-shell");
+    if (button) button.setAttribute("aria-expanded", String(!(shell && shell.classList.contains("sidebar-collapsed"))));
+  };
+  if (typeof mobileSidebarMedia.addEventListener === "function") {
+    mobileSidebarMedia.addEventListener("change", syncSidebarBreakpoint);
+  } else if (typeof mobileSidebarMedia.addListener === "function") {
+    mobileSidebarMedia.addListener(syncSidebarBreakpoint);
+  }
+  window.addEventListener("orientationchange", () => {
+    if (mobileSidebarMedia.matches) closeMobileSidebar();
+    scheduleVisibleViewportSync();
+  }, { passive: true });
+  syncSidebarBreakpoint();
   document.querySelectorAll("[data-prompt]").forEach((button) => {
     button.addEventListener("click", () => {
       ui.input.value = button.getAttribute("data-prompt") || "";
