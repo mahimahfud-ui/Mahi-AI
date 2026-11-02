@@ -135,6 +135,8 @@
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) scheduleVisibleViewportSync();
   });
+  document.addEventListener("focusin", scheduleVisibleViewportSync, { passive: true });
+  document.addEventListener("focusout", scheduleVisibleViewportSync, { passive: true });
   if (window.visualViewport) {
     window.visualViewport.addEventListener("resize", scheduleVisibleViewportSync, { passive: true });
     window.visualViewport.addEventListener("scroll", scheduleVisibleViewportSync, { passive: true });
