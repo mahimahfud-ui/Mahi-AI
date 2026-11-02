@@ -155,8 +155,6 @@
 @media (max-width: 390px) {
   body .suggestion-grid { grid-template-columns: 1fr; }
 }
-@media (prefers-reduced-motion: reduce) {
-  @media (max-width: 760px) {
-    body > .app-shell > .sidebar { transition: none !important; }
-  }
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  body > .app-shell > .sidebar { transition: none !important; }
 }
