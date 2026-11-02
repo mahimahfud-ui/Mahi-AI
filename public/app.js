@@ -89,7 +89,7 @@
   let busy = false, currentMessages = [], pendingFiles = [], previewUrls = [];
   let thinkModeEnabled = false;
   let selectedModel = "auto";
-  let activeRequestController = null, pendingEdit = null, temporaryChatMode = false;
+  let activeRequestController = null, pendingEdit = null, pendingReply = null, temporaryChatMode = false;
   let branchSeedMessages = null, branchOrigin = null;
   let chatSearchMatches = null, chatSearchSequence = 0;
   let accountMethod = "email", accountMode = "register";
@@ -337,6 +337,73 @@
     loadPreview();
   }
 
+  const REPLY_MARKER_PREFIX = "[[MAHI_REPLY_TO:";
+  function parseReplyContent(value) {
+    const source = String(value || "");
+    const match = source.match(/^\[\[MAHI_REPLY_TO:(user|assistant)\]\]\n([\s\S]*?)\n\[\[\/MAHI_REPLY_TO\]\]\n\n/);
+    if (!match) return { text: source, replyTo: null };
+    return { text: source.slice(match[0].length), replyTo: { role: match[1], content: match[2] } };
+  }
+  function buildReplyContent(target, text) {
+    const role = target.role === "assistant" ? "assistant" : "user";
+    const quote = String(target.content || "").slice(0, 1200);
+    return REPLY_MARKER_PREFIX + role + "]]\n" + quote + "\n[[/MAHI_REPLY_TO]]\n\n" + String(text || "");
+  }
+  function setReplyTarget(target) {
+    pendingReply = target ? { role: target.role, content: String(target.content || "").slice(0, 1200), index: Number.isInteger(target.index) ? target.index : null } : null;
+    if (!ui.form) return;
+    let preview = ui.form.querySelector(".reply-preview");
+    if (!pendingReply) { if (preview) preview.remove(); return; }
+    if (!preview) {
+      preview = document.createElement("div");
+      preview.className = "reply-preview";
+      preview.innerHTML = '<div class="reply-preview-copy"><span class="reply-preview-label"></span><span class="reply-preview-text"></span></div><button class="reply-preview-close" type="button" aria-label="Cancel reply" title="Cancel reply">×</button>';
+      ui.form.insertBefore(preview, ui.form.querySelector("#promptInput"));
+      preview.querySelector(".reply-preview-close").addEventListener("click", () => setReplyTarget(null));
+    }
+    preview.querySelector(".reply-preview-label").textContent = "Replying to " + (pendingReply.role === "assistant" ? "MahiCloud" : getDisplayName());
+    preview.querySelector(".reply-preview-text").textContent = pendingReply.content;
+  }
+  function chooseMessageReply(node) {
+    if (busy || !node) return;
+    const index = Number(node.dataset.messageIndex);
+    const item = Number.isInteger(index) ? currentMessages[index] : null;
+    if (!item || !["user", "assistant"].includes(item.role)) return;
+    const parsed = parseReplyContent(item.content);
+    if (!parsed.text.trim()) return;
+    setReplyTarget({ role: item.role, content: parsed.text, index });
+    ui.input.focus();
+    const composer = document.querySelector(".composer-wrap");
+    if (composer && window.matchMedia("(max-width: 760px)").matches) composer.scrollIntoView({ behavior: "smooth", block: "end" });
+  }
+  function installSwipeToReply() {
+    if (!ui.messages) return;
+    let gesture = null;
+    const reset = () => { if (gesture?.node) gesture.node.classList.remove("reply-swipe-active"); gesture = null; };
+    ui.messages.addEventListener("pointerdown", (event) => {
+      if (event.button !== undefined && event.button !== 0) return;
+      if (event.target.closest("button, a, input, textarea, select, .message-actions, pre, code")) return;
+      const node = event.target.closest(".message");
+      if (!node || node.dataset.typing === "true") return;
+      gesture = { node, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, triggered: false };
+    }, { passive: true });
+    ui.messages.addEventListener("pointermove", (event) => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      const dx = event.clientX - gesture.startX, dy = Math.abs(event.clientY - gesture.startY);
+      if (dx > 14 && dx > dy * 1.15) {
+        gesture.node.classList.add("reply-swipe-active");
+        if (dx >= 58) gesture.triggered = true;
+      } else if (dy > 12 || dx < 0) reset();
+    }, { passive: true });
+    ui.messages.addEventListener("pointerup", (event) => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      const selected = gesture.triggered ? gesture.node : null;
+      reset();
+      if (selected) chooseMessageReply(selected);
+    });
+    ui.messages.addEventListener("pointercancel", reset, { passive: true });
+    ui.messages.addEventListener("lostpointercapture", reset, { passive: true });
+  }
   function addMessage(role, content, options) {
     const opts = options || {};
     const empty = $("welcome");
@@ -368,6 +435,19 @@
       article.innerHTML = '<span class="thinking-label">Thinking</span><span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
       node.dataset.typing = "true";
     } else if (role === "user") {
+      const parsedUserContent = parseReplyContent(content);
+      if (parsedUserContent.replyTo) {
+        const quote = document.createElement("div");
+        quote.className = "message-reply-quote";
+        const quoteLabel = document.createElement("span");
+        quoteLabel.className = "message-reply-quote-label";
+        quoteLabel.textContent = "Replying to " + (parsedUserContent.replyTo.role === "assistant" ? "MahiCloud" : getDisplayName());
+        const quoteText = document.createElement("span");
+        quoteText.className = "message-reply-quote-text";
+        quoteText.textContent = parsedUserContent.replyTo.content;
+        quote.append(quoteLabel, quoteText);
+        body.appendChild(quote);
+      }
       if (Array.isArray(opts.files) && opts.files.length) {
         const files = document.createElement("div");
         files.className = "message-attachments";
@@ -384,7 +464,7 @@
         });
         body.appendChild(files);
       }
-      article.textContent = content;
+      article.textContent = parsedUserContent.text;
     } else {
       article.textContent = content;
       resolveStoredImageMarkers(content).then((resolved) => {
@@ -606,6 +686,13 @@
       body.appendChild(actions);
       return;
     }
+    addButton("Reply", "Reply to this specific message", () => {
+      const parsed = parseReplyContent(item.content);
+      setReplyTarget({ role, content: parsed.text, index });
+      ui.input.focus();
+      const composer = document.querySelector(".composer-wrap");
+      if (composer && window.matchMedia("(max-width: 760px)").matches) composer.scrollIntoView({ behavior: "smooth", block: "end" });
+    });
     if (role === "assistant") {
       const shareButton = addButton("Share", "Share this answer", async () => {
         try {
@@ -640,7 +727,9 @@
       addButton("Edit", "Edit this prompt and replace the following conversation", () => {
         if (busy) return;
         pendingEdit = { index, createdAt: item.created_at, content: item.content, previousMessages: currentMessages.slice() };
-        ui.input.value = item.content;
+        const parsedEditContent = parseReplyContent(item.content);
+        setReplyTarget(parsedEditContent.replyTo);
+        ui.input.value = parsedEditContent.text;
         if (ui.draftNotice) {
           const notice = ui.draftNotice.querySelector("span");
           if (notice) notice.textContent = "Editing a previous message. Sending replaces that turn and the conversation after it.";
@@ -659,10 +748,12 @@
       if (userMessage && userMessage.created_at && !isAttachmentTurn(userMessage)) {
         addButton("Regenerate", "Generate a new answer to the previous prompt", () => {
           if (busy) return;
-          void sendMessage(userMessage.content, {
+          const parsedPrompt = parseReplyContent(userMessage.content);
+          void sendMessage(parsedPrompt.text, {
             replacement: { index: userIndex, createdAt: userMessage.created_at, content: userMessage.content },
             previousMessages: currentMessages.slice(),
-            displayText: userMessage.content
+            displayText: parsedPrompt.text,
+            replyTo: parsedPrompt.replyTo
           });
         });
       }
@@ -1979,6 +2070,7 @@
       if (messageError) throw messageError;
       conversationId = rows.id;
       pendingEdit = null;
+      setReplyTarget(null);
       branchSeedMessages = null;
       branchOrigin = null;
       setTemporaryChatMode(false);
@@ -2001,6 +2093,7 @@
     if (busy) return;
     conversationId = null;
     pendingEdit = null;
+    setReplyTarget(null);
     branchSeedMessages = null;
     branchOrigin = null;
     if (ui.draftNotice) ui.draftNotice.hidden = true;
@@ -2020,6 +2113,7 @@
       ? (sendOptions.previousMessages || pendingEdit?.previousMessages || currentMessages.slice())
       : null;
     const branchRequest = !!branchSeedMessages;
+    const replyTarget = sendOptions.replyTo || pendingReply;
     const typedText = String(text == null ? "" : text);
     if (busy || (!typedText.trim() && !pendingFiles.length)) return;
     if (editRequest && pendingFiles.length) {
@@ -2045,8 +2139,10 @@
     ui.input.style.height = "auto";
     updateCounter();
     showWelcome(false);
-    currentMessages.push({ role: "user", content: userText });
-    addMessage("user", sendOptions.displayText || userText, { files: selectedFiles, messageIndex: currentMessages.length - 1 });
+    const storedUserText = replyTarget ? buildReplyContent(replyTarget, userText) : userText;
+    currentMessages.push({ role: "user", content: storedUserText });
+    addMessage("user", storedUserText, { files: selectedFiles, messageIndex: currentMessages.length - 1 });
+    if (replyTarget) setReplyTarget(null);
     const typing = addMessage("assistant", "", { typing: true, messageIndex: currentMessages.length });
     if (useThinkMode) {
       const thinkLabel = typing.querySelector(".thinking-label");
@@ -2252,7 +2348,8 @@
         ? "Generation stopped. Your draft is available to retry."
         : (error instanceof Error && error.message.startsWith("MahiCloud: ")
           ? error.message.slice(9) : plainError(error)));
-      // Keep the draft and selected files available so the user can retry.
+      // Keep the draft, selected files, and reply target available so the user can retry.
+      if (replyTarget) setReplyTarget(replyTarget);
       ui.input.value = userText;
       updateCounter();
     } finally {
@@ -2545,6 +2642,7 @@
     }
   }
 
+  installSwipeToReply();
   ui.form.addEventListener("submit", (event) => {
     event.preventDefault();
     void sendMessage(ui.input.value);

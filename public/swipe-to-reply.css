@@ -1,0 +1,14 @@
+/* Messenger-style swipe-to-reply. Scoped to message rows and composer preview. */
+.message{position:relative;touch-action:pan-y;transition:transform .16s ease}
+.message.reply-swipe-active{transform:translateX(9px)}
+.message.reply-swipe-active::before{content:"↩";position:absolute;left:-27px;top:7px;width:22px;height:22px;display:grid;place-items:center;border-radius:50%;background:rgba(145,111,255,.16);color:#c7b8ff;font-size:14px}
+.message-reply-quote{display:flex;flex-direction:column;gap:4px;max-width:min(100%,520px);margin:0 0 9px;padding:7px 10px;border-left:2px solid #9a87ff;border-radius:0 7px 7px 0;background:rgba(145,111,255,.075);color:#aeb5c9}
+.message-reply-quote-label{font-size:10px;font-weight:700;color:#c0b2ff}
+.message-reply-quote-text{font-size:11px;line-height:1.5;white-space:pre-wrap;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+.reply-preview{display:flex;align-items:center;gap:12px;margin:0 0 10px;padding:8px 10px;border-left:2px solid #9a87ff;border-radius:0 8px 8px 0;background:rgba(145,111,255,.08)}
+.reply-preview-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.reply-preview-label{font-size:10px;font-weight:700;color:#c0b2ff}
+.reply-preview-text{font-size:11px;line-height:1.4;color:#aeb5c9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reply-preview-close{width:27px;height:27px;flex:0 0 27px;border:0;border-radius:7px;background:transparent;color:#9ba4b8;font-size:19px;line-height:1}
+.reply-preview-close:hover{background:rgba(255,255,255,.07);color:#fff}
+@media(prefers-reduced-motion:reduce){.message{transition:none}}
