@@ -321,3 +321,159 @@ body > .app-shell {
 @media (prefers-reduced-motion: reduce) {
   .sidebar { transition: none !important; }
 }
+
+
+/* Mobile fit correction: avoid compressed controls, text collisions and horizontal overflow. */
+@media (max-width: 760px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  body > .app-shell {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: var(--app-height, 100dvh);
+    min-height: 0;
+    max-height: var(--app-height, 100dvh);
+    overflow: hidden;
+  }
+  .main-panel {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    min-height: 0;
+    height: 100%;
+    max-height: 100%;
+  }
+  .topbar {
+    flex: 0 0 auto;
+    min-width: 0;
+    padding-inline: max(8px, var(--mcf-safe-left)) max(8px, var(--mcf-safe-right));
+    gap: 6px;
+  }
+  .topbar-title { flex: 1 1 0; min-width: 0; }
+  .topbar-right { flex: 0 0 auto; min-width: 0; }
+  .conversation-area,
+  .welcome,
+  .messages,
+  .message,
+  .message-body,
+  .message-content {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .message { width: 100%; }
+  .message-body { flex: 1 1 0; overflow-wrap: anywhere; }
+  .message-content,
+  .message-content p,
+  .message-content li,
+  .message-content a,
+  .message-heading {
+    overflow-wrap: anywhere;
+    word-break: normal;
+  }
+  .message-heading { flex-wrap: wrap; }
+  .message-content pre,
+  .message-content table {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  .composer-wrap {
+    flex: 0 0 auto;
+    width: 100%;
+    padding-left: max(8px, var(--mcf-safe-left));
+    padding-right: max(8px, var(--mcf-safe-right));
+    padding-bottom: max(8px, var(--mcf-safe-bottom));
+  }
+  .composer { min-width: 0; width: 100%; }
+  .composer-bottom {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 7px;
+  }
+  .composer-left-actions {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: nowrap;
+    align-items: center;
+    min-width: 0;
+    gap: 5px;
+  }
+  .composer-actions { flex: 0 0 auto; }
+  .model-picker-wrap { flex: 0 1 auto; min-width: 0; }
+  .model-picker {
+    display: block;
+    width: clamp(78px, 25vw, 104px);
+    min-width: 0;
+    max-width: 104px;
+    text-overflow: ellipsis;
+  }
+  .attach-button,
+  .voice-mode-button,
+  .think-mode-button {
+    display: inline-flex;
+    flex: 0 0 34px;
+    width: 34px;
+    min-width: 34px;
+    height: 34px;
+    min-height: 34px;
+    padding: 0;
+    justify-content: center;
+    gap: 0;
+  }
+  .attach-button span,
+  .voice-mode-button span,
+  .think-mode-button span { display: none !important; }
+  .attach-button svg,
+  .voice-mode-button svg,
+  .think-mode-button svg {
+    display: block;
+    width: 17px;
+    height: 17px;
+    flex: 0 0 17px;
+  }
+  .send-button {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+  }
+  .composer textarea {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 16px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+  }
+  .welcome h1 {
+    max-width: 100%;
+    font-size: clamp(29px, 8vw, 40px);
+    line-height: 1.12;
+    letter-spacing: -.04em;
+    overflow-wrap: break-word;
+    text-wrap: balance;
+  }
+  .welcome-copy { max-width: 100%; overflow-wrap: anywhere; }
+  .suggestion-card { min-width: 0; overflow-wrap: anywhere; }
+}
+@media (max-width: 360px) {
+  .topbar .mobile-menu { flex-basis: 34px; width: 34px; min-width: 34px; }
+  .topbar-title .small-mark { flex-basis: 26px; width: 26px; height: 26px; }
+  .topbar-title-text { font-size: 13px; }
+  .topbar-right .quick-theme-button,
+  .topbar-right .account-button {
+    flex-basis: 32px;
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+  }
+  .composer-left-actions { gap: 3px; }
+  .model-picker { width: 76px; }
+  .attach-button,
+  .voice-mode-button,
+  .think-mode-button { flex-basis: 32px; width: 32px; min-width: 32px; }
+}
