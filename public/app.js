@@ -96,20 +96,29 @@
   let phoneOtpPending = false, pendingPhone = "", phoneOtpType = "sms", accountReturnFocus = null;
   const MAX_FILES = 5, MAX_FILE_BYTES = 15 * 1024 * 1024, MAX_TOTAL_BYTES = 20 * 1024 * 1024;
   const MAX_HISTORY = 24;
-  // Keep the app frame matched to the visible viewport, including mobile browser
-  // chrome, soft keyboards, orientation changes, and restored browser tabs.
+  // Track both dimensions and the visual viewport origin. On iOS Safari the
+  // keyboard can pan the visual viewport as well as shrink it; height-only
+  // tracking leaves the fixed app frame and composer at the wrong screen offset.
   let viewportSyncFrame = 0;
   function syncVisibleViewport() {
     const viewport = window.visualViewport;
-    const visibleHeight = viewport && Number.isFinite(viewport.height) && viewport.height > 0
+    const mobile = window.matchMedia("(max-width: 760px)").matches;
+    const visibleHeight = mobile && viewport && Number.isFinite(viewport.height) && viewport.height > 0
       ? viewport.height
       : window.innerHeight;
+    const visibleTop = mobile && viewport && Number.isFinite(viewport.offsetTop)
+      ? viewport.offsetTop
+      : 0;
     if (!Number.isFinite(visibleHeight) || visibleHeight <= 0) return;
 
-    const heightValue = Math.round(visibleHeight) + "px";
     const root = document.documentElement;
+    const heightValue = Math.round(visibleHeight) + "px";
+    const topValue = Math.round(visibleTop) + "px";
     if (root.style.getPropertyValue("--app-height") !== heightValue) {
       root.style.setProperty("--app-height", heightValue);
+    }
+    if (root.style.getPropertyValue("--app-top") !== topValue) {
+      root.style.setProperty("--app-top", topValue);
     }
   }
   function scheduleVisibleViewportSync() {
