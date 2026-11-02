@@ -1,0 +1,162 @@
+/* Mobile sidebar isolation layer. Loaded last to neutralize legacy desktop collapse rules. */
+@media (max-width: 760px) {
+  html, body {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: clip;
+  }
+  body {
+    position: fixed;
+    inset: 0;
+  }
+  body > .app-shell {
+    position: fixed !important;
+    inset: var(--app-top, 0px) 0 auto 0 !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: var(--app-height, 100dvh) !important;
+    min-height: 0 !important;
+    max-height: var(--app-height, 100dvh) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    transform: none !important;
+    isolation: isolate;
+  }
+
+  /* The sidebar is a fixed overlay, never a flex/grid column on mobile. */
+  body > .app-shell > .sidebar,
+  body > .app-shell.sidebar-collapsed > .sidebar,
+  body > .app-shell .sidebar-collapsed .sidebar {
+    position: fixed !important;
+    inset: var(--app-top, 0px) auto auto 0 !important;
+    display: flex !important;
+    flex: 0 0 auto !important;
+    width: min(300px, 86vw) !important;
+    min-width: 0 !important;
+    max-width: 86vw !important;
+    height: var(--app-height, 100dvh) !important;
+    min-height: 0 !important;
+    max-height: var(--app-height, 100dvh) !important;
+    margin: 0 !important;
+    border: 0 !important;
+    border-right: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: none !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    transform: translate3d(calc(-100% - 28px), 0, 0) !important;
+    transition: transform .24s cubic-bezier(.2,.75,.25,1) !important;
+    will-change: transform;
+    backface-visibility: hidden;
+    z-index: 1001 !important;
+  }
+  body > .app-shell > .sidebar.open,
+  body > .app-shell.sidebar-collapsed > .sidebar.open,
+  body > .app-shell .sidebar-collapsed .sidebar.open {
+    transform: translate3d(0, 0, 0) !important;
+    border-right: 1px solid var(--line) !important;
+    box-shadow: 18px 0 48px rgba(0,0,0,.38) !important;
+    pointer-events: auto !important;
+  }
+
+  /* Cancel every legacy margin-left collapse/slide rule at the mobile breakpoint. */
+  body > .app-shell.sidebar-collapsed > .sidebar,
+  body > .app-shell .sidebar-collapsed .sidebar,
+  body > .app-shell > .sidebar {
+    left: 0 !important;
+    right: auto !important;
+  }
+  body > .app-shell > .main-panel {
+    position: relative !important;
+    display: flex !important;
+    flex: none !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    transform: none !important;
+  }
+
+  body .main-panel > .topbar,
+  body .main-panel > .conversation-area,
+  body .main-panel > .composer-wrap {
+    min-width: 0;
+    max-width: 100%;
+  }
+  body .main-panel > .conversation-area {
+    width: 100%;
+    overflow-x: clip;
+  }
+  body .welcome,
+  body .messages,
+  body .welcome-copy,
+  body .suggestion-grid,
+  body .composer-wrap,
+  body .composer {
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
+  body .welcome h1,
+  body .welcome-copy,
+  body .suggestion-card,
+  body .message-content {
+    overflow-wrap: anywhere;
+  }
+  body .suggestion-grid {
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  body .suggestion-card { min-width: 0; }
+  body .composer-wrap {
+    width: 100%;
+    margin-inline: 0;
+    padding-left: max(8px, env(safe-area-inset-left));
+    padding-right: max(8px, env(safe-area-inset-right));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  body .mobile-scrim,
+  body #mobileScrim {
+    display: none;
+    position: fixed !important;
+    inset: var(--app-top, 0px) 0 auto 0 !important;
+    width: 100% !important;
+    height: var(--app-height, 100dvh) !important;
+    margin: 0 !important;
+    border: 0 !important;
+    z-index: 1000 !important;
+  }
+  body .mobile-scrim.show,
+  body #mobileScrim.show {
+    display: block !important;
+    background: rgba(0,0,0,.58);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+  }
+  body .mobile-menu { display: grid !important; }
+  body .mobile-close { display: grid !important; }
+  body .sidebar-resize-handle { display: none !important; }
+}
+@media (max-width: 390px) {
+  body .suggestion-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  @media (max-width: 760px) {
+    body > .app-shell > .sidebar { transition: none !important; }
+  }
+}
