@@ -1,0 +1,121 @@
+/* MahiCloud universal device-frame and overlay normalization.
+   Loaded last so component-specific legacy layers cannot undo these constraints. */
+:root {
+  --mcf-vh: var(--app-height, 100dvh);
+  --mcf-safe-top: env(safe-area-inset-top, 0px);
+  --mcf-safe-right: env(safe-area-inset-right, 0px);
+  --mcf-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --mcf-safe-left: env(safe-area-inset-left, 0px);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { width: 100%; min-width: 0; max-width: 100%; }
+body { min-height: 0; }
+.app-shell { width: 100%; min-width: 0; max-width: 100%; height: var(--mcf-vh); min-height: 0; max-height: var(--mcf-vh); }
+.main-panel, .conversation-area, .messages, .message, .message-body, .message-content,
+.composer-wrap, .composer, .topbar, .topbar-title, .topbar-right { min-width: 0; max-width: 100%; }
+.main-panel { flex: 1 1 0; }
+.conversation-area { min-width: 0; overflow-x: clip; }
+.message-content { overflow-wrap: anywhere; word-break: normal; }
+.message-content :is(pre, table, .table-wrap) { max-width: 100%; overflow-x: auto; }
+.message-content :is(img, video, iframe, canvas, svg) { max-width: 100%; }
+button, a, input, textarea, select { max-width: 100%; }
+button { min-width: 0; white-space: normal; }
+:is(button, a, input, textarea, select, [role="button"]):focus-visible { scroll-margin: 12px; }
+:is(.setting-copy, .profile-copy, .brand-copy, .topbar-title-text, .message-content, .admin-overlay-brand) { overflow-wrap: anywhere; }
+:where(.modal, .modal-content, .account-modal-panel, .api-explorer-panel, .voice-panel,
+.admin-overlay-dialog, .overlay-panel, .dialog-panel) { min-width: 0; max-width: 100%; }
+:where(.modal, .account-modal, .api-explorer, .voice-overlay, .admin-overlay, .mahi-code-expand-overlay) {
+  box-sizing: border-box;
+  max-width: 100vw;
+  max-width: 100dvw;
+  max-height: var(--mcf-vh);
+  padding-top: max(12px, var(--mcf-safe-top));
+  padding-right: max(12px, var(--mcf-safe-right));
+  padding-bottom: max(12px, var(--mcf-safe-bottom));
+  padding-left: max(12px, var(--mcf-safe-left));
+}
+:where(.account-modal-panel, .api-explorer-panel, .voice-panel, .admin-overlay-dialog,
+.modal-content, .overlay-panel, .dialog-panel) {
+  min-height: 0;
+  max-height: calc(var(--mcf-vh) - 24px - var(--mcf-safe-top) - var(--mcf-safe-bottom));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.api-explorer { z-index: 1200 !important; }
+.account-modal { z-index: 1250 !important; }
+.voice-overlay { z-index: 1300 !important; }
+.admin-overlay { z-index: 1350 !important; }
+.mahi-code-expand-overlay { z-index: 1400 !important; }
+.mobile-scrim.show { z-index: 900 !important; }
+@media (min-width: 761px) {
+  html, body { height: var(--mcf-vh); overflow: hidden; }
+  .app-shell { display: grid; grid-template-columns: minmax(220px, var(--sidebar-width, 260px)) minmax(0, 1fr); overflow: hidden; }
+  .sidebar { grid-column: 1; grid-row: 1; width: var(--sidebar-width, 260px); min-width: 220px; min-height: 0; max-height: 100%; }
+  .main-panel { grid-column: 2; grid-row: 1; height: 100%; min-height: 0; overflow: hidden; }
+  .topbar { flex: 0 0 auto; min-width: 0; }
+  .topbar-right { display: flex; flex: 0 1 auto; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 6px; }
+  .conversation-area { min-height: 0; min-width: 0; }
+  .composer-wrap { flex: 0 0 auto; }
+}
+@media (max-width: 760px) {
+  html, body { height: var(--mcf-vh); overflow: hidden; }
+  .app-shell { display: flex; flex-direction: column; overflow: hidden; }
+  .main-panel { display: flex; flex: 1 1 auto; flex-direction: column; width: 100%; height: auto; min-height: 0; overflow: hidden; }
+  .topbar {
+    display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center;
+    min-height: calc(54px + var(--mcf-safe-top)); height: auto;
+    padding: max(7px, var(--mcf-safe-top)) max(9px, var(--mcf-safe-right)) 7px max(9px, var(--mcf-safe-left));
+    gap: 6px;
+  }
+  .topbar-title { flex: 1 1 90px; max-width: none; min-width: 0; gap: 6px; }
+  .topbar-title .small-mark { flex: 0 0 auto; }
+  .topbar-title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topbar-right { display: flex; flex: 1 1 100%; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 5px; min-width: 0; }
+  .topbar-right > * { flex: 0 1 auto; min-width: 0; }
+  .secure-label { display: none !important; }
+  .conversation-area { flex: 1 1 0; min-height: 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding-left: max(10px, var(--mcf-safe-left)); padding-right: max(10px, var(--mcf-safe-right)); }
+  .welcome, .messages { width: 100%; min-width: 0; max-width: 100%; }
+  .composer-wrap { flex: 0 0 auto; width: 100%; min-width: 0; padding-left: max(8px, var(--mcf-safe-left)); padding-right: max(8px, var(--mcf-safe-right)); padding-bottom: max(8px, var(--mcf-safe-bottom)); }
+  .composer { width: 100%; min-width: 0; }
+  .composer textarea { width: 100%; min-width: 0; max-width: 100%; font-size: 16px; }
+  .composer-bottom { display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: 6px; }
+  .composer-left-actions { flex: 1 1 120px; flex-wrap: wrap; min-width: 0; }
+  .composer-actions { flex: 0 0 auto; min-width: 0; }
+  .sidebar { z-index: 910 !important; max-width: min(88vw, 340px); }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-scrim.show { z-index: 900 !important; }
+  :where(.account-modal, .api-explorer, .voice-overlay, .admin-overlay) { align-items: center; justify-content: center; }
+  .account-modal-panel, .api-explorer-panel, .voice-panel, .admin-overlay-dialog {
+    width: 100%; max-width: 100%; max-height: calc(var(--mcf-vh) - 20px - var(--mcf-safe-top) - var(--mcf-safe-bottom));
+    border-radius: 18px; overflow: auto;
+  }
+  .api-explorer { padding: 0; }
+  .api-explorer-panel { height: var(--mcf-vh); max-height: var(--mcf-vh); border-radius: 0; }
+}
+@media (max-width: 420px) {
+  .topbar { gap: 5px; }
+  .topbar-right { justify-content: flex-start; }
+  .header-tool-button span, .temporary-chat-button span { display: none; }
+  .header-tool-button, .temporary-chat-button, .quick-theme-button, .account-button { min-height: 34px; }
+  .composer-left-actions { gap: 4px; }
+  .composer-actions { gap: 4px; }
+  .suggestion-grid { grid-template-columns: minmax(0, 1fr); }
+  .suggestion-card { min-width: 0; }
+}
+@media (max-width: 360px) {
+  .topbar-title { flex-basis: 70px; }
+  .topbar-right { gap: 3px; }
+  .topbar-right > * { padding-inline: 5px; }
+  .composer { padding-inline: 7px; }
+  .composer-left-actions { flex-basis: 100%; }
+}
+@media (max-height: 560px) and (max-width: 760px) {
+  .topbar { min-height: 44px; padding-top: max(4px, var(--mcf-safe-top)); padding-bottom: 4px; }
+  .conversation-area { padding-top: 6px; padding-bottom: 6px; }
+  .welcome { padding-top: 6px; padding-bottom: 8px; }
+  .welcome h1 { font-size: clamp(25px, 6vw, 34px); }
+  .composer textarea { max-height: 18dvh; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
