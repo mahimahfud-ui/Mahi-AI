@@ -340,17 +340,14 @@
   const REPLY_MARKER_PREFIX = "[[MAHI_REPLY_TO:";
   function parseReplyContent(value) {
     const source = String(value || "");
-    const match = source.match(/^\[\[MAHI_REPLY_TO:([^\]]+)\]\]\n\n/);
+    const match = source.match(/^\[\[MAHI_REPLY_TO:(user|assistant)\]\]\n([\s\S]*?)\n\[\[\/MAHI_REPLY_TO\]\]\n\n/);
     if (!match) return { text: source, replyTo: null };
-    try {
-      const replyTo = JSON.parse(decodeURIComponent(match[1]));
-      if (!replyTo || !["user", "assistant"].includes(replyTo.role) || typeof replyTo.content !== "string") return { text: source, replyTo: null };
-      return { text: source.slice(match[0].length), replyTo };
-    } catch (_) { return { text: source, replyTo: null }; }
+    return { text: source.slice(match[0].length), replyTo: { role: match[1], content: match[2] } };
   }
   function buildReplyContent(target, text) {
-    const payload = { role: target.role, content: String(target.content || "").slice(0, 1200) };
-    return REPLY_MARKER_PREFIX + encodeURIComponent(JSON.stringify(payload)) + "]]\n\n" + String(text || "");
+    const role = target.role === "assistant" ? "assistant" : "user";
+    const quote = String(target.content || "").slice(0, 1200);
+    return REPLY_MARKER_PREFIX + role + "]]\n" + quote + "\n[[/MAHI_REPLY_TO]]\n\n" + String(text || "");
   }
   function setReplyTarget(target) {
     pendingReply = target ? { role: target.role, content: String(target.content || "").slice(0, 1200), index: Number.isInteger(target.index) ? target.index : null } : null;
@@ -730,7 +727,9 @@
       addButton("Edit", "Edit this prompt and replace the following conversation", () => {
         if (busy) return;
         pendingEdit = { index, createdAt: item.created_at, content: item.content, previousMessages: currentMessages.slice() };
-        ui.input.value = item.content;
+        const parsedEditContent = parseReplyContent(item.content);
+        setReplyTarget(parsedEditContent.replyTo);
+        ui.input.value = parsedEditContent.text;
         if (ui.draftNotice) {
           const notice = ui.draftNotice.querySelector("span");
           if (notice) notice.textContent = "Editing a previous message. Sending replaces that turn and the conversation after it.";
@@ -749,10 +748,12 @@
       if (userMessage && userMessage.created_at && !isAttachmentTurn(userMessage)) {
         addButton("Regenerate", "Generate a new answer to the previous prompt", () => {
           if (busy) return;
-          void sendMessage(userMessage.content, {
+          const parsedPrompt = parseReplyContent(userMessage.content);
+          void sendMessage(parsedPrompt.text, {
             replacement: { index: userIndex, createdAt: userMessage.created_at, content: userMessage.content },
             previousMessages: currentMessages.slice(),
-            displayText: userMessage.content
+            displayText: parsedPrompt.text,
+            replyTo: parsedPrompt.replyTo
           });
         });
       }
