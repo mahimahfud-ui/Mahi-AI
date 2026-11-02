@@ -3034,10 +3034,15 @@ async function streamChatResponse(
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
   const routingConfig = await getCachedMahiAIAdminConfig();
   const fixedProvider = selectedModel ? PUBLIC_MODEL_PROVIDERS[selectedModel] : "";
-  const available = selectedModel
-    ? (fixedProvider && providerIsConfigured(fixedProvider, task) ? applyProviderPrefs([fixedProvider], routingConfig) : [])
-    : applyProviderPrefs(providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode), routingConfig);
-  if (selectedModel && !available.length) {
+  const orderedProviders = providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode);
+  const configuredProviders = applyProviderPrefs(orderedProviders, routingConfig);
+  const selectedProviderEnabled = !!fixedProvider && routingConfig.providers?.[fixedProvider]?.enabled !== false;
+  // Keep a user-selected alias first, but retain the same task-aware fallback cascade
+  // when that route is missing, cooling down, times out, or returns an error.
+  const available = selectedModel && selectedProviderEnabled && configuredProviders.includes(fixedProvider)
+    ? [fixedProvider, ...configuredProviders.filter((name) => name !== fixedProvider)]
+    : configuredProviders;
+  if (!available.length) {
     return json(503, { error: "That model is currently unavailable. Please choose Auto or try again later." }, responseCors);
   }
   // Internal-only telemetry: report which provider routes the runtime can see without logging any keys.
