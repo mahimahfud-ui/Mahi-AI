@@ -2113,7 +2113,7 @@
       ? (sendOptions.previousMessages || pendingEdit?.previousMessages || currentMessages.slice())
       : null;
     const branchRequest = !!branchSeedMessages;
-    const replyTarget = !editRequest ? (sendOptions.replyTo || pendingReply) : null;
+    const replyTarget = sendOptions.replyTo || pendingReply;
     const typedText = String(text == null ? "" : text);
     if (busy || (!typedText.trim() && !pendingFiles.length)) return;
     if (editRequest && pendingFiles.length) {
