@@ -13,7 +13,7 @@ test("Venice AI is a configured OpenAI-compatible chat provider", () => {
   assert.match(edge, /envFirst\(\["VENICE_MODEL"\]\) \|\| "zai-org-glm-5"/);
 });
 
-test("adult text requests place OpenRouter and Venice at the front of their fallback route", () => {
+test("adult text requests put OpenRouter and Venice first in the preferred route", () => {
   const adultRoute = edge.indexOf('if (isPornRelatedPrompt(prompt) && !hasInlineAttachments)');
   const attachmentRoute = edge.indexOf('} else if (hasInlineAttachments)', adultRoute);
   const codingRoute = edge.indexOf('} else if (task === "coding")', adultRoute);
@@ -28,12 +28,12 @@ test("adult text requests place OpenRouter and Venice at the front of their fall
   assert.ok(edge.includes("return isPornRelatedPrompt(prompt);"));
 });
 
-test("provider routing uses only configured keys and keeps a separate attachment priority", () => {
+test("provider routing uses configured keys and excludes text-only providers from inline attachments", () => {
   assert.ok(edge.includes("const configured = [...new Set([...preferred, ...fallback])]"));
-  assert.ok(edge.includes(".filter((name) => providerIsConfigured(name, task));"));
+  assert.ok(edge.includes("providerIsConfigured(name, task) &&"));
+  assert.ok(edge.includes('!(hasInlineAttachments && (name === "venice" || name === "shannon"))'));
   assert.ok(edge.includes('preferred = ["gemini", "openrouter", "shannon", "deepseek", "groq", "nvidia", "cloudflare", "mistral", "venice", "anthropic", "openai"];'));
   assert.ok(edge.includes("if (!hasInlineImages) preferred ="));
-  assert.ok(edge.includes('if (["openai", "openrouter", "deepseek", "venice", "mistral"].includes(name)'));
   assert.ok(edge.includes("function isSensitiveSocialPrompt(prompt: string): boolean"));
 });
 
@@ -43,10 +43,12 @@ test("independent answer review is opt-in and adult-content requests bypass that
   assert.ok(edge.includes("!isPornRelatedPrompt(originalPrompt);"));
 });
 
-test("the default OpenRouter route is free and origin/rate protections remain enforced", () => {
+test("the default OpenRouter route is free and request reservation is bounded and idempotent", () => {
   assert.ok(edge.includes('return "openrouter/free";'));
   assert.ok(edge.includes('const general = envFirst(["OPENROUTER_MODEL"]);'));
   assert.ok(edge.includes("function isAllowedOrigin(origin: string): boolean"));
-  assert.ok(edge.includes("MAHI_AI_RATE_LIMIT_PER_MINUTE"));
-  assert.ok(edge.includes("MAHI_AI_RATE_LIMIT_PER_DAY"));
+  assert.ok(edge.includes("const MAX_BODY_BYTES = 8_000_000;"));
+  assert.ok(edge.includes("const UNLIMITED_PER_USER_REQUEST_LIMIT = 2_147_483_647;"));
+  assert.ok(edge.includes("async function reserveUsageRequest(userId: string, requestId: string): Promise<UsageReservation>"));
+  assert.ok(edge.includes('rest("rpc/mahi_ai_reserve_request"'));
 });
