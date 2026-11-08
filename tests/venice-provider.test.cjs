@@ -43,7 +43,7 @@ test("independent answer review is opt-in and adult-content requests bypass that
   assert.ok(edge.includes("!isPornRelatedPrompt(originalPrompt);"));
 });
 
-test("the default OpenRouter route is free and request reservation is bounded and idempotent", () => {
+test("the default OpenRouter route is free and usage reservation/body protections remain enforced", () => {
   assert.ok(edge.includes('return "openrouter/free";'));
   assert.ok(edge.includes('const general = envFirst(["OPENROUTER_MODEL"]);'));
   assert.ok(edge.includes("function isAllowedOrigin(origin: string): boolean"));
