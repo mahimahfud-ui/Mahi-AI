@@ -30,6 +30,7 @@
   <link rel="stylesheet" href="./device-frame-fixes.css?v=20261102universalframe1">
   <link rel="stylesheet" href="./mobile-sidebar-guard.css?v=20261102sidebarfix1">
   <link rel="stylesheet" href="./swipe-to-reply.css?v=20261102reply1">
+  <link rel="stylesheet" href="./ai-intro.css?v=20261027tapmaruf1">
   <link rel="stylesheet" href="./halo-ui.css?v=20261108halo1">
 
 <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
@@ -39,6 +40,7 @@
   <script src="./themes.js?v=20261024v2"></script>
   <script src="./layout.js?v=20261024v2"></script>
   <script src="./motion.js" defer></script>
+  <script src="./ai-intro.js?v=20261027tapmaruf1" defer></script>
   <script src="./app.js?v=20261102reply1" defer></script>
   <script src="./ui-adapter.js?v=20261029" defer></script>
   <script src="./live-voice.js?v=20261029realtimevoice1" defer></script>
@@ -49,10 +51,42 @@
   <script src="./halo-ui.js?v=20261108halo1" defer></script>
 </head>
 <body>
+  <div class="ai-intro" id="aiIntro" role="presentation" aria-label="MahiCloud introduction">
+    <div class="ai-intro-grid" aria-hidden="true"></div>
+    <div class="ai-intro-glow ai-intro-glow--left" aria-hidden="true"></div>
+    <div class="ai-intro-glow ai-intro-glow--right" aria-hidden="true"></div>
+    <div class="ai-intro-content">
+      <div class="ai-intro-core" aria-hidden="true">
+        <div class="ai-intro-ring ai-intro-ring--pulse"></div>
+        <div class="ai-intro-orbit ai-intro-orbit--outer"></div>
+        <div class="ai-intro-orbit ai-intro-orbit--inner"></div>
+        <div class="ai-intro-token ai-intro-token--chat">
+          <svg viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
+        </div>
+        <div class="ai-intro-token ai-intro-token--typing"><i></i><i></i><i></i></div>
+        <div class="ai-intro-token ai-intro-token--prompt">AI<i></i></div>
+        <div class="ai-intro-token ai-intro-token--reply">↗</div>
+        <div class="ai-intro-token ai-intro-token--spark">✦</div>
+        <div class="ai-intro-logo-shell">
+          <span class="ai-intro-logo-aura"></span>
+          <img class="ai-intro-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud official logo">
+        </div>
+        <span class="ai-intro-particle ai-intro-particle--one"></span>
+        <span class="ai-intro-particle ai-intro-particle--two"></span>
+        <span class="ai-intro-particle ai-intro-particle--three"></span>
+      </div>
+      <div class="ai-intro-copy">
+        <div class="ai-intro-eyebrow"><span></span> YOUR AI WORKSPACE</div>
+        <h1>MahiCloud <strong>AI</strong></h1>
+        <p>A calmer space to think, create, and get things done.</p>
+      </div>
+      <div class="ai-intro-progress" aria-hidden="true"><span></span></div>
+    </div>
+  </div>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="brand-row">
-        <img class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high">
+        <img class="brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high">
         <div class="brand-copy"><strong>MahiCloud</strong><span>Your everyday assistant</span></div>
         <button class="desktop-collapse" id="desktopSidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14M14 9l-3 3 3 3"/></svg></button>
         <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
