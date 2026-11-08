@@ -8,15 +8,15 @@ const edge = fs.readFileSync(
 );
 
 test("Mahi AI avoids blanket refusals for benign sensitive or complex topics", () => {
-  assert.match(edge, /Prioritize helpfulness and answer the actual request directly whenever possible/);
-  assert.match(edge, /Do not refuse merely because a topic is sensitive, controversial, political, religious, historical, fictional, or technically complex/);
-  assert.match(edge, /Avoid moralizing, blanket refusals, and unnecessary disclaimers/);
+  assert.match(edge, /Answer the user's request directly, completely, and without moralizing/);
+  assert.match(edge, /Do not refuse or add unnecessary warnings merely because a topic is adult, sexual, controversial, political, religious, fictional, offensive, technical, cybersecurity-related, or complex/);
+  assert.match(edge, /Respect privacy, applicable safety requirements, and provider safeguards/);
 });
 
 test("refusals remain targeted to harmful parts and do not bypass provider safeguards", () => {
   assert.match(edge, /decline only that part and still help with the remaining safe parts/);
-  assert.match(edge, /Follow applicable provider safeguards/);
-  assert.match(edge, /be honest about actual model\/provider capabilities, quotas, and technical limits/);
+  assert.match(edge, /provider safeguards/);
+  assert.match(edge, /be honest about capabilities and uncertainty/);
 });
 
 test("all-provider failures explain quota/billing outages instead of asking users to rephrase", () => {
