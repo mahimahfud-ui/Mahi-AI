@@ -844,3 +844,108 @@ button { -webkit-tap-highlight-color: transparent; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+
+
+/* Compatibility bridge for MahiCloud's permanent-black and device-frame layers.
+   These app-scoped tokens intentionally win over legacy root-level !important
+   palette variables without changing the original logo, theme storage or app.js. */
+body > .app-shell {
+  --mcf-sidebar-width: 280px;
+  --sidebar-width: 280px;
+
+  --bg: #0d0e11;
+  --panel: #14151a;
+  --panel-2: #1b1c23;
+  --panel-3: #24252d;
+  --line: rgba(255,255,255,.075);
+  --line-strong: rgba(255,255,255,.14);
+  --text: #ececf1;
+  --muted: #8d8fa0;
+  --accent: #8b7cff;
+  --accent2: #a99aff;
+  --accent-soft: rgba(139,124,255,.15);
+  --accent-border: rgba(139,124,255,.34);
+
+  --ui-btn-primary: #8b7cff;
+  --ui-btn-surface: #1b1c23;
+  --ui-btn-border: rgba(255,255,255,.12);
+  --ui-btn-text: #c7c7d4;
+  --ui-text-primary: #ececf1;
+  --ui-text-secondary: #d8d8e2;
+  --ui-text-muted: #8d8fa0;
+  --ui-text-accent: #b6aaff;
+  --ui-text-success: #63c6a0;
+  --ui-text-danger: #ed777e;
+  --ui-type-sm: 11.5px;
+  --ui-type-body: 14px;
+  --ui-type-control: 14px;
+  --ui-type-heading: 15px;
+  --ui-type-title: 24px;
+  --ui-type-display: clamp(30px,4.2vw,43px);
+  --ui-radius-small: 9px;
+  --ui-radius-control: 11px;
+  --ui-radius-card: 14px;
+  --ui-radius-panel: 20px;
+  --ui-radius-pill: 9999px;
+
+  color: var(--text);
+  font-family: var(--font);
+  background: var(--bg) !important;
+}
+body .sidebar { background: var(--panel) !important; }
+body .main-panel,
+body .conversation-area { background: var(--bg) !important; }
+body .topbar {
+  color: var(--text);
+  background: rgba(13,14,17,.94);
+  border-bottom-color: var(--line);
+}
+body .topbar .topbar-title-text {
+  color: var(--text) !important;
+  font-family: var(--display) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: -.2px !important;
+}
+body .halo-model-picker {
+  flex: 0 0 auto;
+  border-color: var(--line);
+  background: var(--panel-2);
+}
+body .halo-model-picker .model-picker {
+  color: #d4d1e4;
+  background: transparent;
+}
+body .composer-wrap { background: linear-gradient(180deg,rgba(13,14,17,0),var(--bg) 20%); }
+
+@media (min-width: 761px) {
+  body > .app-shell { grid-template-columns: minmax(0,280px) minmax(0,1fr); }
+  body > .app-shell.sidebar-collapsed { grid-template-columns: 0 minmax(0,1fr); }
+  .desktop-expand-toggle { display: none; }
+  body > .app-shell.sidebar-collapsed .desktop-expand-toggle {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    margin-right: 1px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    color: var(--muted);
+    background: var(--panel-2);
+  }
+  body > .app-shell.sidebar-collapsed .desktop-expand-toggle:hover {
+    color: var(--text);
+    border-color: var(--accent-border);
+    background: var(--accent-soft);
+  }
+}
+@media (max-width: 760px) {
+  .desktop-collapse,
+  .desktop-expand-toggle { display: none !important; }
+  body .topbar .topbar-title {
+    flex: 0 1 auto;
+    max-width: 35%;
+  }
+  body .topbar .halo-model-picker { margin-left: auto; }
+}
