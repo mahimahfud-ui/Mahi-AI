@@ -26,6 +26,8 @@ on:
       - "public/motion.js"
       - "public/motion-b.css"
       - "public/motion-b.js"
+      - "public/halo-ui.js"
+      - "public/halo-ui.css"
       - "tests/**"
       - ".github/workflows/edge-function-check.yml"
   push:
@@ -89,6 +91,7 @@ jobs:
           node --check public/config.js
           node --check public/themes.js
           node --check public/code-blocks.js
+          node --check public/halo-ui.js
       - name: Run backend regression tests
         run: node --test tests/*.test.cjs
 
