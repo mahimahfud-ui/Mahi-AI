@@ -39,7 +39,7 @@ test("the top logos remain visible while the duplicate welcome-heading logo is r
   assert.ok(html.includes('class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
   assert.ok(html.includes('class="small-mark mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
   assert.ok(html.includes('class="topbar-title-text" id="chatTitle">MahiCloud</span>'));
-  assert.ok(html.includes('class="profile-avatar-logo mahi-brand-logo" id="profileAvatar"'));
+  assert.ok(html.includes('class="mahi-brand-logo" id="profileAvatar"'));
   assert.doesNotMatch(html, /welcome-brand-mark|welcome-logo/);
   assert.doesNotMatch(html, /welcomeBrandGradient/);
 });
