@@ -3,6 +3,7 @@
   "use strict";
   const shell = document.querySelector(".app-shell");
   const collapseButton = document.getElementById("desktopSidebarToggle");
+  const expandButton = document.getElementById("desktopSidebarExpand");
   const topbarToggle = document.getElementById("openSidebar");
   if (!shell || !collapseButton) return;
 
@@ -22,12 +23,20 @@
     shell.classList.toggle("sidebar-collapsed", read());
     if (topbarToggle) topbarToggle.setAttribute("aria-expanded", String(!shell.classList.contains("sidebar-collapsed")));
   };
+  const setCollapsed = (collapsed) => {
+    shell.classList.toggle("sidebar-collapsed", !!collapsed);
+    write(!!collapsed);
+    if (topbarToggle) topbarToggle.setAttribute("aria-expanded", String(!collapsed));
+    if (collapseButton) collapseButton.setAttribute("aria-label", collapsed ? "Sidebar collapsed" : "Collapse sidebar");
+  };
   collapseButton.addEventListener("click", () => {
     if (mobile.matches) return;
-    const collapsed = shell.classList.toggle("sidebar-collapsed");
-    write(collapsed);
-    if (topbarToggle) topbarToggle.setAttribute("aria-expanded", String(!collapsed));
-    collapseButton.setAttribute("aria-label", collapsed ? "Sidebar collapsed" : "Collapse sidebar");
+    setCollapsed(true);
+  });
+  if (expandButton) expandButton.addEventListener("click", () => {
+    if (mobile.matches) return;
+    setCollapsed(false);
+    if (collapseButton) collapseButton.focus();
   });
   if (topbarToggle) topbarToggle.addEventListener("click", () => {
     if (mobile.matches) return;
