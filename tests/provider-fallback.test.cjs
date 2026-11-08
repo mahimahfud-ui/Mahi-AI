@@ -20,8 +20,9 @@ test("Gemini quota failures try alternate stable free-tier models for normal and
 test("Gemini model retries do not mask invalid credentials and daily limits are cooled down", () => {
   assert.ok(edge.includes("invalid api key|unauthorized|permission denied|access denied"));
   assert.ok(edge.includes("free-models-per-day|tokens? per day|daily quota|per-day quota|daily limit"));
-  assert.ok(edge.includes("return 6 * 60 * 60_000"));
-  assert.ok(edge.includes("return 90_000"));
+  assert.ok(edge.includes("return 5 * 60_000"));
+  assert.ok(edge.includes("return 30 * 60_000"));
+  assert.ok(edge.includes("return 30_000"));
 });
 
 test("configured provider keys activate fallback routes without extra enable flags", () => {
@@ -32,11 +33,15 @@ test("configured provider keys activate fallback routes without extra enable fla
     'if (name === "openai") return configuredSecret(["OPENAI_API_KEY"]);',
     'if (name === "anthropic") return configuredSecret(["ANTHROPIC_API_KEY"]);'
   ]) assert.ok(edge.includes(providerLine), "missing configured fallback route: " + providerLine);
-  assert.ok(edge.includes('const fallback = ["gemini", "groq", "openrouter", "cloudflare", "shannon"'));
+
+  assert.ok(edge.includes("const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments"));
+  assert.ok(edge.includes('["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek"'));
+  assert.ok(edge.includes("const configured = [...new Set([...preferred, ...fallback])]"));
+  assert.ok(edge.includes("providerIsConfigured(name, task)"));
 });
 
-test("ordinary chat failover is bounded for speed while research and attachments get more time", () => {
-  assert.ok(edge.includes('const totalProviderBudgetMs = (task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 105000 : 60000;'));
+test("ordinary chat failover is bounded while research and attachments receive longer attempts", () => {
+  assert.ok(edge.includes('const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution" || hasInlineAttachments;'));
   assert.ok(edge.includes("const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 11000 : 8500;"));
   assert.ok(edge.includes("const providerBudget = Math.max(5000, Math.min(maxAttemptMs, remaining - 6000));"));
 });

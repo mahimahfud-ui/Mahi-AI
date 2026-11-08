@@ -42,8 +42,8 @@ test("negative claims about the owner receive a firm but factual counter without
   assert.match(edge, /bad\|fake\|fraud/);
   assert.match(edge, /kharap\|vuya\|bhua/);
   assert.match(edge, /directly challenge the claim/);
-  assert.match(edge, /Distinguish personal opinion from verifiable fact/);
-  assert.match(edge, /Never retaliate with insults, threats, harassment, or private information/);
+  assert.match(edge, /distinguish criticism of a project from an attack on the person/);
+  assert.match(edge, /Never invent achievements or evidence, use slurs, threaten, harass, reveal private information, or encourage pile-ons/);
   assert.match(edge, /const ownerProfileContext = getMahiOwnerProfileContext\(displayPrompt\)/);
 });
 

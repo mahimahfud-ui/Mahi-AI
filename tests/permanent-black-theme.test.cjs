@@ -39,7 +39,7 @@ test("the top logos remain visible while the duplicate welcome-heading logo is r
   assert.ok(html.includes('class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
   assert.ok(html.includes('class="small-mark mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/' + logo));
   assert.ok(html.includes('class="topbar-title-text" id="chatTitle">MahiCloud</span>'));
-  assert.ok(html.includes('class="profile-avatar-logo mahi-brand-logo" id="profileAvatar"'));
+  assert.ok(html.includes('class="avatar profile-avatar-logo mahi-brand-logo" id="profileAvatar"'));
   assert.doesNotMatch(html, /welcome-brand-mark|welcome-logo/);
   assert.doesNotMatch(html, /welcomeBrandGradient/);
 });
@@ -63,7 +63,7 @@ test("the app has distinct frames for phone, tablet, laptop and desktop widths",
 
 test("production backend hooks and integrations remain intact", () => {
   for (const file of [
-    "./app.js?v=20261029realtimevoice1",
+    "./app.js?v=20261102reply1",
     "./live-voice.js?v=20261029realtimevoice1",
     "./admin-control.js?v=20261025admin1",
     "./code-blocks.js?v=20261025",

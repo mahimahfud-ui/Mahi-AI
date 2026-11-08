@@ -5,7 +5,7 @@ const vm = require("node:vm");
 
 const appJs = fs.readFileSync(require.resolve("../public/app.js"), "utf8");
 const appStart = appJs.indexOf("function plainError(error) {");
-const appEnd = appJs.indexOf("\n  function setBusy(", appStart);
+const appEnd = appJs.indexOf("\n  function setThinkModeEnabled(", appStart);
 assert.ok(appStart >= 0 && appEnd > appStart, "plainError must exist");
 const plainErrorSource = appJs.slice(appStart, appEnd).trim();
 

@@ -16,11 +16,10 @@ test("Shannon is enabled by its configured key and uses the official OpenAI-comp
   assert.match(edge, /provider: name/);
 });
 
-test("Shannon remains a task-aware fallback and is skipped for inline attachments", () => {
-  assert.match(edge, /preferred = \["groq", "gemini", "openrouter", "openai", "venice", "shannon"/);
-  assert.match(edge, /const fallback = \["gemini", "groq", "openrouter", "cloudflare", "shannon"/);
-  assert.match(edge, /name === "shannon" && !shouldPreferVenice\(prompt\)/);
-  assert.match(edge, /hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)/);
+test("text-only providers are excluded from inline media fallback routes", () => {
+  assert.match(edge, /preferred = \["gemini", "openrouter", "shannon", "deepseek", "groq"/);
+  assert.match(edge, /\.filter\(\(name\) => providerIsConfigured\(name, task\) &&\s*!\(hasInlineAttachments && \(name === "venice" \|\| name === "shannon"\)\)\)/);
+  assert.match(edge, /const fallback = isPornRelatedPrompt\(prompt\) && !hasInlineAttachments/);
 });
 
 test("Shannon documentation covers opt-in, pricing, and text-only support", () => {

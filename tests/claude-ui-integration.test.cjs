@@ -15,7 +15,7 @@ const admin = read("public/admin-control.js");
 const codeBlocks = read("public/code-blocks.js");
 
 test("the production HTML uses the supplied welcome design without demo-reply copy", () => {
-  assert.match(html, /Quiet space for clear thinking\./);
+  assert.match(html, /Let’s make something<br><span>clear and useful\.<\/span>/);
   assert.match(html, /Write a JavaScript debounce function/);
   assert.match(html, /Draft a project update email/);
   assert.match(html, /Explain how tides work/);

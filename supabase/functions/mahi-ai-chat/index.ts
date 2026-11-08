@@ -883,10 +883,11 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
   const fallback = isPornRelatedPrompt(prompt) && !hasInlineAttachments
     ? ["openrouter", "venice", "groq", "mistral", "deepseek", "gemini", "shannon", "nvidia", "cloudflare", "anthropic", "openai"]
     : ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
-  // Provider routing: no provider is excluded. Every configured provider is eligible
-  // for every task, attachments and porn prompts included.
+  // Only configured providers are eligible. Inline media must not be sent to
+  // text-only providers that cannot inspect the attachment bytes.
   const configured = [...new Set([...preferred, ...fallback])]
-    .filter((name) => providerIsConfigured(name, task));
+    .filter((name) => providerIsConfigured(name, task) &&
+      !(hasInlineAttachments && (name === "venice" || name === "shannon")));
   const healthy = configured.filter((name) => !providerIsCoolingDown(name));
   const candidates = includeCoolingDown ? configured : (healthy.length ? healthy : configured);
   const preferredRank = new Map<string, number>(preferred.map((name, index) => [name, index] as const));
