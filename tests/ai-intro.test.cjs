@@ -16,7 +16,7 @@ test("MahiCloud AI intro loads before the chat shell and uses the official AI lo
   assert.match(html, /src="\.\/ai-intro\.js\?v=20261027tapmaruf1" defer/);
   const officialLogo = "https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png";
   assert.ok(html.includes(`<img class="ai-intro-logo" src="${officialLogo}" alt="MahiCloud official logo">`));
-  assert.ok(html.includes(`<img class="brand-logo" src="${officialLogo}"`));
+  assert.ok(html.includes(`<img class="brand-logo mahi-brand-logo" src="${officialLogo}"`));
   assert.match(css, /\.ai-intro-logo-shell\s*\{[^}]*position:\s*absolute;[^}]*left:\s*50%;[^}]*top:\s*50%;[^}]*transform:\s*translate\(-50%,\s*-50%\)/s);
   assert.match(css, /@keyframes ai-intro-logo-breathe\s*\{[^}]*translate\(-50%,\s*-50%\) scale\(1\)/s);
   assert.match(css, /\.ai-intro-logo-shell\s*\{[^}]*border-radius:\s*50%/s);
