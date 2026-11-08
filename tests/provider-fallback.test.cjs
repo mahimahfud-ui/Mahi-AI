@@ -20,8 +20,8 @@ test("Gemini quota failures try alternate stable free-tier models for normal and
 test("Gemini model retries do not mask invalid credentials and daily limits are cooled down", () => {
   assert.ok(edge.includes("invalid api key|unauthorized|permission denied|access denied"));
   assert.ok(edge.includes("free-models-per-day|tokens? per day|daily quota|per-day quota|daily limit"));
-  assert.ok(edge.includes("return 6 * 60 * 60_000"));
-  assert.ok(edge.includes("return 90_000"));
+  assert.ok(edge.includes("return 5 * 60_000"));
+  assert.ok(edge.includes("return 30 * 60_000"));\n  assert.ok(edge.includes("return 30_000"));
 });
 
 test("configured provider keys activate fallback routes without extra enable flags", () => {
