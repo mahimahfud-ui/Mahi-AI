@@ -63,7 +63,7 @@ test("the app has distinct frames for phone, tablet, laptop and desktop widths",
 
 test("production backend hooks and integrations remain intact", () => {
   for (const file of [
-    "./app.js?v=20261029realtimevoice1",
+    "./app.js?v=20261102reply1",
     "./live-voice.js?v=20261029realtimevoice1",
     "./admin-control.js?v=20261025admin1",
     "./code-blocks.js?v=20261025",
