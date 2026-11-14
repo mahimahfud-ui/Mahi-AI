@@ -16,7 +16,7 @@
       $("chatSearch")?.focus({ preventScroll: true });
       $("chatList")?.scrollTo({ top: 0, behavior: "smooth" });
     }
-    if (action === "api") $("openApiExplorer")?.click();
+    // This navigation item is itself the API Explorer trigger bound by app.js.
     if (action === "settings") {
       const toggle = $("toggleSettings");
       const panel = $("settingsPanel");

@@ -17,7 +17,7 @@ test("NEXORA workspace is the active MahiCloud interface", () => {
 });
 
 test("real MahiCloud chat and account modules remain wired", () => {
-  for (const script of ["./app.js", "./live-voice.js", "./admin-control.js", "./code-blocks.js", "./themes.js"]) {
+  for (const script of ["./app.js", "./live-voice.js", "./admin-control.js", "./code-blocks.js", "./black-theme.js"]) {
     assert.ok(html.includes(script), "missing existing script: " + script);
   }
   for (const id of ["newChat", "chatList", "chatForm", "sendButton", "promptInput", "modelPicker", "thinkModeButton", "accountModal", "voiceOverlay", "apiExplorer", "openAdminControl", "adminControlOverlay"]) {
