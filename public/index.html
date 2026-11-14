@@ -1,115 +1,90 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
 <head>
-  <link rel="preconnect" href="https://husydmiujigyonlxbuuj.supabase.co" crossorigin>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#090b10">
-  <meta name="description" content="MahiCloud — one helpful assistant for your everyday tasks.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="MahiCloud — your private multi-model AI workspace.">
   <meta name="mahicloud-brand-logo" content="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
   <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
   <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
-  <title>MahiCloud</title>
+  <title>MahiCloud — AI Workspace</title>
+  <link rel="preconnect" href="https://husydmiujigyonlxbuuj.supabase.co" crossorigin>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261029modelpicker1">
-  <link rel="stylesheet" href="./theme.css?v=20261024v5">
-  <link rel="stylesheet" href="./motion.css">
-  <link rel="stylesheet" href="./craft.css">
-  <link rel="stylesheet" href="./motion-b.css">
-  <link rel="stylesheet" href="./ui-overrides.css?v=20261029deviceframes2">
-  <link rel="stylesheet" href="./code-blocks.css?v=20261025">
-  <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
-  <link rel="stylesheet" href="./mahi.css?v=20261031fontsystem1">
-  <link rel="stylesheet" href="./black-theme.css?v=20261031uiconsistency1">
-  <link rel="stylesheet" href="./header-layout.css?v=20261031profileheader1">
-  <link rel="stylesheet" href="./device-frames.css?v=20261102ioskeyboard1">
-  <link rel="stylesheet" href="./device-frame-fixes.css?v=20261102universalframe1">
-  <link rel="stylesheet" href="./mobile-sidebar-guard.css?v=20261102sidebarfix1">
-  <link rel="stylesheet" href="./swipe-to-reply.css?v=20261102reply1">
-  <link rel="stylesheet" href="./ai-intro.css?v=20261027tapmaruf1">
-  <link rel="stylesheet" href="./halo-ui.css?v=20261108halo1">
-
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,650;14..32,700&display=swap" rel="stylesheet">
+  <!-- Feature/component styles: account, voice, API explorer, owner console and code previews. -->
+  <link rel="stylesheet" href="./styles.css?v=20261114nexora1">
+  <link rel="stylesheet" href="./theme.css?v=20261114nexora1">
+  <link rel="stylesheet" href="./code-blocks.css?v=20261114nexora1">
+  <link rel="stylesheet" href="./admin-control.css?v=20261114nexora1">
+  <link rel="stylesheet" href="./mahi.css?v=20261114nexora1">
+  <link rel="stylesheet" href="./swipe-to-reply.css?v=20261114nexora1">
+  <link rel="stylesheet" href="./nexora.css?v=20261114nexora1">
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
   <script src="./config.js"></script>
-  <script src="./themes.js?v=20261024v2"></script>
-  <script src="./layout.js?v=20261024v2"></script>
-  <script src="./motion.js" defer></script>
-  <script src="./ai-intro.js?v=20261027tapmaruf1" defer></script>
-  <script src="./app.js?v=20261102reply1" defer></script>
-  <script src="./ui-adapter.js?v=20261029" defer></script>
-  <script src="./live-voice.js?v=20261029realtimevoice1" defer></script>
-  <script src="./admin-control.js?v=20261025admin1" defer></script>
-  <script src="./code-blocks.js?v=20261025" defer></script>
-  <script src="./motion-b.js" defer></script>
-  <script src="./black-theme.js?v=black-20261029" defer></script>
-  <script src="./halo-ui.js?v=20261108halo1" defer></script>
+  <script src="./themes.js?v=20261114nexora1"></script>
+  <script defer src="./app.js?v=20261114nexora1"></script>
+  <script defer src="./ui-adapter.js?v=20261114nexora1"></script>
+  <script defer src="./live-voice.js?v=20261114nexora1"></script>
+  <script defer src="./admin-control.js?v=20261114nexora1"></script>
+  <script defer src="./code-blocks.js?v=20261114nexora1"></script>
+  <script defer src="./nexora-ui.js?v=20261114nexora1"></script>
 </head>
 <body>
-  <div class="ai-intro" id="aiIntro" role="presentation" aria-label="MahiCloud introduction">
-    <div class="ai-intro-grid" aria-hidden="true"></div>
-    <div class="ai-intro-glow ai-intro-glow--left" aria-hidden="true"></div>
-    <div class="ai-intro-glow ai-intro-glow--right" aria-hidden="true"></div>
-    <div class="ai-intro-content">
-      <div class="ai-intro-core" aria-hidden="true">
-        <div class="ai-intro-ring ai-intro-ring--pulse"></div>
-        <div class="ai-intro-orbit ai-intro-orbit--outer"></div>
-        <div class="ai-intro-orbit ai-intro-orbit--inner"></div>
-        <div class="ai-intro-token ai-intro-token--chat">
-          <svg viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
+  <div class="app-shell nexora-shell" id="appShell">
+    <aside class="sidebar" id="sidebar" aria-label="Workspace sidebar">
+      <div class="nx-sidebar-top">
+        <div class="brand-row">
+          <div class="nx-brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 32 32"><defs><linearGradient id="nxLogoGradient" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b7a5ff"/><stop offset="1" stop-color="#8b9cff"/></linearGradient></defs><path d="M8 24V8l16 16V8" fill="none" stroke="url(#nxLogoGradient)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="brand-copy"><strong>MAHICLOUD</strong><span>AI Workspace</span></div>
+          <span class="nx-live-pill">LIVE</span>
+          <button class="desktop-collapse" id="desktopSidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18"/></svg>
+          </button>
+          <button class="icon-button mobile-close" id="closeSidebar" type="button" aria-label="Close menu" title="Close menu">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
         </div>
-        <div class="ai-intro-token ai-intro-token--typing"><i></i><i></i><i></i></div>
-        <div class="ai-intro-token ai-intro-token--prompt">AI<i></i></div>
-        <div class="ai-intro-token ai-intro-token--reply">↗</div>
-        <div class="ai-intro-token ai-intro-token--spark">✦</div>
-        <div class="ai-intro-logo-shell">
-          <span class="ai-intro-logo-aura"></span>
-          <img class="ai-intro-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud official logo">
+        <button class="new-chat" id="newChat" type="button">
+          <span class="nx-plus-box" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+          <span>New chat</span><kbd>Ctrl K</kbd>
+        </button>
+        <label class="chat-search-wrap nx-search-wrap">
+          <span class="sr-only">Search conversations</span>
+          <svg class="nx-search-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+          <input id="chatSearch" type="search" placeholder="Search chats…" autocomplete="off">
+          <kbd>⌘ K</kbd>
+        </label>
+      </div>
+
+      <nav class="nx-nav" aria-label="Primary navigation">
+        <button class="nx-nav-item active" type="button" data-nx-nav="discover"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5z"/></svg><span>Discover</span></button>
+        <button class="nx-nav-item" type="button" data-nx-nav="recent"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Recent chats</span><span class="nx-nav-hint" id="nxRecentCount"></span></button>
+        <button class="nx-nav-item" type="button" data-nx-nav="api"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.4 2.5 3.6 5.5 3.6 9S14.4 18.5 12 21c-2.4-2.5-3.6-5.5-3.6-9S9.6 5.5 12 3Z"/></svg><span>Public API Library</span><svg class="nx-nav-external" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></button>
+        <button class="nx-nav-item" type="button" data-nx-nav="settings"><svg viewBox="0 0 24 24"><path d="M4 7h5m6 0h5M4 17h3m6 0h7M4 12h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg><span>Preferences</span></button>
+      </nav>
+
+      <div class="nx-history-heading"><span>YOUR CONVERSATIONS</span><button class="text-button" id="refreshChats" type="button" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
+      <nav id="chatList" class="chat-list nx-chat-list" aria-label="Recent conversations">
+        <div class="chat-skeleton" aria-hidden="true">
+          <div class="skel-row" style="--i:0"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:74%"></span></div>
+          <div class="skel-row" style="--i:1"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:58%"></span></div>
+          <div class="skel-row" style="--i:2"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:82%"></span></div>
+          <div class="skel-row" style="--i:3"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:49%"></span></div>
         </div>
-        <span class="ai-intro-particle ai-intro-particle--one"></span>
-        <span class="ai-intro-particle ai-intro-particle--two"></span>
-        <span class="ai-intro-particle ai-intro-particle--three"></span>
-      </div>
-      <div class="ai-intro-copy">
-        <div class="ai-intro-eyebrow"><span></span> YOUR AI WORKSPACE</div>
-        <h1>MahiCloud <strong>AI</strong></h1>
-        <p>A calmer space to think, create, and get things done.</p>
-      </div>
-      <div class="ai-intro-progress" aria-hidden="true"><span></span></div>
-    </div>
-  </div>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand-row">
-        <img class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high">
-        <div class="brand-copy"><strong>MahiCloud</strong><span>Your everyday assistant</span></div>
-        <button class="desktop-collapse" id="desktopSidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14M14 9l-3 3 3 3"/></svg></button>
-        <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      </div>
-      <button class="new-chat" id="newChat"><span class="plus" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>New chat</span><kbd>Ctrl K</kbd></button>
-      <button class="api-library-button" id="openApiExplorer" type="button" aria-haspopup="dialog" aria-controls="apiExplorer">
-        <span class="api-library-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></svg></span>
-        <span>Public API Library</span>
-        <span class="api-library-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
-      </button>
-      <div class="history-heading"><span>Recents</span><button class="text-button" id="refreshChats" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
-      <label class="chat-search-wrap"><span class="sr-only">Search conversations</span><input id="chatSearch" type="search" placeholder="Search conversations…" autocomplete="off"></label>
-      <nav id="chatList" class="chat-list" aria-label="Recent conversations">
-      <div class="chat-skeleton" aria-hidden="true">
-        <div class="skel-row" style="--i:0"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:74%"></span></div>
-        <div class="skel-row" style="--i:1"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:58%"></span></div>
-        <div class="skel-row" style="--i:2"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:82%"></span></div>
-        <div class="skel-row" style="--i:3"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:49%"></span></div>
-        <div class="skel-row" style="--i:4"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:66%"></span></div>
-      </div>
-    </nav>
-      
-      <section class="sidebar-settings" aria-label="Settings and preferences">
+      </nav>
+
+      <div class="nx-sidebar-bottom">
+        <div class="nx-privacy-note"><span class="nx-privacy-dot"></span><div><strong>Private workspace</strong><small>Secure session · server-backed chat</small></div></div>
+        <section class="sidebar-settings" aria-label="Settings and preferences">
         <button class="settings-trigger" id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">
           <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m6 0h5M4 17h3m6 0h7M4 12h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
           <span>Settings &amp; preferences</span>
@@ -185,68 +160,105 @@
            </section>
 </div>
       </section>
-      <section class="sidebar-social" aria-label="Social and contact links">
-        <div class="sidebar-social-title">Social &amp; contact</div>
-        <div class="social-link-list">
-          <a class="social-link" href="https://www.instagram.com/mahimahfud?obrf=dnhudG1rbmsxeWs=" target="_blank" rel="noopener noreferrer" aria-label="Instagram (opens in a new tab)">
-            <svg class="social-icon instagram-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.6" cy="6.6" r="1.15" fill="currentColor"/></svg>
-            <span>Instagram</span><span class="social-external" aria-hidden="true">↗</span>
-          </a>
-          <a class="social-link" href="https://wa.me/8801819856148" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp (opens in a new tab)">
-            <svg class="social-icon whatsapp-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.8a8.5 8.5 0 0 1-12.6 7.4L3.5 20l.9-4.2a8.5 8.5 0 1 1 16.1-4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.7 8.1c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.7 1.7c.1.2.1.4-.1.6l-.6.7c-.2.2-.2.4-.1.6.5.9 1.2 1.6 2.1 2.1.2.1.4.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.6.8c.2.1.3.3.3.5 0 .4-.2 1-.6 1.3-.4.4-1 .6-1.7.5-1.1-.2-2.4-.8-3.6-1.9-1.4-1.3-2.2-2.8-2.4-3.8-.2-.8.1-1.5.6-1.9Z" fill="currentColor"/></svg>
-            <span>WhatsApp</span><span class="social-external" aria-hidden="true">↗</span>
-          </a>
+        <div class="profile-row nx-profile-row">
+          <img class="avatar profile-avatar-logo mahi-brand-logo" id="profileAvatar" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async">
+          <div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div>
+          <span class="nx-profile-status" aria-hidden="true"></span>
         </div>
-      </section>
-      <div class="sidebar-bottom">
-        <div class="privacy-note"><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
-        <div class="profile-row"><img class="avatar profile-avatar-logo mahi-brand-logo" id="profileAvatar" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="42" height="42" decoding="async" fetchpriority="high"><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
       </div>
-      <div class="sidebar-resize-handle" id="sidebarResizeHandle" role="separator" tabindex="0" aria-label="Resize chat history sidebar" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="440" aria-valuenow="260" title="Drag to resize chat history"></div>
+      <div class="sidebar-resize-handle" id="sidebarResizeHandle" role="separator" tabindex="0" aria-label="Resize chat history sidebar" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="440" aria-valuenow="264" title="Drag to resize chat history"></div>
     </aside>
 
     <main class="main-panel">
-      <header class="topbar">
-        <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-        <button class="desktop-expand-toggle" id="desktopSidebarExpand" type="button" aria-label="Expand sidebar" title="Expand sidebar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14M14 9l3 3-3 3"/></svg></button>
-        <div class="topbar-title"><img class="small-mark mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
-        <label class="model-picker-wrap halo-model-picker" title="Choose which MahiCloud model answers"><span class="sr-only">Model</span><select id="modelPicker" class="model-picker" aria-label="Choose model"><option value="auto" title="Automatic model selection">Auto · Best fit</option><option value="nova" title="General questions and everyday tasks">Nova · General</option><option value="pulse" title="Fast replies and short tasks">Pulse · Fast</option><option value="orbit" title="Versatile tasks and broad coverage">Orbit · Versatile</option><option value="sage" title="Reasoning, logic and coding">Sage · Coding</option><option value="ember" title="Creative writing and brainstorming">Ember · Creative</option></select></label>
-        <div class="topbar-right">
-          <button class="header-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown">↓ <span>MD</span></button>
-          <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
-          <button class="temporary-chat-button" id="temporaryChatButton" type="button" aria-pressed="false" title="Start a temporary chat that is not saved to chat history or long-term memory">◌ <span>Temporary</span></button>
+      <header class="topbar nx-topbar">
+        <div class="nx-topbar-left">
+          <button class="icon-button mobile-menu" id="openSidebar" type="button" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <button class="desktop-expand-toggle" id="desktopSidebarExpand" type="button" aria-label="Expand sidebar" title="Expand sidebar">
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18"/></svg>
+          </button>
+          <div class="topbar-title nx-topbar-title">
+            <div class="nx-title-kicker">PRIVATE AI WORKSPACE</div>
+            <strong class="topbar-title-text" id="chatTitle">MahiCloud</strong>
+          </div>
+          <label class="model-picker-wrap halo-model-picker nx-model-wrap" title="Choose which MahiCloud model answers">
+            <span class="nx-status-dot" aria-hidden="true"></span><span class="sr-only">Model</span>
+            <select id="modelPicker" class="model-picker" aria-label="Choose model">
+              <option value="auto" title="Automatic model selection">Auto · Best fit</option>
+              <option value="nova" title="General questions and everyday tasks">Nova · General</option>
+              <option value="pulse" title="Fast replies and short tasks">Pulse · Fast</option>
+              <option value="orbit" title="Versatile tasks and broad coverage">Orbit · Versatile</option>
+              <option value="sage" title="Reasoning, logic and coding">Sage · Coding</option>
+              <option value="ember" title="Creative writing and brainstorming">Ember · Creative</option>
+            </select>
+            <span class="nx-model-tier">MODEL ROUTING</span>
+            <svg class="nx-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
+          </label>
+        </div>
+        <div class="topbar-right nx-topbar-right">
+          <button class="nx-think-button" id="thinkModeButton" type="button" aria-pressed="false" aria-label="Toggle Think mode" title="Think mode is off: use the normal fast response route">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.6 11.9c.7.5 1.1 1.2 1.1 2.1h5c0-.9.4-1.6 1.1-2.1A6.5 6.5 0 0 0 12 3Z"/></svg><span>Think</span>
+          </button>
+          <button class="header-tool-button nx-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 20h14"/></svg><span>Export</span></button>
+          <button class="header-tool-button nx-tool-button nx-json-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H7a2 2 0 0 0-2 2v3a3 3 0 0 1-2 3 3 3 0 0 1 2 3v3a2 2 0 0 0 2 2h2M15 4h2a2 2 0 0 1 2 2v3a3 3 0 0 0 2 3 3 3 0 0 0-2 3v3a2 2 0 0 1-2 2h-2"/></svg><span>JSON</span></button>
+          <button class="temporary-chat-button nx-temporary-button" id="temporaryChatButton" type="button" aria-pressed="false" title="Start a temporary chat that is not saved to chat history or long-term memory"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 2.5"/></svg><span>Temporary</span></button>
           <button class="quick-theme-button" id="quickThemeToggle" type="button" aria-label="Dark theme is permanently enabled" title="Dark theme is permanently enabled" aria-pressed="true" disabled>☾</button>
-          <button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button>
-          <span class="secure-label">Ready to help</span>
+          <button class="account-button nx-account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button>
         </div>
       </header>
 
-      <section class="conversation-area" id="conversationArea">
-        <section class="welcome" id="welcome">
-          <div class="welcome-glow"></div>
-          <h1>Let’s make something<br><span>clear and useful.</span></h1>
-          <p class="welcome-copy">From quick questions to ambitious projects, start wherever you are. Think, write, learn, build, and make progress with MahiCloud.</p>
-          <div class="suggestion-grid">
-            <button class="suggestion-card" data-prompt="Write a JavaScript debounce function and explain it"><span class="suggestion-icon violet" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/></svg></span><span><strong>Solve a problem</strong><small>Write a JavaScript debounce function</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-            <button class="suggestion-card" data-prompt="Draft a friendly project update email for my team"><span class="suggestion-icon blue" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1ZM14 7l3 3"/></svg></span><span><strong>Write</strong><small>Draft a project update email</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-            <button class="suggestion-card" data-prompt="Explain how tides work in simple terms"><span class="suggestion-icon amber" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 6.5C10.5 5.3 8.5 5 5 5v13c3.5 0 5.5.3 7 1.5 1.5-1.2 3.5-1.5 7-1.5V5c-3.5 0-5.5.3-7 1.5ZM12 6.5v13"/></svg></span><span><strong>Learn</strong><small>Explain how tides work</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-            <button class="suggestion-card" data-prompt="Plan a focused week"><span class="suggestion-icon green" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg></span><span><strong>Plan</strong><small>Plan a focused week</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
+      <section class="conversation-area nx-conversation-area" id="conversationArea">
+        <section class="welcome nx-welcome" id="welcome" aria-labelledby="nxHeroTitle">
+          <div class="nx-orb" aria-hidden="true"><span></span><span></span><span></span></div>
+          <div class="nx-eyebrow"><span class="nx-eyebrow-badge">NEW</span> Multi-model intelligence is ready</div>
+          <h1 id="nxHeroTitle">Your ideas deserve<br><span>a smarter space.</span></h1>
+          <p class="welcome-copy nx-hero-copy">Think, create, explore, and turn complex ideas into something extraordinary.</p>
+          <div class="suggestion-grid nx-suggestion-grid">
+            <button class="suggestion-card nx-suggestion-card" type="button" data-prompt="Help me build a practical web application. Start with architecture, then implement the core features.">
+              <span class="suggestion-icon nx-card-icon"><svg viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg></span>
+              <span class="nx-card-copy"><strong>Build something</strong><small>Turn an idea into a working project.</small></span><svg class="nx-card-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </button>
+            <button class="suggestion-card nx-suggestion-card" type="button" data-prompt="Help me write clear, polished content. Ask only for essential missing details and give me a complete first draft.">
+              <span class="suggestion-icon nx-card-icon"><svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></span>
+              <span class="nx-card-copy"><strong>Write anything</strong><small>Create compelling content and stories.</small></span><svg class="nx-card-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </button>
+            <button class="suggestion-card nx-suggestion-card" type="button" data-prompt="Analyze the information I provide, identify the strongest patterns, and explain the practical conclusions.">
+              <span class="suggestion-icon nx-card-icon"><svg viewBox="0 0 24 24"><path d="M3 3v18h18M8 17v-5M13 17V7M18 17v-9"/></svg></span>
+              <span class="nx-card-copy"><strong>Analyze data</strong><small>Find patterns and uncover insights.</small></span><svg class="nx-card-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </button>
+            <button class="suggestion-card nx-suggestion-card" type="button" data-prompt="Teach me a difficult topic from first principles. Use a simple example, then gradually add technical depth.">
+              <span class="suggestion-icon nx-card-icon"><svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5zM4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></svg></span>
+              <span class="nx-card-copy"><strong>Learn something</strong><small>Understand complex topics clearly.</small></span><svg class="nx-card-arrow" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg>
+            </button>
           </div>
+          <div class="nx-welcome-foot"><span class="nx-mini-pulse"></span> Connected to MahiCloud AI services</div>
         </section>
-        <section class="messages" id="messages" aria-live="polite" aria-label="Conversation"></section>
-        <div class="error-banner" id="errorBanner" role="alert" hidden></div>
+        <section class="messages nx-messages" id="messages" aria-live="polite" aria-label="Conversation" hidden></section>
+        <div class="error-banner nx-error-banner" id="errorBanner" role="alert" hidden></div>
       </section>
 
-      <footer class="composer-wrap">
-        <form class="composer" id="chatForm">
+      <footer class="composer-wrap nx-composer-wrap">
+        <form class="composer nx-composer" id="chatForm">
           <div class="draft-notice" id="draftNotice" hidden><span>Editing a previous message. Sending replaces that turn and the conversation after it.</span><button type="button" id="cancelEditButton">Cancel</button></div>
           <input id="fileInput" type="file" multiple hidden>
-          <div id="attachmentList" class="attachment-list" hidden aria-label="Selected attachments"></div>
+          <div id="attachmentList" class="attachment-list nx-attachment-list" hidden aria-label="Selected attachments"></div>
           <label for="promptInput" class="sr-only">Message MahiCloud</label>
-          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message MahiCloud…" autocomplete="off" enterkeyhint="send"></textarea>
-          <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><button class="think-mode-button" id="thinkModeButton" type="button" aria-pressed="false" aria-label="Toggle Think mode" title="Think mode is off: use the normal fast response route"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.6 11.9c.7.5 1.1 1.2 1.1 2.1h5c0-.9.4-1.6 1.1-2.1A6.5 6.5 0 0 0 12 3Z"/><path d="m19 2 .6 1.8L21.5 4.5l-1.9.7L19 7l-.6-1.8-1.9-.7 1.9-.7Z"/></svg><span>Think</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="stop-button" id="stopButton" type="button" hidden aria-label="Stop generating" title="Stop generating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg><span>Stop</span></button><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
+          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Ask anything. Explore everything…" autocomplete="off" enterkeyhint="send"></textarea>
+          <div class="composer-bottom nx-composer-bottom">
+            <div class="composer-left-actions nx-composer-left">
+              <button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button>
+              <button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button>
+              <span class="composer-hint nx-composer-hint"><kbd>Enter</kbd> to send <span>·</span> <kbd>Shift</kbd> + <kbd>Enter</kbd> for new line</span>
+            </div>
+            <div class="composer-actions nx-composer-actions">
+              <span class="char-count" id="charCount">0 / 12000</span>
+              <button class="stop-button" id="stopButton" type="button" hidden aria-label="Stop generating" title="Stop generating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg><span>Stop</span></button>
+              <button class="send-button nx-send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button>
+            </div>
+          </div>
         </form>
-        <p class="footer-note">MahiCloud can make mistakes.</p>
+        <p class="footer-note nx-footer-note">MahiCloud can make mistakes. Verify important information.</p>
       </footer>
     </main>
   </div>

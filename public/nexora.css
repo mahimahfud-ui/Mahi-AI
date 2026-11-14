@@ -1,0 +1,341 @@
+/* NEXORA workspace redesign — presentation only; all MahiCloud data/API modules remain authoritative. */
+:root {
+  color-scheme: dark;
+  --nx-bg:#09090b;
+  --nx-sidebar:#0c0c0f;
+  --nx-surface:#121216;
+  --nx-surface-2:#18181e;
+  --nx-surface-3:#1f1f27;
+  --nx-border:rgba(255,255,255,.065);
+  --nx-border-strong:rgba(255,255,255,.11);
+  --nx-border-hi:rgba(255,255,255,.16);
+  --nx-text:#f5f5f7;
+  --nx-muted:#92929e;
+  --nx-dim:#62626f;
+  --nx-accent:#b7a5ff;
+  --nx-accent-2:#8b9cff;
+  --nx-accent-soft:rgba(183,165,255,.11);
+  --nx-ok:#7ee2b8;
+  --nx-danger:#ff8a8a;
+  --nx-ease:cubic-bezier(.16,1,.3,1);
+  --nx-shadow:0 30px 70px -24px rgba(0,0,0,.7),0 2px 10px rgba(0,0,0,.4);
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;background:var(--nx-bg);color:var(--nx-text)}
+body{min-height:0;overflow:hidden;font:400 14px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased;font-feature-settings:"cv11","ss01"}
+body::before{content:"";position:fixed;inset:0;z-index:200;pointer-events:none;opacity:.025;mix-blend-mode:overlay;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E")}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid rgba(183,165,255,.62)!important;outline-offset:3px!important}
+::selection{background:rgba(183,165,255,.25)}
+.sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.app-shell.nexora-shell{display:flex;width:100%;height:var(--app-height,100dvh);min-height:0;max-height:var(--app-height,100dvh);overflow:hidden;position:relative;background:var(--nx-bg)}
+.nexora-shell .sidebar{width:264px;min-width:264px;max-width:264px;flex:0 0 264px;height:100%;min-height:0;position:relative;z-index:40;display:flex;flex-direction:column;overflow:hidden;padding:calc(14px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,rgba(183,165,255,.035),transparent 180px),var(--nx-sidebar);border-right:1px solid var(--nx-border);transition:margin-left .6s var(--nx-ease),transform .6s var(--nx-ease);box-shadow:none}
+.nexora-shell.sidebar-collapsed .sidebar{margin-left:-264px}
+.nx-sidebar-top{display:flex;flex-direction:column;gap:12px;flex-shrink:0}
+.nexora-shell .brand-row{display:flex;align-items:center;gap:10px;padding:4px 6px 2px;margin:0 0 5px;min-width:0}
+.nx-brand-mark{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;border-radius:10px;background:linear-gradient(150deg,#22212e,#111116);border:1px solid var(--nx-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 6px 16px -8px rgba(183,165,255,.5);transition:transform .6s var(--nx-ease),box-shadow .6s var(--nx-ease)}
+.nx-brand-mark svg{width:20px;height:20px}
+.nx-brand-mark:hover{transform:rotate(-6deg) scale(1.04);box-shadow:0 10px 24px -8px rgba(183,165,255,.7)}
+.nexora-shell .brand-copy{display:flex;flex-direction:column;gap:3px;min-width:0;line-height:1.1}
+.nexora-shell .brand-copy strong{font:650 12px/1.1 Inter,sans-serif;letter-spacing:.2em;color:var(--nx-text)}
+.nexora-shell .brand-copy span{font:400 10.5px/1.2 Inter,sans-serif;letter-spacing:.025em;color:var(--nx-dim)}
+.nx-live-pill{margin-left:auto;padding:3px 7px;border-radius:999px;border:1px solid rgba(126,226,184,.18);background:rgba(126,226,184,.08);color:var(--nx-ok);font-size:9px;font-weight:700;letter-spacing:.12em}
+.nexora-shell .desktop-collapse,.nexora-shell .mobile-close{width:30px;height:30px;display:grid;place-items:center;border:0;border-radius:8px;background:transparent;color:var(--nx-dim);padding:6px;transition:color .25s,background .25s}
+.nexora-shell .desktop-collapse:hover,.nexora-shell .mobile-close:hover{background:rgba(255,255,255,.06);color:var(--nx-text)}
+.nexora-shell .desktop-collapse .ico,.nexora-shell .mobile-close .ico{width:16px;height:16px}
+.nexora-shell .mobile-close{display:none}
+.nexora-shell .new-chat{width:100%;height:42px;flex-shrink:0;position:relative;display:flex;align-items:center;gap:10px;padding:0 12px;border-radius:12px;background:linear-gradient(180deg,rgba(183,165,255,.17),rgba(183,165,255,.06));border:1px solid rgba(183,165,255,.24);color:var(--nx-text);font-size:13.5px;font-weight:600;text-align:left;box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 10px 24px -16px rgba(183,165,255,.6);transition:border-color .35s,background .35s,box-shadow .45s var(--nx-ease),transform .25s var(--nx-ease)}
+.nexora-shell .new-chat:hover{border-color:rgba(183,165,255,.4);background:linear-gradient(180deg,rgba(183,165,255,.24),rgba(183,165,255,.1));box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 14px 30px -14px rgba(183,165,255,.7)}
+.nexora-shell .new-chat:active{transform:scale(.985)}
+.nx-plus-box{width:23px;height:23px;display:grid;place-items:center;border-radius:7px;background:rgba(183,165,255,.16);color:var(--nx-accent);transition:transform .5s var(--nx-ease)}
+.nx-plus-box .ico{width:14px;height:14px}
+.new-chat:hover .nx-plus-box{transform:rotate(90deg)}
+.nexora-shell .new-chat kbd,.nx-search-wrap kbd{margin-left:auto;padding:3px 6px;border:1px solid var(--nx-border-strong);border-radius:6px;background:rgba(0,0,0,.2);color:var(--nx-dim);font:500 9.5px/1 Inter,sans-serif;white-space:nowrap}
+.nexora-shell .chat-search-wrap{height:36px;position:relative;display:flex;align-items:center;margin:0}
+.nx-search-wrap .nx-search-icon{position:absolute;left:11px;width:15px;height:15px;fill:none;stroke:var(--nx-dim);stroke-width:1.8;stroke-linecap:round;pointer-events:none}
+.nexora-shell .chat-search-wrap input{width:100%;height:36px;padding:0 42px 0 33px;border:1px solid var(--nx-border);border-radius:10px;background:rgba(18,18,22,.8);color:var(--nx-text);font:400 12.5px Inter,sans-serif;outline:none;box-shadow:none;transition:border-color .35s,background .35s,box-shadow .35s}
+.nexora-shell .chat-search-wrap input::placeholder{color:var(--nx-dim)}
+.nexora-shell .chat-search-wrap input:focus{border-color:rgba(183,165,255,.35);background:var(--nx-surface-2);box-shadow:0 0 0 4px rgba(183,165,255,.06)}
+.nx-search-wrap kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);margin:0;background:transparent}
+.nx-nav{position:relative;display:flex;flex-direction:column;gap:2px;margin:15px 0 0;padding:4px;border:1px solid var(--nx-border);border-radius:14px;background:rgba(255,255,255,.015);flex-shrink:0}
+.nx-nav-item{height:35px;width:100%;display:flex;align-items:center;gap:11px;padding:0 10px;border:0;border-radius:9px;background:transparent;color:var(--nx-muted);font-size:12.5px;font-weight:500;text-align:left;transition:background .3s,color .3s}
+.nx-nav-item svg{width:16px;height:16px;flex:0 0 16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nx-nav-item:hover{color:var(--nx-text);background:rgba(255,255,255,.035)}
+.nx-nav-item.active{color:var(--nx-text);background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.025));box-shadow:inset 0 0 0 1px var(--nx-border-strong),inset 0 1px 0 rgba(255,255,255,.04)}
+.nx-nav-item.active::before{content:"";width:2px;height:16px;border-radius:2px;background:linear-gradient(180deg,var(--nx-accent),var(--nx-accent-2));box-shadow:0 0 10px rgba(183,165,255,.6);margin-left:-10px;margin-right:8px}
+.nx-nav-item.active svg{color:var(--nx-accent)}
+.nx-nav-hint{margin-left:auto;color:var(--nx-dim);font-size:10px;font-variant-numeric:tabular-nums}
+.nx-nav-external{margin-left:auto;width:13px!important;height:13px!important;color:var(--nx-dim)}
+.nx-history-heading{display:flex;align-items:center;gap:8px;padding:17px 10px 7px;color:var(--nx-dim);font-size:9px;font-weight:700;letter-spacing:.12em;flex-shrink:0}
+.nx-history-heading::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--nx-border-strong),transparent)}
+.nexora-shell .text-button{background:transparent;border:0;color:var(--nx-dim);font-size:17px;padding:2px 5px;border-radius:6px;transition:background .25s,color .25s}
+.nexora-shell .text-button:hover{color:var(--nx-text);background:rgba(255,255,255,.06)}
+.nexora-shell .chat-list{display:flex;flex-direction:column;gap:3px;flex:1;min-height:30px;overflow-x:hidden;overflow-y:auto;margin:0 -5px;padding:0 5px 8px;scrollbar-width:thin;scrollbar-color:#292932 transparent}
+.nexora-shell .chat-list .chat-item{min-width:0;min-height:35px;display:flex;align-items:center;gap:4px;padding:0 4px 0 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--nx-muted);font-size:12px;transition:background .3s,border-color .3s,color .3s}
+.nexora-shell .chat-list .chat-item:hover{background:rgba(255,255,255,.035);color:var(--nx-text)}
+.nexora-shell .chat-list .chat-item.active{background:rgba(255,255,255,.065);border-color:var(--nx-border);color:var(--nx-text)}
+.nexora-shell .chat-list .chat-item.active::before{content:"";width:2px;height:18px;flex:0 0 2px;border-radius:2px;background:var(--nx-accent);box-shadow:0 0 10px rgba(183,165,255,.55);margin-left:-9px;margin-right:6px}
+.nexora-shell .chat-list .chat-item .chat-item{flex:1;min-width:0;height:34px;display:flex;align-items:center;gap:9px;padding:0 4px;border:0;background:transparent;color:inherit;text-align:left}
+.nexora-shell .chat-list .chat-icon{flex:0 0 14px;color:var(--nx-accent);font-size:12px;text-align:center}
+.nexora-shell .chat-list .chat-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+.nexora-shell .chat-list .rename-chat,.nexora-shell .chat-list .delete-chat{opacity:0;flex:0 0 22px;width:22px;height:25px;display:grid;place-items:center;padding:0;border:0;border-radius:7px;background:transparent;color:var(--nx-dim);font-size:13px;transition:opacity .2s,color .2s,background .2s}
+.nexora-shell .chat-list .chat-item:hover .rename-chat,.nexora-shell .chat-list .chat-item:hover .delete-chat,.nexora-shell .chat-list .chat-item:focus-within .rename-chat,.nexora-shell .chat-list .chat-item:focus-within .delete-chat{opacity:1}
+.nexora-shell .chat-list .rename-chat:hover{background:rgba(255,255,255,.07);color:var(--nx-text)}
+.nexora-shell .chat-list .delete-chat:hover{background:rgba(255,90,90,.09);color:var(--nx-danger)}
+.nexora-shell .empty-history{padding:20px 10px;color:var(--nx-dim);font-size:11.5px;line-height:1.6}
+.nx-sidebar-bottom{display:flex;flex-direction:column;gap:8px;flex-shrink:0;padding-top:8px}
+.nx-privacy-note{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--nx-border);border-radius:10px;background:rgba(255,255,255,.018)}
+.nx-privacy-note>div{display:flex;flex-direction:column;gap:1px;min-width:0}
+.nx-privacy-note strong{font-size:10.5px;font-weight:600;color:var(--nx-text)}
+.nx-privacy-note small{font-size:9.5px;color:var(--nx-dim)}
+.nx-privacy-dot,.nx-profile-status,.nx-status-dot,.nx-mini-pulse{width:7px;height:7px;flex:0 0 7px;border-radius:50%;background:var(--nx-ok);box-shadow:0 0 10px rgba(126,226,184,.28)}
+.nexora-shell .sidebar-settings{position:relative;margin:0;padding:0;border:0;min-width:0}
+.nexora-shell .settings-trigger{width:100%;height:32px;display:flex;align-items:center;gap:8px;padding:0 9px;border:1px solid var(--nx-border);border-radius:9px;background:rgba(255,255,255,.018);color:var(--nx-muted);font-size:11.5px;text-align:left}
+.nexora-shell .settings-trigger:hover{background:rgba(255,255,255,.05);color:var(--nx-text)}
+.nexora-shell .settings-trigger>.ico{width:15px;height:15px}
+.nexora-shell .settings-trigger .settings-chevron{margin-left:auto;transition:transform .25s}
+.nexora-shell .settings-trigger[aria-expanded="true"] .settings-chevron{transform:rotate(180deg)}
+.nexora-shell .settings-panel{position:absolute;z-index:70;bottom:40px;left:0;right:0;max-height:min(64vh,540px);overflow:auto;padding:12px;border:1px solid var(--nx-border-strong);border-radius:14px;background:rgba(24,24,30,.98);box-shadow:var(--nx-shadow);backdrop-filter:blur(18px)}
+.nexora-shell .settings-panel[hidden]{display:none!important}
+.nexora-shell .settings-group{padding:8px 0;border-bottom:1px solid var(--nx-border)}
+.nexora-shell .settings-group:last-child{border-bottom:0}
+.nexora-shell .settings-group-title{margin:0 0 8px;color:var(--nx-accent);font-size:9px;font-weight:700;letter-spacing:.11em;text-transform:uppercase}
+.nexora-shell .setting-row,.nexora-shell .settings-field{display:flex;flex-direction:column;gap:5px;padding:7px 0}
+.nexora-shell .setting-copy{display:flex;flex-direction:column;gap:2px}
+.nexora-shell .setting-title{color:var(--nx-text);font-size:11px;font-weight:550}
+.nexora-shell .setting-copy small,.nexora-shell .settings-help,.nexora-shell .setting-status{color:var(--nx-dim);font-size:10px;line-height:1.5}
+.nexora-shell .setting-select,.nexora-shell .setting-textarea,.nexora-shell .name-setting-control input{width:100%;min-height:32px;padding:7px 9px;border:1px solid var(--nx-border-strong);border-radius:8px;background:#101015;color:var(--nx-text);font-size:11px}
+.nexora-shell .setting-textarea{resize:vertical}
+.nexora-shell .setting-switch,.nexora-shell .theme-toggle{align-self:flex-start}
+.nexora-shell .profile-row{display:flex;align-items:center;gap:9px;padding:7px 5px 2px;border-top:1px solid var(--nx-border);margin-top:2px}
+.nexora-shell .profile-avatar-logo{width:34px;height:34px;object-fit:cover;border:1px solid var(--nx-border-strong);border-radius:50%;background:#201d2e}
+.nexora-shell .profile-copy{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nexora-shell .profile-copy strong{font-size:11.5px;color:var(--nx-text);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nexora-shell .profile-copy small{font-size:9.5px;color:var(--nx-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx-profile-status{width:7px;height:7px;margin-left:auto}
+.nexora-shell .sidebar-resize-handle{width:5px;right:-2px;top:0;bottom:0;cursor:col-resize;opacity:0}
+.nexora-shell .sidebar-resize-handle:hover{opacity:1;background:rgba(183,165,255,.2)}
+.nexora-shell .main-panel{position:relative;flex:1;min-width:0;min-height:0;height:100%;display:flex;flex-direction:column;overflow:hidden;background:var(--nx-bg)}
+.nexora-shell .main-panel::before{content:"";position:absolute;left:-10%;right:-10%;top:-30%;height:80%;pointer-events:none;z-index:0;background:radial-gradient(40% 55% at 30% 40%,rgba(183,165,255,.07),transparent 70%),radial-gradient(35% 50% at 72% 30%,rgba(139,156,255,.05),transparent 70%);filter:blur(30px);animation:nxDrift 22s ease-in-out infinite alternate}
+.nexora-shell .topbar{height:62px;min-height:62px;flex:0 0 62px;position:relative;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 18px;border-bottom:1px solid var(--nx-border);background:rgba(9,9,11,.76);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.nx-topbar-left{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.nexora-shell .icon-button,.nexora-shell .desktop-expand-toggle{width:34px;height:34px;flex:0 0 34px;display:grid;place-items:center;padding:7px;border:1px solid transparent;border-radius:10px;background:transparent;color:var(--nx-muted);transition:background .25s,color .25s,transform .25s}
+.nexora-shell .icon-button:hover,.nexora-shell .desktop-expand-toggle:hover{background:rgba(255,255,255,.05);color:var(--nx-text)}
+.nexora-shell .icon-button .ico,.nexora-shell .desktop-expand-toggle .ico{width:16px;height:16px}
+.nexora-shell .mobile-menu{display:none}
+.nexora-shell .desktop-expand-toggle{display:none}
+.nexora-shell.sidebar-collapsed .desktop-expand-toggle{display:grid}
+.nexora-shell .topbar-title{display:flex;flex-direction:column;gap:1px;min-width:92px;max-width:180px;line-height:1.15;margin-right:3px}
+.nx-title-kicker{color:var(--nx-dim);font-size:8px;font-weight:700;letter-spacing:.13em}
+.nexora-shell .topbar-title-text{font-size:13px;font-weight:620;letter-spacing:-.02em;color:var(--nx-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nexora-shell .model-picker-wrap{height:38px;min-width:0;max-width:340px;display:flex;align-items:center;gap:8px;padding:0 10px;border:1px solid var(--nx-border);border-radius:11px;background:rgba(255,255,255,.025);position:relative;transition:border-color .3s,background .3s}
+.nexora-shell .model-picker-wrap:hover,.nexora-shell .model-picker-wrap:focus-within{border-color:rgba(183,165,255,.28);background:rgba(255,255,255,.045)}
+.nx-status-dot{position:relative;width:7px;height:7px;background:var(--nx-ok)}
+.nx-status-dot::after{content:"";position:absolute;inset:-4px;border-radius:50%;background:var(--nx-ok);opacity:.25;animation:nxPing 2.4s ease-in-out infinite}
+.nexora-shell .model-picker{min-width:0;width:145px;height:34px;appearance:none;-webkit-appearance:none;border:0;outline:none;background:transparent;color:var(--nx-text);font:600 12px Inter,sans-serif;cursor:pointer}
+.nexora-shell .model-picker option{background:#18181e;color:#f5f5f7}
+.nx-model-tier{padding:3px 7px;border:1px solid rgba(183,165,255,.14);border-radius:999px;background:var(--nx-accent-soft);color:var(--nx-accent);font-size:8px;font-weight:700;letter-spacing:.07em;white-space:nowrap}
+.nx-chevron{width:13px;height:13px;flex:0 0 13px;fill:none;stroke:var(--nx-dim);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.nexora-shell .topbar-right{display:flex;align-items:center;gap:5px;min-width:0}
+.nexora-shell .header-tool-button,.nexora-shell .temporary-chat-button,.nexora-shell .nx-think-button{height:34px;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:0 10px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--nx-muted);font-size:11.5px;font-weight:550;white-space:nowrap;transition:background .25s,color .25s,border-color .25s,transform .25s}
+.nexora-shell .header-tool-button:hover,.nexora-shell .temporary-chat-button:hover,.nexora-shell .nx-think-button:hover{background:rgba(255,255,255,.05);border-color:var(--nx-border);color:var(--nx-text)}
+.nexora-shell .header-tool-button svg,.nexora-shell .temporary-chat-button svg,.nexora-shell .nx-think-button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nexora-shell .nx-think-button{border-color:rgba(183,165,255,.18);background:rgba(183,165,255,.07);color:var(--nx-accent)}
+.nexora-shell .nx-think-button.is-active{background:rgba(183,165,255,.16);border-color:rgba(183,165,255,.35);box-shadow:0 0 0 3px rgba(183,165,255,.05)}
+.nexora-shell .nx-think-button:disabled{opacity:.35;cursor:not-allowed}
+.nexora-shell .quick-theme-button{display:none}
+.nexora-shell .account-button{height:34px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border:1px solid var(--nx-border-strong);border-radius:10px;background:rgba(255,255,255,.035);color:var(--nx-text);font-size:11.5px;font-weight:550;white-space:nowrap;transition:background .25s,border-color .25s}
+.nexora-shell .account-button:hover{background:rgba(255,255,255,.07);border-color:var(--nx-border-hi)}
+.nexora-shell .account-button-icon{width:18px;height:18px;display:grid;place-items:center}
+.nexora-shell .account-button-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round}
+.nexora-shell .secure-label{display:none}
+.nexora-shell .conversation-area{position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;align-items:stretch;overflow-y:auto;overflow-x:hidden;padding:0;scrollbar-width:thin;scrollbar-color:#292932 transparent}
+.nexora-shell .welcome{position:relative;isolation:isolate;width:100%;max-width:900px;min-height:100%;flex:1;align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 28px 44px;margin:0 auto;text-align:center}
+.nx-orb{position:absolute;z-index:-1;top:50%;left:50%;width:min(640px,88vw);height:460px;transform:translate(-50%,-60%);pointer-events:none;opacity:.8}
+.nx-orb::before{content:"";position:absolute;top:50%;left:50%;width:390px;height:260px;transform:translate(-50%,-50%);background:radial-gradient(closest-side,rgba(183,165,255,.13),rgba(139,156,255,.045) 55%,transparent);filter:blur(30px);animation:nxBreathe 9s ease-in-out infinite}
+.nx-orb span{position:absolute;left:50%;top:50%;border:1px solid rgba(255,255,255,.035);border-radius:50%;transform:translate(-50%,-50%)}
+.nx-orb span:nth-child(1){width:280px;height:280px}
+.nx-orb span:nth-child(2){width:430px;height:430px;border-style:dashed;animation:nxSpin 80s linear infinite}
+.nx-orb span:nth-child(3){width:600px;height:600px;border-color:rgba(255,255,255,.018)}
+.nx-orb span:nth-child(2)::after{content:"";position:absolute;left:50%;top:-3px;width:6px;height:6px;margin-left:-3px;border-radius:50%;background:var(--nx-accent);box-shadow:0 0 14px 3px rgba(183,165,255,.45)}
+.nx-eyebrow{display:inline-flex;align-items:center;gap:8px;position:relative;z-index:1;margin-bottom:24px;padding:5px 12px 5px 6px;border:1px solid var(--nx-border-strong);border-radius:999px;background:rgba(255,255,255,.035);box-shadow:inset 0 1px 0 rgba(255,255,255,.04);color:var(--nx-muted);font-size:11px;font-weight:500}
+.nx-eyebrow-badge{padding:3px 7px;border-radius:999px;background:linear-gradient(135deg,var(--nx-accent),var(--nx-accent-2));color:#0b0b12;font-size:9px;font-weight:750;letter-spacing:.07em}
+.nexora-shell .welcome h1{position:relative;z-index:1;margin:0;color:transparent;background:linear-gradient(100deg,#8e8e9b 0%,#fff 30%,#fff 52%,#8e8e9b 75%);background-size:260% 100%;background-position:100% 0;-webkit-background-clip:text;background-clip:text;font-size:clamp(36px,5.2vw,58px);font-weight:650;line-height:1.06;letter-spacing:-.05em;text-wrap:balance;animation:nxSheenText 9s ease-in-out 1.4s infinite}
+.nexora-shell .welcome h1 span{color:transparent}
+.nexora-shell .welcome-copy{position:relative;z-index:1;max-width:510px;margin:18px 0 34px;color:var(--nx-muted);font-size:15px;line-height:1.65;text-wrap:balance}
+.nexora-shell .suggestion-grid{position:relative;z-index:1;display:grid;width:100%;max-width:650px;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.nexora-shell .suggestion-card{position:relative;min-width:0;min-height:106px;display:flex;align-items:flex-start;gap:13px;padding:17px 18px;border:1px solid var(--nx-border);border-radius:15px;background:linear-gradient(180deg,rgba(24,24,30,.78),rgba(15,15,19,.78));box-shadow:inset 0 1px 0 rgba(255,255,255,.035);color:var(--nx-text);text-align:left;transition:transform .6s var(--nx-ease),border-color .45s,box-shadow .6s var(--nx-ease);overflow:hidden;--mx:50%;--my:0%}
+.nexora-shell .suggestion-card::before{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(280px circle at var(--mx) var(--my),rgba(183,165,255,.14),transparent 62%);transition:opacity .5s}
+.nexora-shell .suggestion-card::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.05) 50%,transparent 65%);transform:translateX(-30%);transition:opacity .5s,transform 1s var(--nx-ease)}
+.nexora-shell .suggestion-card:hover{transform:translateY(-4px);border-color:var(--nx-border-hi);box-shadow:0 26px 44px -22px rgba(0,0,0,.85),0 0 0 1px rgba(183,165,255,.05),inset 0 1px 0 rgba(255,255,255,.06)}
+.nexora-shell .suggestion-card:hover::before{opacity:1}
+.nexora-shell .suggestion-card:hover::after{opacity:1;transform:translateX(30%)}
+.nexora-shell .suggestion-card:active{transform:translateY(-1px) scale(.985)}
+.nx-card-icon{position:relative;z-index:1;width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border:1px solid rgba(183,165,255,.16);border-radius:11px;background:linear-gradient(145deg,#24233a,#16161f);color:var(--nx-accent);box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.nx-card-icon svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nx-card-copy{position:relative;z-index:1;display:flex;flex-direction:column;gap:5px;min-width:0;padding-top:1px}
+.nx-card-copy strong{font-size:12.5px;font-weight:650;letter-spacing:-.01em}
+.nx-card-copy small{color:var(--nx-muted);font-size:11px;line-height:1.5}
+.nx-card-arrow{position:absolute;right:14px;top:15px;width:15px;height:15px;fill:none;stroke:var(--nx-accent);stroke-width:1.7;opacity:0;transform:translate(-5px,5px);transition:opacity .35s,transform .5s var(--nx-ease)}
+.nexora-shell .suggestion-card:hover .nx-card-arrow{opacity:1;transform:none}
+.nx-welcome-foot{display:flex;align-items:center;gap:8px;margin-top:25px;color:var(--nx-dim);font-size:10px;letter-spacing:.02em}
+.nx-mini-pulse{width:6px;height:6px;box-shadow:0 0 12px rgba(126,226,184,.4)}
+.nexora-shell .messages{width:100%;max-width:900px;align-self:center;display:flex;flex-direction:column;gap:28px;padding:34px 28px 38px;margin:0 auto}
+.nexora-shell .messages[hidden]{display:none!important}
+.nexora-shell .message{position:relative;width:100%;max-width:100%;display:flex;align-items:flex-start;gap:14px;margin:0;color:var(--nx-text);animation:nxMessageIn .55s var(--nx-ease) both}
+.nexora-shell .message-avatar{width:31px;height:31px;flex:0 0 31px;display:grid;place-items:center;margin-top:1px;border:1px solid var(--nx-border-strong);border-radius:10px;background:linear-gradient(145deg,#24233a,#16161f);color:var(--nx-accent);font-size:11px;font-weight:650}
+.nexora-shell .message-logo{width:19px;height:19px;border-radius:6px;object-fit:cover}
+.nexora-shell .message-body{flex:1;min-width:0;border-left:1px solid var(--nx-border);padding:0 0 2px 17px}
+.nexora-shell .message-heading{margin:0 0 7px;color:var(--nx-muted);font-size:10.5px;font-weight:650;letter-spacing:.02em}
+.nexora-shell .message-content{color:#e2e2e9;font-size:14px;line-height:1.78;overflow-wrap:anywhere}
+.nexora-shell .message-content p{margin:0 0 12px}
+.nexora-shell .message-content p:last-child{margin-bottom:0}
+.nexora-shell .message-content h1,.nexora-shell .message-content h2,.nexora-shell .message-content h3,.nexora-shell .message-content h4{margin:21px 0 9px;color:var(--nx-text);line-height:1.3;letter-spacing:-.02em}
+.nexora-shell .message-content h1,.nexora-shell .message-content h2{font-size:20px;font-weight:650}
+.nexora-shell .message-content h3{font-size:17px;font-weight:620}
+.nexora-shell .message-content h4{font-size:15px;font-weight:600}
+.nexora-shell .message-content ul,.nexora-shell .message-content ol{margin:0 0 13px;padding-left:22px}
+.nexora-shell .message-content li{margin:5px 0;padding-left:3px}
+.nexora-shell .message-content li::marker{color:var(--nx-dim)}
+.nexora-shell .message-content strong{color:var(--nx-text);font-weight:650}
+.nexora-shell .message-content a{color:var(--nx-accent);text-decoration:none;border-bottom:1px solid rgba(183,165,255,.3)}
+.nexora-shell .message-content a:hover{border-color:var(--nx-accent)}
+.nexora-shell .message-content code{padding:1px 6px;border:1px solid var(--nx-border);border-radius:6px;background:var(--nx-surface-2);color:#dcd5ff;font: .86em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+.nexora-shell .message-content pre{max-width:100%;overflow:auto;margin:12px 0 18px;padding:15px 17px;border:1px solid var(--nx-border-strong);border-radius:13px;background:#0a0a0d;font-size:12.5px;line-height:1.65}
+.nexora-shell .message-content pre code{padding:0;border:0;background:none;color:#e6e1ff}
+.nexora-shell .message-content blockquote{margin:0 0 13px;padding:4px 15px;border-left:2px solid rgba(183,165,255,.45);background:linear-gradient(90deg,rgba(183,165,255,.04),transparent);color:var(--nx-muted)}
+.nexora-shell .message-content table{width:100%;border-collapse:collapse;font-size:12.5px}
+.nexora-shell .message-content th,.nexora-shell .message-content td{padding:9px 12px;border-bottom:1px solid var(--nx-border);text-align:left}
+.nexora-shell .message-content th{color:var(--nx-muted);background:rgba(255,255,255,.025);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.nexora-shell .message.user{align-self:flex-end;width:auto;max-width:min(78%,650px);flex-direction:row-reverse;gap:10px}
+.nexora-shell .message.user .message-avatar{width:28px;height:28px;flex-basis:28px;border-radius:50%;background:linear-gradient(135deg,#3b3354,#1f2236);border-color:var(--nx-border-strong)}
+.nexora-shell .message.user .message-body{flex:0 1 auto;max-width:100%;padding:10px 15px 11px;border:1px solid var(--nx-border-strong);border-radius:18px 18px 5px 18px;background:linear-gradient(180deg,#22222a,#1c1c23);box-shadow:inset 0 1px 0 rgba(255,255,255,.04),0 8px 20px -14px rgba(0,0,0,.8)}
+.nexora-shell .message.user .message-heading{margin:0 0 4px;text-align:right;font-size:9px;color:var(--nx-dim)}
+.nexora-shell .message.user .message-content{font-size:13.5px;line-height:1.6;color:var(--nx-text);white-space:pre-wrap}
+.nexora-shell .message-reply-quote{margin:0 0 8px;padding:7px 9px;border-left:2px solid var(--nx-accent);border-radius:4px;background:rgba(183,165,255,.07)}
+.nexora-shell .message-reply-quote-label,.nexora-shell .message-reply-quote-text{display:block;font-size:10px;color:var(--nx-muted)}
+.nexora-shell .message-reply-quote-text{margin-top:3px;max-height:48px;overflow:hidden}
+.nexora-shell .message-attachments{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:7px}
+.nexora-shell .message-attachment{display:inline-flex;gap:5px;align-items:center;padding:4px 7px;border:1px solid var(--nx-border);border-radius:7px;background:rgba(255,255,255,.04);font-size:10px;color:var(--nx-muted)}
+.nexora-shell .message-controls{display:flex;gap:2px;margin-top:9px;opacity:.72}
+.nexora-shell .message-controls button{width:28px;height:28px;display:grid;place-items:center;border-radius:8px;background:transparent;color:var(--nx-dim);font-size:12px;transition:background .25s,color .25s}
+.nexora-shell .message-controls button:hover{background:rgba(255,255,255,.06);color:var(--nx-text)}
+.nexora-shell .thinking-label{color:var(--nx-muted);font-size:11px}
+.nexora-shell .typing-dots{display:inline-flex;gap:5px;align-items:center;margin-left:8px}
+.nexora-shell .typing-dots span{width:5px;height:5px;border-radius:50%;background:var(--nx-accent);opacity:.3;animation:nxDot 1.2s infinite ease-in-out}
+.nexora-shell .typing-dots span:nth-child(2){animation-delay:.15s}
+.nexora-shell .typing-dots span:nth-child(3){animation-delay:.3s}
+.nexora-shell .nx-error-banner{width:calc(100% - 40px);max-width:850px;align-self:center;margin:0 auto 8px;padding:10px 13px;border:1px solid rgba(255,138,138,.24);border-radius:10px;background:rgba(255,100,100,.07);color:#ffc0c0;font-size:12px}
+.nexora-shell .composer-wrap{position:relative;z-index:15;flex:0 0 auto;padding:12px 24px calc(8px + env(safe-area-inset-bottom,0px));background:linear-gradient(180deg,transparent,var(--nx-bg) 24%)}
+.nexora-shell .composer{position:relative;width:100%;max-width:850px;margin:0 auto;padding:12px 12px 9px 16px;border:1px solid var(--nx-border-strong);border-radius:21px;background:rgba(22,22,28,.94);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 18px 40px -18px rgba(0,0,0,.8);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);transition:border-color .45s,box-shadow .5s var(--nx-ease),background .45s}
+.nexora-shell .composer:focus-within{border-color:rgba(183,165,255,.4);background:rgba(24,24,31,.98);box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 0 0 4px rgba(183,165,255,.05),0 26px 54px -20px rgba(0,0,0,.85)}
+.nexora-shell #promptInput{display:block;width:100%;min-height:37px;max-height:180px;resize:none;overflow-y:auto;margin:0;padding:6px 4px 9px 0;border:0;border-radius:0;outline:none;background:transparent;color:var(--nx-text);font:400 14.5px/1.55 Inter,sans-serif;box-shadow:none}
+.nexora-shell #promptInput::placeholder{color:var(--nx-dim)}
+.nexora-shell .composer-bottom{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.nexora-shell .composer-left-actions,.nexora-shell .composer-actions{display:flex;align-items:center;gap:6px;min-width:0}
+.nexora-shell .attach-button,.nexora-shell .voice-mode-button{height:31px;display:inline-flex;align-items:center;gap:7px;padding:0 9px;border:1px solid transparent;border-radius:9px;background:transparent;color:var(--nx-muted);font-size:11.5px;transition:background .25s,color .25s,border-color .25s}
+.nexora-shell .attach-button svg,.nexora-shell .voice-mode-button svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.nexora-shell .attach-button:hover,.nexora-shell .voice-mode-button:hover{border-color:var(--nx-border);background:rgba(255,255,255,.05);color:var(--nx-text)}
+.nexora-shell .composer-hint{display:inline-flex;align-items:center;gap:5px;margin-left:7px;color:var(--nx-dim);font-size:10px;white-space:nowrap}
+.nexora-shell .composer-hint kbd{padding:2px 5px;border:1px solid var(--nx-border-strong);border-radius:5px;background:rgba(255,255,255,.02);color:var(--nx-dim);font:500 9px Inter,sans-serif}
+.nexora-shell .char-count{color:var(--nx-dim);font-size:9px;font-variant-numeric:tabular-nums}
+.nexora-shell .send-button{position:relative;width:38px;height:38px;flex:0 0 38px;display:grid;place-items:center;border:1px solid transparent;border-radius:12px;background:linear-gradient(var(--nx-surface-3),var(--nx-surface-3)) padding-box,linear-gradient(135deg,var(--nx-accent),var(--nx-accent-2)) border-box;color:var(--nx-accent);box-shadow:0 8px 20px -10px rgba(183,165,255,.7),inset 0 1px 0 rgba(255,255,255,.06);transition:transform .2s,box-shadow .4s,opacity .25s}
+.nexora-shell .send-button:hover{box-shadow:0 12px 26px -10px rgba(183,165,255,.85),inset 0 1px 0 rgba(255,255,255,.06);transform:translateY(-1px)}
+.nexora-shell .send-button:active{transform:scale(.94)}
+.nexora-shell .send-button svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.nexora-shell .send-button:disabled{background:var(--nx-surface-3);border-color:var(--nx-border);color:var(--nx-dim);box-shadow:none;cursor:not-allowed}
+.nexora-shell .stop-button{height:32px;display:inline-flex;align-items:center;gap:5px;padding:0 9px;border:1px solid rgba(255,138,138,.2);border-radius:9px;background:rgba(255,138,138,.07);color:#ffaaaa;font-size:10.5px}
+.nexora-shell .stop-button svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8}
+.nexora-shell .attachment-list{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
+.nexora-shell .attachment-list[hidden]{display:none!important}
+.nexora-shell .attachment-chip,.nexora-shell .attachment-item{max-width:240px}
+.nexora-shell .draft-notice{margin:0 0 8px;padding:8px 10px;border:1px solid rgba(183,165,255,.2);border-radius:9px;background:rgba(183,165,255,.07);color:var(--nx-muted);font-size:10px}
+.nexora-shell .draft-notice button{margin-left:8px;color:var(--nx-accent);font-weight:600}
+.nexora-shell .footer-note{max-width:850px;margin:8px auto 0;color:var(--nx-dim);font-size:9.5px;text-align:center}
+.nexora-shell #mobileScrim{position:fixed;inset:0;z-index:35;background:rgba(0,0,0,.56);opacity:0;visibility:hidden;pointer-events:none;backdrop-filter:blur(2px);transition:opacity .35s,visibility .35s}
+.nexora-shell #mobileScrim.show{opacity:1;visibility:visible;pointer-events:auto}
+.nexora-shell .chat-skeleton{display:flex;flex-direction:column;gap:10px;padding:12px 9px}
+.nexora-shell .skel-row{display:flex;align-items:center;gap:9px}
+.nexora-shell .skel{display:block;height:7px;border-radius:99px;background:rgba(255,255,255,.07);animation:nxSkeleton 1.5s ease-in-out infinite}
+.nexora-shell .skel-dot{width:7px;flex:0 0 7px}
+.nexora-shell .skel-line{width:70%}
+@keyframes nxSpin{to{transform:translate(-50%,-50%) rotate(360deg)}}
+@keyframes nxBreathe{0%,100%{opacity:.8;transform:translate(-50%,-50%) scale(1)}50%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}}
+@keyframes nxDrift{from{transform:translate3d(0,0,0) scale(1)}to{transform:translate3d(40px,20px,0) scale(1.08)}}
+@keyframes nxPing{0%{transform:scale(.6);opacity:.35}80%,100%{transform:scale(1.8);opacity:0}}
+@keyframes nxDot{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+@keyframes nxSheenText{0%,25%{background-position:100% 0}75%,100%{background-position:-100% 0}}
+@keyframes nxMessageIn{from{opacity:0;filter:blur(3px);transform:translateY(6px)}to{opacity:1;filter:blur(0);transform:none}}
+@keyframes nxSkeleton{0%,100%{opacity:.35}50%{opacity:.85}}
+@media (max-width:1100px){
+  .nexora-shell .nx-json-button,.nexora-shell .nx-temporary-button{display:none}
+}
+@media (max-width:900px){
+  .nexora-shell .nx-model-tier{display:none}
+  .nexora-shell .nx-topbar-right .header-tool-button span{display:none}
+  .nexora-shell .nx-topbar-right .header-tool-button{width:34px;padding:0}
+  .nexora-shell .nx-think-button span{display:none}
+  .nexora-shell .nx-think-button{width:34px;padding:0}
+}
+@media (max-width:760px){
+  .app-shell.nexora-shell{height:var(--app-height,100dvh);min-height:0;max-height:var(--app-height,100dvh)}
+  .nexora-shell .sidebar{position:fixed;inset:0 auto 0 0;width:min(308px,86vw);min-width:min(308px,86vw);max-width:min(308px,86vw);height:var(--app-height,100dvh);transform:translateX(-105%);margin-left:0;box-shadow:var(--nx-shadow);transition:transform .6s var(--nx-ease)}
+  .nexora-shell .sidebar.open{transform:translateX(0)}
+  .nexora-shell.sidebar-collapsed .sidebar{margin-left:0}
+  .nexora-shell .mobile-menu{display:grid}
+  .nexora-shell .mobile-close{display:none}
+  .nexora-shell .desktop-collapse,.nexora-shell .desktop-expand-toggle{display:none!important}
+  .nexora-shell .topbar{height:58px;min-height:58px;flex-basis:58px;padding:0 10px;gap:5px}
+  .nx-topbar-left{gap:4px}
+  .nexora-shell .topbar-title{max-width:110px;min-width:70px}
+  .nx-title-kicker{font-size:7px}
+  .nexora-shell .topbar-title-text{font-size:11.5px}
+  .nexora-shell .model-picker-wrap{max-width:170px;height:35px;gap:5px;padding:0 7px}
+  .nexora-shell .model-picker{width:100px;height:32px;font-size:10.5px}
+  .nexora-shell .account-button{width:34px;justify-content:center;padding:0}
+  .nexora-shell .account-button>span:last-child{display:none}
+  .nexora-shell .nx-topbar-right{gap:2px}
+  .nexora-shell .nx-topbar-right .header-tool-button,.nexora-shell .nx-topbar-right .nx-think-button{width:31px;height:32px;padding:0}
+  .nexora-shell .welcome{min-height:100%;padding:42px 16px 30px}
+  .nexora-shell .welcome h1{font-size:clamp(32px,9vw,44px)}
+  .nexora-shell .welcome-copy{font-size:13px;margin:15px 0 25px}
+  .nexora-shell .suggestion-grid{gap:9px}
+  .nexora-shell .suggestion-card{min-height:96px;padding:13px 11px;gap:9px}
+  .nx-card-icon{width:31px;height:31px;flex-basis:31px}
+  .nx-card-copy strong{font-size:11px}
+  .nx-card-copy small{font-size:9.5px}
+  .nx-card-arrow{display:none}
+  .nexora-shell .messages{padding:24px 14px 30px;gap:22px}
+  .nexora-shell .message.user{max-width:90%}
+  .nexora-shell .composer-wrap{padding:9px 10px calc(6px + env(safe-area-inset-bottom,0px))}
+  .nexora-shell .composer{border-radius:18px;padding:10px 9px 8px 13px}
+  .nexora-shell #promptInput{font-size:14px;min-height:34px}
+  .nexora-shell .composer-hint,.nexora-shell .char-count{display:none}
+  .nexora-shell .attach-button,.nexora-shell .voice-mode-button{height:30px;padding:0 7px;font-size:10.5px}
+}
+@media (max-width:420px){
+  .nexora-shell .nx-topbar-left{gap:2px}
+  .nexora-shell .topbar-title{max-width:82px;min-width:54px}
+  .nx-title-kicker{display:none}
+  .nexora-shell .model-picker-wrap{max-width:130px}
+  .nexora-shell .model-picker{width:83px;font-size:9.8px}
+  .nexora-shell .nx-topbar-right .nx-think-button{display:none}
+  .nexora-shell .welcome{padding:32px 13px 22px}
+  .nexora-shell .suggestion-grid{grid-template-columns:1fr}
+  .nexora-shell .suggestion-card{min-height:70px;align-items:center}
+  .nexora-shell .nx-orb{height:360px}
+  .nexora-shell .composer-wrap{padding-left:8px;padding-right:8px}
+  .nexora-shell .attach-button span,.nexora-shell .voice-mode-button span{display:none}
+  .nexora-shell .attach-button,.nexora-shell .voice-mode-button{width:32px;justify-content:center;padding:0}
+}
+@media (max-height:720px) and (min-width:761px){
+  .nexora-shell .welcome{padding-top:26px;padding-bottom:24px}
+  .nexora-shell .welcome-copy{margin-top:12px;margin-bottom:22px}
+  .nexora-shell .suggestion-card{min-height:88px;padding:13px 15px}
+  .nx-welcome-foot{margin-top:16px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}
+}
