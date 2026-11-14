@@ -20,7 +20,7 @@ test("real MahiCloud chat and account modules remain wired", () => {
   for (const script of ["./app.js", "./live-voice.js", "./admin-control.js", "./code-blocks.js", "./black-theme.js"]) {
     assert.ok(html.includes(script), "missing existing script: " + script);
   }
-  for (const id of ["newChat", "chatList", "chatForm", "sendButton", "promptInput", "modelPicker", "thinkModeButton", "accountModal", "voiceOverlay", "apiExplorer", "openAdminControl", "adminControlOverlay"]) {
+  for (const id of ["newChat", "chatList", "chatForm", "sendButton", "promptInput", "modelPicker", "thinkModeButton", "accountModal", "voiceOverlay", "apiExplorer", "openAdminControl", "openApiExplorer", "adminControlOverlay"]) {
     assert.ok(html.includes('id="' + id + '"'), "missing existing feature element: " + id);
   }
   assert.match(html, /supabase-js@2/);
@@ -41,6 +41,8 @@ test("NEXORA layout is responsive, accessible and reduced-motion aware", () => {
   assert.match(css, /@media\s*\(max-width:\s*420px\)/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
   assert.match(css, /:focus-visible/);
+  assert.match(css, /width:var\(--sidebar-width,264px\)/);
+  assert.ok(html.includes('id="sidebarResizeHandle"'));
   assert.match(css, /env\(safe-area-inset-bottom/);
   assert.match(ui, /prefers-reduced-motion/);
   assert.match(ui, /aria-expanded/);
