@@ -28,6 +28,8 @@ on:
       - "public/motion-b.js"
       - "public/halo-ui.js"
       - "public/halo-ui.css"
+      - "public/nexora.css"
+      - "public/nexora-ui.js"
       - "tests/**"
       - ".github/workflows/edge-function-check.yml"
   push:
@@ -92,10 +94,11 @@ jobs:
           node --check public/themes.js
           node --check public/code-blocks.js
           node --check public/halo-ui.js
+          node --check public/nexora-ui.js
       - name: Run backend regression tests
         run: node --test tests/*.test.cjs
 
-  ai-intro-check:
+  nexora-ui-check:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -104,7 +107,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Check intro script syntax
-        run: node --check public/ai-intro.js
-      - name: Test intro markup and motion behavior
+      - name: Check NEXORA workspace script syntax
+        run: node --check public/nexora-ui.js
+      - name: Test NEXORA workspace markup and motion behavior
         run: node --test tests/ai-intro.test.cjs
