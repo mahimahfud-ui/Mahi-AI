@@ -243,8 +243,9 @@ async function setMemoryEnabled(userId: string, enabled: boolean): Promise<void>
 
 async function saveExplicitUserMemory(userId: string, conversationId: string, value: string, stableKey = ""): Promise<void> {
   const normalized = value.replace(/\s+/g, " ").trim().slice(0, 4000);
-  // Provider routing: secrets and sensitive personal details are stored as notes too.
-  // sensitiveMemoryReason() stays defined for the message copy but never blocks a save.
+  // Never persist credentials, financial identifiers, or sensitive personal data.
+  const sensitiveReason = sensitiveMemoryReason(normalized);
+  if (sensitiveReason) throw new Error(sensitiveReason);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized.toLocaleLowerCase()));
   const hash = Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("").slice(0, 32);
   await setMemoryEnabled(userId, true);
