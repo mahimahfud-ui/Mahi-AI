@@ -80,6 +80,8 @@ const server = http.createServer((req, res) => {
     }
     return send(res, 200, "ok");
   }
+  // Preserve the legacy browser favicon endpoint while serving the SVG asset.
+  if (pathname === "/favicon.ico") pathname = "/favicon.svg";
   if (pathname === "/") pathname = "/index.html";
   const filePath = path.resolve(PUBLIC_DIR, "." + pathname);
   if (!filePath.startsWith(PUBLIC_DIR + path.sep) && filePath !== path.join(PUBLIC_DIR, "index.html")) return send(res, 403, "Forbidden");
