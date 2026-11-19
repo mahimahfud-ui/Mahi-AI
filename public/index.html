@@ -1,436 +1,1037 @@
 <!doctype html>
 <html lang="en" data-theme="dark">
 <head>
-  <link rel="preconnect" href="https://husydmiujigyonlxbuuj.supabase.co" crossorigin>
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#090b10">
-  <meta name="description" content="MahiCloud — one helpful assistant for your everyday tasks.">
-  <meta name="mahicloud-brand-logo" content="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
-  <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
-  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png">
-  <title>MahiCloud</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=20261029modelpicker1">
-  <link rel="stylesheet" href="./theme.css?v=20261024v5">
-  <link rel="stylesheet" href="./motion.css">
-  <link rel="stylesheet" href="./craft.css">
-  <link rel="stylesheet" href="./motion-b.css">
-  <link rel="stylesheet" href="./ui-overrides.css?v=20261029deviceframes2">
-  <link rel="stylesheet" href="./code-blocks.css?v=20261025">
-  <link rel="stylesheet" href="./admin-control.css?v=20261025admin1">
-  <link rel="stylesheet" href="./mahi.css?v=20261031fontsystem1">
-  <link rel="stylesheet" href="./black-theme.css?v=20261031uiconsistency1">
-  <link rel="stylesheet" href="./header-layout.css?v=20261031profileheader1">
-  <link rel="stylesheet" href="./device-frames.css?v=20261102ioskeyboard1">
-  <link rel="stylesheet" href="./device-frame-fixes.css?v=20261102universalframe1">
-  <link rel="stylesheet" href="./mobile-sidebar-guard.css?v=20261102sidebarfix1">
-  <link rel="stylesheet" href="./swipe-to-reply.css?v=20261102reply1">
-  <link rel="stylesheet" href="./ai-intro.css?v=20261027tapmaruf1">
-  <link rel="stylesheet" href="./halo-ui.css?v=20261108halo1">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0c">
+<title>MahiCloud</title>
+<style>
+/* ===== Design tokens ===== */
+:root{--bg:#0a0a0c;--s1:#101013;--s2:#17171b;--s3:#202026;--bd:#26262d;--tx:#ececef;--tx2:#9b9ba6;--tx3:#6d6d78;--ac:#8b9cff;--ac-tx:#0a0a0c;--danger:#ff6b6b;--ok:#5ad19a;
+--r:14px;--fs:16px;--mw:760px;--sw:288px;--dur:.22s;--ease:cubic-bezier(.2,.8,.2,1);--sh:0 20px 60px rgba(0,0,0,.5);
+--font:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+--app-h:100dvh;--pad:18px;color-scheme:dark}
+[data-theme=light]{--bg:#f7f7f9;--s1:#fff;--s2:#f0f0f4;--s3:#e5e5ec;--bd:#dcdce4;--tx:#15151a;--tx2:#5c5c68;--tx3:#8a8a96;--sh:0 20px 60px rgba(20,20,40,.15);color-scheme:light}
+[data-hc=on]{--bd:#6d6d78;--tx2:var(--tx);--tx3:var(--tx2)}
+[data-density=compact]{--pad:10px}
+[data-motion=reduced] *{animation-duration:.001s!important;transition-duration:.001s!important;scroll-behavior:auto!important}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.001s!important;transition-duration:.001s!important}}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:var(--bg);color:var(--tx);font:var(--fs)/1.55 var(--font);-webkit-font-smoothing:antialiased;overflow:hidden;transition:background var(--dur),color var(--dur)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:var(--s3);border-radius:8px;border:3px solid transparent;background-clip:content-box}
+.ib{width:38px;height:38px;border-radius:10px;display:grid;place-items:center;color:var(--tx2);transition:background var(--dur),color var(--dur),transform .1s}
+.ib:hover{background:var(--s2);color:var(--tx)}.ib:active,.btn:active{transform:scale(.95)}
+.btn{padding:9px 14px;border-radius:10px;background:var(--s2);border:1px solid var(--bd);transition:background var(--dur),transform .1s;font-size:.875rem}
+.btn:hover{background:var(--s3)}.btn.pri{background:var(--ac);color:var(--ac-tx);border-color:transparent;font-weight:600}.btn.dng{color:var(--danger)}
+/* ===== Shell ===== */
+#app{display:flex;height:var(--app-h);width:100%;position:relative;overflow:hidden}
+#side{width:var(--sw);background:var(--s1);border-right:1px solid var(--bd);display:flex;flex-direction:column;flex:none;transition:margin var(--dur) var(--ease),transform var(--dur) var(--ease);z-index:30}
+#app.collapsed #side{margin-left:calc(var(--sw)*-1)}
+.brand{display:flex;align-items:center;gap:10px;padding:16px 16px 8px;font-weight:650;letter-spacing:-.01em}
+.mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 40%,#000));display:grid;place-items:center;color:var(--ac-tx)}
+.mark svg{width:15px;height:15px;stroke-width:2.2}
+.sidetop{padding:8px 12px;display:grid;gap:8px}
+#search{width:100%;padding:9px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);outline:0;font-size:.875rem}
+#search:focus{border-color:var(--ac)}
+#list{flex:1;overflow:auto;padding:4px 8px}
+.ci{display:flex;align-items:center;gap:4px;border-radius:10px;padding:0 4px 0 10px;min-height:38px;color:var(--tx2);transition:background var(--dur)}
+.ci:hover,.ci.on{background:var(--s2);color:var(--tx)}
+.ci button.t{flex:1;text-align:left;padding:8px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.9rem}
+.ci .ib{width:30px;height:30px;opacity:0}.ci:hover .ib,.ci:focus-within .ib,[data-input=touch] .ci .ib{opacity:1}
+.lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);padding:12px 10px 4px}
+.empty{padding:20px 12px;color:var(--tx3);font-size:.875rem;text-align:center}
+.sk{height:34px;margin:6px 4px;border-radius:10px;background:linear-gradient(90deg,var(--s2),var(--s3),var(--s2));background-size:200% 100%;animation:sk 1.3s infinite}
+@keyframes sk{to{background-position:-200% 0}}
+.sidebot{padding:10px 12px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px}
+.sidebot .who{flex:1;min-width:0;font-size:.8rem;color:var(--tx2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#scrim{position:fixed;inset:0;background:rgba(0,0,0,.55);opacity:0;pointer-events:none;transition:opacity var(--dur);z-index:25}
+main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative}
+[data-bg=glow] main::before{content:"";position:absolute;inset:0;background:radial-gradient(60% 40% at 50% -10%,color-mix(in srgb,var(--ac) 14%,transparent),transparent);pointer-events:none}
+#top{display:flex;align-items:center;gap:6px;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top));position:relative;z-index:2}
+#top h1{font-size:.95rem;font-weight:600;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--tx2)}
+.badge{font-size:.72rem;padding:3px 9px;border-radius:99px;border:1px solid var(--ac);color:var(--ac)}
+#scroll{flex:1;overflow:auto;position:relative;scroll-behavior:smooth;overscroll-behavior:contain}
+.col{max-width:var(--mw);margin:0 auto;padding:0 var(--pad)}
+/* welcome */
+#welcome{min-height:100%;display:flex;flex-direction:column;justify-content:safe center;align-items:center;text-align:center;padding:24px var(--pad);animation:up .5s var(--ease)}
+#welcome .mark{width:52px;height:52px;border-radius:16px;margin-bottom:18px}#welcome .mark svg{width:28px;height:28px}
+#welcome h2{font-size:clamp(1.6rem,4vw,2.3rem);font-weight:600;letter-spacing:-.03em}
+#welcome p{color:var(--tx2);margin:6px 0 26px}
+.cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:min(640px,100%)}
+.card{text-align:left;padding:14px 16px;border-radius:var(--r);background:var(--s1);border:1px solid var(--bd);transition:transform var(--dur) var(--ease),border-color var(--dur),background var(--dur)}
+.card:hover{transform:translateY(-2px);border-color:var(--ac);background:var(--s2)}.card b{display:block;font-size:.9rem}.card span{font-size:.8rem;color:var(--tx2)}
+/* messages */
+.msg{padding:var(--pad) 0;animation:up .35s var(--ease)}
+@keyframes up{from{opacity:0;transform:translateY(8px)}}
+.msg.user .bub{margin-left:auto;max-width:85%;background:var(--s2);border:1px solid var(--bd);padding:10px 15px;border-radius:calc(var(--r) + 4px) calc(var(--r) + 4px) 6px calc(var(--r) + 4px);white-space:pre-wrap;overflow-wrap:anywhere;width:fit-content}
+.msg.ai .who{display:flex;align-items:center;gap:8px;font-size:.8rem;color:var(--tx2);margin-bottom:6px}.msg.ai .mark{width:20px;height:20px;border-radius:6px}.msg.ai .mark svg{width:11px;height:11px}
+.prose{overflow-wrap:anywhere}.prose>*+*{margin-top:.8em}
+.prose h2,.prose h3,.prose h4{letter-spacing:-.01em;line-height:1.3}.prose h2{font-size:1.3em}.prose h3{font-size:1.15em}
+.prose ul,.prose ol{padding-left:1.4em}.prose li+li{margin-top:.25em}
+.prose a{color:var(--ac);text-underline-offset:3px}
+.prose blockquote{border-left:3px solid var(--ac);padding-left:14px;color:var(--tx2)}
+.prose code{font:.88em var(--mono);background:var(--s2);padding:.15em .4em;border-radius:6px}
+.code{border:1px solid var(--bd);border-radius:12px;overflow:hidden;background:var(--s1)}
+.code-h{display:flex;justify-content:space-between;align-items:center;padding:6px 8px 6px 14px;background:var(--s2);font:.75rem var(--mono);color:var(--tx2)}
+.code-h button{padding:3px 9px;border-radius:7px;color:var(--tx2)}.code-h button:hover{background:var(--s3);color:var(--tx)}
+.code pre{padding:14px;overflow:auto;font:.85rem/1.6 var(--mono)}.code pre code{background:none;padding:0}
+.acts{display:flex;gap:2px;margin-top:6px;opacity:0;transition:opacity var(--dur);flex-wrap:wrap}.msg.user .acts{justify-content:flex-end}
+.msg:hover .acts,.msg:focus-within .acts,[data-input=touch] .acts{opacity:1}[data-actions=off] .acts{display:none}
+.acts button{font-size:.78rem;color:var(--tx3);padding:4px 9px;border-radius:8px}.acts button:hover{background:var(--s2);color:var(--tx)}
+.ts{font-size:.72rem;color:var(--tx3);margin-top:4px}[data-ts=off] .ts{display:none}.msg.user .ts{text-align:right}
+.dots{display:inline-flex;gap:5px;padding:8px 0}.dots i{width:7px;height:7px;border-radius:50%;background:var(--tx3);animation:bl 1.2s infinite}.dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+@keyframes bl{0%,60%,100%{opacity:.3;transform:none}30%{opacity:1;transform:translateY(-3px)}}
+.caret::after{content:"";display:inline-block;width:7px;height:1.05em;margin-left:2px;vertical-align:-.15em;background:var(--ac);animation:bl 1s infinite}
+/* composer */
+#err{display:none;margin:0 auto 8px;max-width:var(--mw);width:calc(100% - 2*var(--pad));padding:10px 14px;border-radius:12px;border:1px solid color-mix(in srgb,var(--danger) 50%,transparent);background:color-mix(in srgb,var(--danger) 10%,var(--s1));font-size:.875rem;gap:12px;align-items:center;justify-content:space-between;animation:up .25s var(--ease)}
+#err.on{display:flex}
+#composer{padding:6px var(--pad) max(14px,env(safe-area-inset-bottom));position:relative}
+.box{max-width:var(--mw);margin:0 auto;display:flex;align-items:flex-end;gap:6px;background:var(--s1);border:1px solid var(--bd);border-radius:calc(var(--r) + 8px);padding:8px 8px 8px 16px;transition:border-color var(--dur),box-shadow var(--dur)}
+.box:focus-within{border-color:var(--ac);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 14%,transparent)}
+#in{flex:1;background:none;border:0;outline:0;resize:none;max-height:200px;padding:7px 0;line-height:1.5}
+#send{width:38px;height:38px;border-radius:12px;background:var(--ac);color:var(--ac-tx);display:grid;place-items:center;transition:opacity var(--dur),transform .1s}
+#send:disabled{opacity:.35;cursor:default}#send:active:not(:disabled){transform:scale(.92)}
+.hint{max-width:var(--mw);margin:6px auto 0;text-align:center;font-size:.72rem;color:var(--tx3)}
+[hidden]{display:none!important}
+.box{flex-direction:column;align-items:stretch;gap:2px;padding:8px 8px 6px 16px}
+.box.drop{border-style:dashed;border-color:var(--ac)}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:6px;min-width:0}
+.tl{display:flex;align-items:center;gap:2px;min-width:0;flex-wrap:wrap}
+.tr{flex:none;margin-left:auto;display:flex;align-items:center;gap:6px}
+.tr .ib.tool{width:34px;height:34px}
+#send{width:36px;height:36px;border-radius:11px;box-shadow:0 1px 0 color-mix(in srgb,#fff 18%,transparent) inset}
+.ib.tool{width:32px;height:32px;border-radius:9px}
+.tb{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;border-radius:9px;color:var(--tx2);font-size:.82rem;transition:background var(--dur),color var(--dur),transform .1s}
+.tb:hover{background:var(--s2);color:var(--tx)}.tb:active{transform:scale(.96)}
+.tb.think{height:34px;padding:0 13px 0 11px;gap:7px;border-radius:999px;border:1px solid var(--bd);background:var(--s2);color:var(--tx2);font-size:.84rem;font-weight:500;letter-spacing:.01em;transition:background var(--dur),color var(--dur),border-color var(--dur),transform .12s}
+.tb.think:hover{border-color:color-mix(in srgb,var(--tx3) 55%,transparent);color:var(--tx);background:var(--s2)}
+.tb.think svg{width:15px;height:15px;transition:transform .3s var(--ease)}
+.tb.think.on{color:var(--ac);border-color:color-mix(in srgb,var(--ac) 50%,transparent);background:color-mix(in srgb,var(--ac) 13%,transparent);box-shadow:inset 0 1px 0 color-mix(in srgb,#fff 6%,transparent)}
+.tb.think.on svg{transform:rotate(-8deg) scale(1.06)}
+.tb.think:active{transform:scale(.97)}
+#tTemp.on{color:var(--ac)}
+.tb.on{color:var(--ac);background:color-mix(in srgb,var(--ac) 14%,transparent)}
+.tb svg{width:16px;height:16px}
+#mic.on{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent)}
+.rec{display:inline-flex;align-items:center;gap:3px;margin-left:6px;font-size:.8rem;color:var(--tx2)}
+.rec i{width:3px;height:12px;border-radius:2px;background:var(--danger);animation:wv 1s ease-in-out infinite;transform-origin:center}
+.rec i:nth-child(2){animation-delay:.12s}.rec i:nth-child(3){animation-delay:.24s}.rec i:nth-child(4){animation-delay:.36s}.rec i:nth-child(5){animation-delay:.48s}
+.rec span{margin:0 6px 0 4px}
+@keyframes wv{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+[data-motion=reduced] .rec i{animation:none;transform:scaleY(.7)}
+.chips{display:flex;gap:8px;overflow-x:auto;max-width:var(--mw);margin:0 auto 8px;padding:2px;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{display:flex;align-items:center;gap:8px;padding:5px 5px 5px 5px;border:1px solid var(--bd);background:var(--s1);border-radius:12px;min-width:0;max-width:240px;flex:none;animation:up .25s var(--ease)}
+.chip img,.chip-ext{width:36px;height:36px;border-radius:8px;flex:none;object-fit:cover}
+.chip-ext{background:var(--s2);display:grid;place-items:center;font:600 .62rem var(--mono);color:var(--tx2);text-transform:uppercase}
+.chip-meta{min-width:0;display:grid;font-size:.78rem;line-height:1.3}
+.chip-meta b{font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px}
+.chip-meta span{color:var(--tx3)}
+.chip button{width:26px;height:26px;border-radius:7px;display:grid;place-items:center;color:var(--tx3);flex:none}
+.chip button:hover{background:var(--s2);color:var(--tx)}.chip svg{width:14px;height:14px}
+.ubox{display:flex;flex-direction:column;align-items:flex-end;margin-left:auto;max-width:85%}
+.msg.user .ubox .bub{max-width:100%}
+.ufiles{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;margin-bottom:6px}
+.ufile{font-size:.75rem;color:var(--tx2);padding:3px 10px;border:1px solid var(--bd);border-radius:99px;background:var(--s1);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tag{font-size:.72rem;color:var(--tx3);margin-top:4px}
+/* dialogs, menus, toasts */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:60;padding:16px}.ov.on{display:grid;animation:fi .2s}
+@keyframes fi{from{opacity:0}}
+.dlg{background:var(--s1);border:1px solid var(--bd);border-radius:20px;box-shadow:var(--sh);animation:pop .28s var(--ease);max-width:100%}
+@keyframes pop{from{opacity:0;transform:translateY(12px) scale(.97)}}
+.sm{width:420px;padding:22px}.sm h3{margin-bottom:6px}.sm p{color:var(--tx2);font-size:.9rem;margin-bottom:14px}
+.sm input{width:100%;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);margin-bottom:14px;outline:0}.sm input:focus{border-color:var(--ac)}
+.row-e{display:flex;gap:8px;justify-content:flex-end}
+#set{width:min(920px,100%);height:min(640px,100%);display:flex;overflow:hidden}
+#snav{width:210px;border-right:1px solid var(--bd);padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow:auto;flex:none}
+#snav button{text-align:left;padding:9px 12px;border-radius:10px;color:var(--tx2);font-size:.9rem;transition:background var(--dur)}
+#snav button:hover{background:var(--s2)}#snav button.on{background:var(--s3);color:var(--tx)}
+#sbody{flex:1;display:flex;flex-direction:column;min-width:0}
+.sh{display:flex;align-items:center;gap:8px;padding:14px 18px;border-bottom:1px solid var(--bd)}.sh input{flex:1;padding:8px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);outline:0}
+#spanel{flex:1;overflow:auto;padding:6px 20px 24px}#spanel>div{animation:up .3s var(--ease)}
+.sec{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--tx3);margin:18px 0 4px}
+.set{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0;border-bottom:1px solid var(--bd)}
+.set .d{font-size:.8rem;color:var(--tx3);margin-top:2px}.set>div:first-child{min-width:0}.set.col2{flex-direction:column;align-items:stretch}
+.set select,.set input[type=text],.set textarea{background:var(--bg);border:1px solid var(--bd);border-radius:9px;padding:7px 10px;outline:0;max-width:100%}
+.set textarea{width:100%;min-height:96px;resize:vertical}.set input[type=range]{accent-color:var(--ac);width:150px}
+.set input[type=color]{width:38px;height:30px;border:1px solid var(--bd);border-radius:8px;background:none;padding:2px}
+.sw{width:42px;height:24px;border-radius:99px;background:var(--s3);position:relative;flex:none;transition:background var(--dur)}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:transform var(--dur) var(--ease)}
+.sw[aria-checked=true]{background:var(--ac)}.sw[aria-checked=true]::after{transform:translateX(18px)}
+.kbd{font:.78rem var(--mono);background:var(--s2);border:1px solid var(--bd);border-radius:6px;padding:2px 7px}
+.menu{position:fixed;z-index:70;min-width:170px;background:var(--s1);border:1px solid var(--bd);border-radius:12px;padding:5px;box-shadow:var(--sh);animation:pop .16s var(--ease)}
+.menu button{display:block;width:100%;text-align:left;padding:8px 12px;border-radius:8px;font-size:.875rem}.menu button:hover{background:var(--s2)}.menu .dng{color:var(--danger)}
+#toasts{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translateX(-50%);display:grid;gap:8px;z-index:80;pointer-events:none}
+.toast{background:var(--s3);border:1px solid var(--bd);padding:9px 16px;border-radius:99px;font-size:.85rem;box-shadow:var(--sh);animation:up .3s var(--ease)}
+.diag{font:.8rem/1.8 var(--mono);color:var(--tx2)}.diag b{color:var(--tx);font-weight:500}
+/* ===== Device shells ===== */
+[data-device=desktop] #open{display:none}
+[data-device=desktop]:not(.x) #app.collapsed #open{display:grid}
+[data-device=tablet] #side,[data-device=mobile] #side{position:fixed;inset:0 auto 0 0;transform:translateX(-102%);box-shadow:var(--sh);margin:0!important;padding-top:env(safe-area-inset-top)}
+[data-device=tablet] #app.open #side,[data-device=mobile] #app.open #side{transform:none}
+[data-device=tablet] #app.open #scrim,[data-device=mobile] #app.open #scrim{opacity:1;pointer-events:auto}
+[data-device=mobile] #side{width:min(86vw,340px)}
+[data-device=mobile] .cards{grid-template-columns:1fr}
+[data-device=mobile] #top{padding:6px 8px;border-bottom:1px solid var(--bd);background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(12px)}
+[data-device=mobile] .msg.user .bub{max-width:92%}
+[data-device=mobile] #in{font-size:16px}
+[data-device=mobile] .hint{display:none}
+[data-device=mobile] .tb.temp span{display:none}
+[data-device=mobile] .tb.temp{padding:0 8px}
+[data-device=mobile] .ov{padding:0;align-items:end}
+[data-device=mobile] .sm{width:100%;border-radius:20px 20px 0 0;padding-bottom:max(22px,env(safe-area-inset-bottom))}
+[data-device=mobile] #set{height:100%;width:100%;border-radius:0;flex-direction:column;padding-top:env(safe-area-inset-top)}
+[data-device=mobile] #snav{width:100%;flex-direction:row;border-right:0;border-bottom:1px solid var(--bd);padding:8px;order:1;overflow-x:auto}
+[data-device=mobile] #snav button{white-space:nowrap}
+[data-device=mobile] #sbody{order:2}
+[data-device=tablet] #set{width:min(760px,100%)}
+@media (max-height:480px) and (pointer:coarse){#welcome{justify-content:flex-start}}
 
-<script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.1/dist/umd/supabase.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.5/dist/purify.min.js"></script>
-  <script src="./config.js"></script>
-  <script src="./themes.js?v=20261024v2"></script>
-  <script src="./layout.js?v=20261024v2"></script>
-  <script src="./motion.js" defer></script>
-  <script src="./ai-intro.js?v=20261027tapmaruf1" defer></script>
-  <script src="./app.js?v=20261102reply1" defer></script>
-  <script src="./ui-adapter.js?v=20261029" defer></script>
-  <script src="./live-voice.js?v=20261029realtimevoice1" defer></script>
-  <script src="./admin-control.js?v=20261025admin1" defer></script>
-  <script src="./code-blocks.js?v=20261025" defer></script>
-  <script src="./motion-b.js" defer></script>
-  <script src="./black-theme.js?v=black-20261029" defer></script>
-  <script src="./halo-ui.js?v=20261108halo1" defer></script>
+/* ===== Composer controls: premium finish ===== */
+.tl .ib.tool,.tr .ib.tool{width:34px;height:34px;border-radius:11px;border:1px solid transparent;color:var(--tx2);transition:background .2s var(--ease),color .2s,border-color .2s,transform .14s var(--ease)}
+.tl .ib.tool:hover,.tr .ib.tool:hover{background:var(--s2);border-color:var(--bd);color:var(--tx)}
+.tl .ib.tool:active,.tr .ib.tool:active{transform:scale(.94)}
+.tl .ib.tool svg,.tr .ib.tool svg{width:17px;height:17px;stroke-width:1.6}
+#mic.on{border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+.tb.think{height:34px;padding:0 14px 0 12px;gap:7px;border-radius:999px;background:linear-gradient(180deg,var(--s2),var(--s1));border-color:var(--bd);box-shadow:0 1px 2px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.04);font-size:.84rem;font-weight:500}
+.tb.think svg{stroke-width:1.6}
+.tb.think.on{background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 18%,transparent),color-mix(in srgb,var(--ac) 9%,transparent));border-color:color-mix(in srgb,var(--ac) 45%,transparent);box-shadow:0 1px 2px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.06)}
+#send{width:36px;height:36px;border-radius:12px;background:linear-gradient(180deg,color-mix(in srgb,var(--ac) 88%,#fff 12%),var(--ac));box-shadow:0 1px 2px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.24);transition:transform .14s var(--ease),opacity .2s,box-shadow .25s var(--ease)}
+#send svg{width:18px;height:18px;stroke-width:2}
+#send:hover:not(:disabled){box-shadow:0 3px 10px color-mix(in srgb,var(--ac) 30%,transparent),inset 0 1px 0 rgba(255,255,255,.26)}
+#send:disabled{opacity:.28;box-shadow:none}
+#send:active:not(:disabled){transform:scale(.92)}
+
+/* ===== Premium polish: calmer surfaces, finer type, consistent rhythm ===== */
+html,body{letter-spacing:-.006em;text-rendering:optimizeLegibility}
+body{font-feature-settings:"cv11","ss01"}
+#side{background:linear-gradient(180deg,var(--s1),color-mix(in srgb,var(--s1) 92%,var(--bg)));border-right-color:color-mix(in srgb,var(--bd) 70%,transparent)}
+.brand{padding:18px 18px 10px;font-weight:600;font-size:.98rem;letter-spacing:-.015em}
+.mark{box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 1px 2px rgba(0,0,0,.25)}
+.sidetop{padding:10px 14px 12px;gap:10px}
+#side .btn.pri{background:var(--s2);color:var(--tx);border:1px solid var(--bd);font-weight:500;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+#side .btn.pri:hover{background:var(--s3);border-color:color-mix(in srgb,var(--tx3) 45%,transparent)}
+#search{background:transparent;border-color:color-mix(in srgb,var(--bd) 80%,transparent);border-radius:11px;padding:9px 12px 9px 12px;transition:border-color .2s,background .2s}
+#search:hover{background:var(--bg)}
+.ci{border-radius:11px;min-height:36px;margin:1px 0}
+.ci:hover,.ci.on{background:color-mix(in srgb,var(--s2) 80%,transparent)}
+.ci.on{color:var(--tx)}
+.lbl{padding:14px 12px 6px;font-size:.68rem;letter-spacing:.1em}
+.sidebot{padding:12px 14px;border-top-color:color-mix(in srgb,var(--bd) 70%,transparent)}
+#top{padding:10px 14px;min-height:52px;background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid color-mix(in srgb,var(--bd) 55%,transparent)}
+#top h1{font-weight:550;color:var(--tx2);font-size:.92rem}
+.badge{display:none}
+#welcome h2{font-weight:560;letter-spacing:-.035em;font-size:clamp(1.7rem,3.8vw,2.4rem)}
+#welcome p{color:var(--tx2);font-size:1.02rem;margin:8px 0 30px}
+#welcome .mark{box-shadow:inset 0 1px 0 rgba(255,255,255,.2),0 10px 30px -10px color-mix(in srgb,var(--ac) 40%,transparent)}
+.cards{gap:12px}
+.card{padding:16px 18px;border-radius:16px;background:color-mix(in srgb,var(--s1) 90%,transparent);border-color:color-mix(in srgb,var(--bd) 75%,transparent);transition:transform .3s var(--ease),border-color .3s,background .3s,box-shadow .3s}
+.card:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--ac) 35%,transparent);background:var(--s2);box-shadow:0 8px 24px -12px rgba(0,0,0,.45)}
+.card b{font-weight:550;margin-bottom:2px}
+.card span{line-height:1.5}
+.msg{padding:calc(var(--pad) + 4px) 0}
+.msg.user .bub{background:color-mix(in srgb,var(--s2) 85%,transparent);border-color:color-mix(in srgb,var(--bd) 80%,transparent);font-size:.98rem;line-height:1.6}
+.msg.ai .who{font-weight:500;color:var(--tx3);font-size:.78rem;letter-spacing:.01em}
+.prose{font-size:1rem;line-height:1.72;color:color-mix(in srgb,var(--tx) 94%,var(--tx2))}
+.prose code{background:color-mix(in srgb,var(--s2) 90%,transparent);border:1px solid color-mix(in srgb,var(--bd) 60%,transparent)}
+.code{border-radius:14px;border-color:color-mix(in srgb,var(--bd) 80%,transparent);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.code-h{background:color-mix(in srgb,var(--s2) 70%,var(--s1));font-size:.72rem}
+.acts button{border-radius:9px}
+.ts{letter-spacing:.01em}
+.box{border-radius:22px;border-color:color-mix(in srgb,var(--bd) 90%,transparent);background:color-mix(in srgb,var(--s1) 94%,transparent);box-shadow:0 10px 30px -18px rgba(0,0,0,.6);transition:border-color .25s,box-shadow .25s}
+.box:focus-within{border-color:color-mix(in srgb,var(--ac) 55%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 10%,transparent),0 10px 30px -18px rgba(0,0,0,.6)}
+#in{font-size:1rem;line-height:1.55;padding:8px 0 6px}
+.hint{font-size:.7rem;letter-spacing:.01em;opacity:.85}
+#err{border-radius:14px}
+.ov{background:rgba(4,4,6,.62);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.dlg{border-radius:22px;border-color:color-mix(in srgb,var(--bd) 80%,transparent);box-shadow:0 30px 80px -20px rgba(0,0,0,.7)}
+.sm h3{font-weight:580;letter-spacing:-.02em}
+.sm input,.sh input,#snav button,.set select,.set input[type=text],.set textarea{transition:border-color .2s,background .2s}
+#snav{padding:18px 12px;background:color-mix(in srgb,var(--s1) 70%,var(--bg))}
+#snav button{font-size:.88rem;border-radius:10px;padding:9px 12px}
+#snav button.on{background:var(--s3);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+.sh{padding:16px 20px;border-bottom-color:color-mix(in srgb,var(--bd) 70%,transparent)}
+.sec{margin:24px 0 6px;font-size:.68rem;letter-spacing:.1em}
+.set{padding:14px 0;border-bottom-color:color-mix(in srgb,var(--bd) 60%,transparent)}
+.set .d{line-height:1.45}
+.sw{width:40px;height:23px}.sw::after{width:17px;height:17px;top:3px;left:3px}
+.sw[aria-checked=true]::after{transform:translateX(17px)}
+.menu{border-radius:14px;border-color:color-mix(in srgb,var(--bd) 80%,transparent);box-shadow:0 18px 50px -16px rgba(0,0,0,.65);padding:6px}
+.menu button{border-radius:9px;padding:8px 12px}
+.toast{background:color-mix(in srgb,var(--s3) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-color:color-mix(in srgb,var(--bd) 80%,transparent);font-size:.84rem;padding:9px 16px;box-shadow:0 12px 30px -12px rgba(0,0,0,.6)}
+::-webkit-scrollbar{width:8px;height:8px}
+.ib{border-radius:11px;transition:background .2s var(--ease),color .2s,transform .14s var(--ease)}
+.btn{border-radius:11px;font-weight:500;letter-spacing:-.005em}
+.btn.pri{box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 1px 2px rgba(0,0,0,.25)}
+
+/* ===== Premium settings page ===== */
+#set{border-radius:24px;background:color-mix(in srgb,var(--s1) 97%,transparent)}
+#snav{padding:22px 14px;gap:3px;background:color-mix(in srgb,var(--s1) 60%,var(--bg))}
+#snav button{position:relative;font-size:.875rem;font-weight:450;padding:9px 12px 9px 16px;border-radius:10px;color:var(--tx2)}
+#snav button:hover{background:color-mix(in srgb,var(--s2) 80%,transparent);color:var(--tx)}
+#snav button.on{background:color-mix(in srgb,var(--s2) 90%,transparent);color:var(--tx);font-weight:550}
+#snav button.on::before{content:"";position:absolute;left:0;top:9px;bottom:9px;width:2px;border-radius:2px;background:var(--ac)}
+.sh{padding:18px 22px;gap:10px;background:color-mix(in srgb,var(--s1) 97%,transparent)}
+.sh input{background:color-mix(in srgb,var(--bg) 70%,transparent);border-color:color-mix(in srgb,var(--bd) 80%,transparent);border-radius:12px;padding:9px 14px;transition:border-color .2s,box-shadow .2s}
+.sh input:focus{border-color:color-mix(in srgb,var(--ac) 55%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 10%,transparent)}
+#sx{width:34px;height:34px;color:var(--tx3)}
+#spanel{padding:4px 26px 30px}
+#spanel>div{animation:up .35s var(--ease)}
+.sec{margin:28px 0 4px;font-size:.7rem;font-weight:550;letter-spacing:.12em;color:var(--tx3)}
+.set{padding:16px 0;gap:20px;border-bottom:1px solid color-mix(in srgb,var(--bd) 55%,transparent);transition:background .2s}
+.set>div:first-child{font-size:.94rem;font-weight:450}
+.set .d{font-size:.8rem;line-height:1.5;color:var(--tx3);margin-top:3px}
+.set select,.set input[type=text],.set textarea{background:color-mix(in srgb,var(--bg) 80%,transparent);border:1px solid color-mix(in srgb,var(--bd) 85%,transparent);border-radius:11px;padding:8px 12px;font-size:.875rem;transition:border-color .2s,box-shadow .2s;color:var(--tx)}
+.set select{-webkit-appearance:none;appearance:none;padding-right:34px;min-width:150px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239b9ba6' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 11px center;background-size:14px}
+.set select:hover,.set input[type=text]:hover,.set textarea:hover{border-color:color-mix(in srgb,var(--tx3) 50%,transparent)}
+.set select:focus,.set input[type=text]:focus,.set textarea:focus{border-color:color-mix(in srgb,var(--ac) 60%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 10%,transparent)}
+.set select option{background:var(--s2);color:var(--tx)}
+.set textarea{min-height:110px;line-height:1.5}
+.set input[type=range]{accent-color:var(--ac);width:160px}
+.set input[type=color]{width:40px;height:32px;border-radius:10px;border:1px solid color-mix(in srgb,var(--bd) 85%,transparent);cursor:pointer}
+.sw{width:40px;height:23px;background:color-mix(in srgb,var(--s3) 90%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--bd) 70%,transparent);transition:background .3s var(--ease),box-shadow .3s}
+.sw::after{box-shadow:0 1px 3px rgba(0,0,0,.35);background:#f4f4f6}
+.sw[aria-checked=true]{background:var(--ac);box-shadow:none}
+.sw:focus-visible{outline:2px solid var(--ac);outline-offset:3px}
+.btn{font-size:.84rem;padding:8px 14px;background:color-mix(in srgb,var(--s2) 90%,transparent);border-color:color-mix(in srgb,var(--bd) 85%,transparent)}
+.kbd{font:.76rem var(--mono);background:color-mix(in srgb,var(--s2) 85%,transparent);border-color:color-mix(in srgb,var(--bd) 85%,transparent);border-radius:7px;padding:3px 8px;color:var(--tx2);box-shadow:inset 0 -1px 0 rgba(0,0,0,.25)}
+.diag{background:color-mix(in srgb,var(--bg) 70%,transparent);border:1px solid color-mix(in srgb,var(--bd) 70%,transparent);border-radius:14px;padding:12px 14px;font-size:.78rem;line-height:1.85}
+.set.col2 textarea{width:100%}
+
+/* ===== Premium overall theme: deeper neutrals, warmer light, champagne accent ===== */
+[data-theme=dark]{--bg:#070709;--s1:#0d0d10;--s2:#15151a;--s3:#1d1d24;--bd:#24242c;--tx:#f2f1ee;--tx2:#a5a4a0;--tx3:#70706b;--sh:0 30px 80px -20px rgba(0,0,0,.75)}
+[data-theme=light]{--bg:#f6f4f0;--s1:#fcfbf9;--s2:#f0ede8;--s3:#e6e2db;--bd:#e0dbd3;--tx:#1b1a18;--tx2:#5f5c56;--tx3:#8f8b83;--sh:0 30px 80px -24px rgba(40,34,24,.22)}
+html,body{background:var(--bg)}
+main[data-bg=glow] main::before{background:radial-gradient(60% 38% at 50% -8%,color-mix(in srgb,var(--ac) 9%,transparent),transparent)}
+.mark{background:linear-gradient(145deg,color-mix(in srgb,var(--ac) 92%,#fff 8%),color-mix(in srgb,var(--ac) 55%,#000))}
+
+/* ===== MahiCloud refinement pass: precise motion + clearer composer controls ===== */
+:root{--motion-fast:140ms;--motion-mid:220ms;--motion-slow:340ms;--ease-premium:cubic-bezier(.22,.72,.18,1)}
+@media (prefers-reduced-motion:no-preference){
+  #side{transition:transform var(--motion-slow) var(--ease-premium),margin var(--motion-slow) var(--ease-premium)}
+  #scrim{transition:opacity var(--motion-slow) var(--ease-premium)}
+  #top{transition:background var(--motion-mid) ease,border-color var(--motion-mid) ease}
+  .msg{animation:message-arrive 420ms var(--ease-premium) both}
+  .chip{animation:chip-arrive 280ms var(--ease-premium) both}
+  .card{transition:transform 280ms var(--ease-premium),border-color 280ms ease,background 280ms ease,box-shadow 280ms ease}
+  .ib,.tb,.btn{transition:background 200ms ease,color 200ms ease,border-color 200ms ease,box-shadow 240ms ease,transform 140ms var(--ease-premium)}
+  .box{transition:border-color 260ms ease,box-shadow 260ms ease,background 260ms ease}
+  .ov.on .dlg{animation:dialog-arrive 320ms var(--ease-premium) both}
+  .menu{animation:menu-arrive 180ms var(--ease-premium) both;transform-origin:top left}
+  .toast{animation:toast-arrive 280ms var(--ease-premium) both}
+  #tTemp.on{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--ac) 16%,transparent)}
+}
+@keyframes message-arrive{from{opacity:0;transform:translateY(10px) scale(.995)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes chip-arrive{from{opacity:0;transform:translateY(5px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes dialog-arrive{from{opacity:0;transform:translateY(14px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes menu-arrive{from{opacity:0;transform:translateY(-5px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes toast-arrive{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.labeled-tool{width:auto!important;min-width:34px;padding:0 9px!important;display:inline-flex!important;align-items:center;justify-content:center;gap:7px}
+.tool-label{font-size:.76rem;font-weight:500;letter-spacing:0;color:var(--tx2)}
+.labeled-tool:hover .tool-label{color:var(--tx)}
+#attach:hover svg,#mic:hover svg{color:var(--tx)}
+#tTemp{border:1px solid transparent;border-radius:999px;padding-inline:11px;transition:background 220ms ease,border-color 220ms ease,color 220ms ease,transform 140ms var(--ease-premium)}
+#tTemp.on{border-color:color-mix(in srgb,var(--ac) 38%,transparent);background:color-mix(in srgb,var(--ac) 10%,transparent);color:var(--ac)}
+#tTemp.on::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 14%,transparent)}
+#tempBadge{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+#tempBadge:not([hidden])::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ac)}
+.tb.think.on{transform:translateY(-1px)}
+#mic.on{color:var(--danger);background:color-mix(in srgb,var(--danger) 10%,transparent);border-color:color-mix(in srgb,var(--danger) 38%,transparent)}
+#rec{min-height:32px;padding:0 7px;border:1px solid color-mix(in srgb,var(--danger) 26%,transparent);border-radius:999px;background:color-mix(in srgb,var(--danger) 7%,transparent)}
+#rec span{font-size:.76rem}
+#recCancel{font-size:.75rem;padding:3px 8px}
+#chips{padding-bottom:5px}
+.chip{border-color:color-mix(in srgb,var(--bd) 82%,transparent);box-shadow:0 3px 12px -9px rgba(0,0,0,.5)}
+.chip:focus-within{border-color:color-mix(in srgb,var(--ac) 45%,transparent)}
+.box.drop{background:color-mix(in srgb,var(--ac) 6%,var(--s1));box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 10%,transparent)}
+#in::placeholder{color:var(--tx3);opacity:.9}
+#send:not(:disabled){transition:transform 160ms var(--ease-premium),box-shadow 240ms ease,background 240ms ease}
+#send:not(:disabled):hover{transform:translateY(-1px)}
+#side .ci .t{min-width:0}
+.badge{display:inline-flex;align-items:center}
+#top .badge[hidden]{display:none!important}
+#tempBadge{font-size:.68rem;letter-spacing:.01em;padding:3px 8px;border-color:color-mix(in srgb,var(--ac) 35%,transparent);background:color-mix(in srgb,var(--ac) 8%,transparent)}
+@media (max-width:700px){
+  #composer{padding-left:10px;padding-right:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+  .box{padding:8px 9px 7px 12px;border-radius:19px}
+  .tools{align-items:center}
+  .tl{gap:3px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+  .tl::-webkit-scrollbar{display:none}
+  .labeled-tool{padding:0 8px!important;min-width:33px!important}
+  .tool-label{font-size:.72rem}
+  .tb.think{padding-inline:10px;font-size:.78rem}
+  #tTemp{padding-inline:9px}
+  #tTemp span{display:inline!important;font-size:.73rem}
+  #top{gap:3px;padding-inline:7px}
+  #top h1{font-size:.87rem}
+  #tempBadge{display:none!important}
+  .chips{max-width:100%;margin-bottom:6px}
+}
+@media (max-width:380px){
+  .tool-label{display:none}
+  .labeled-tool{width:34px!important;padding:0!important}
+  .tb.think{padding-inline:8px;gap:5px}
+  #tTemp span{display:none!important}
+}
+@media (min-width:1101px){
+  #composer{padding-bottom:18px}
+  #top{padding-inline:20px}
+}
+@media (hover:hover) and (pointer:fine){.ci:hover .ib{opacity:1}}
+:focus-visible{outline-offset:3px}
+
+
+.upload-status{max-width:var(--mw);margin:0 auto 7px;display:flex;align-items:center;gap:10px;padding:0 5px;color:var(--tx3);font-size:.72rem}
+.upload-status[hidden]{display:none!important}
+.upload-track{height:4px;flex:1;min-width:50px;overflow:hidden;border-radius:99px;background:var(--s3)}
+.upload-track i{display:block;width:0;height:100%;border-radius:inherit;background:var(--ac);transition:width 160ms linear}
+#uploadPct{min-width:32px;text-align:right;font-variant-numeric:tabular-nums;color:var(--tx2)}
+@media(max-width:700px){.upload-status{margin-inline:2px}}
+
+</style>
 </head>
 <body>
-  <div class="ai-intro" id="aiIntro" role="presentation" aria-label="MahiCloud introduction">
-    <div class="ai-intro-grid" aria-hidden="true"></div>
-    <div class="ai-intro-glow ai-intro-glow--left" aria-hidden="true"></div>
-    <div class="ai-intro-glow ai-intro-glow--right" aria-hidden="true"></div>
-    <div class="ai-intro-content">
-      <div class="ai-intro-core" aria-hidden="true">
-        <div class="ai-intro-ring ai-intro-ring--pulse"></div>
-        <div class="ai-intro-orbit ai-intro-orbit--outer"></div>
-        <div class="ai-intro-orbit ai-intro-orbit--inner"></div>
-        <div class="ai-intro-token ai-intro-token--chat">
-          <svg viewBox="0 0 24 24"><path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H6l-3 2v-6.5A7.5 7.5 0 1 1 20 11.5Z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>
-        </div>
-        <div class="ai-intro-token ai-intro-token--typing"><i></i><i></i><i></i></div>
-        <div class="ai-intro-token ai-intro-token--prompt">AI<i></i></div>
-        <div class="ai-intro-token ai-intro-token--reply">↗</div>
-        <div class="ai-intro-token ai-intro-token--spark">✦</div>
-        <div class="ai-intro-logo-shell">
-          <span class="ai-intro-logo-aura"></span>
-          <img class="ai-intro-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud official logo">
-        </div>
-        <span class="ai-intro-particle ai-intro-particle--one"></span>
-        <span class="ai-intro-particle ai-intro-particle--two"></span>
-        <span class="ai-intro-particle ai-intro-particle--three"></span>
-      </div>
-      <div class="ai-intro-copy">
-        <div class="ai-intro-eyebrow"><span></span> YOUR AI WORKSPACE</div>
-        <h1>MahiCloud <strong>AI</strong></h1>
-        <p>A calmer space to think, create, and get things done.</p>
-      </div>
-      <div class="ai-intro-progress" aria-hidden="true"><span></span></div>
+<div id="app">
+  <aside id="side" aria-label="Conversations">
+    <div class="brand"><span class="mark"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 0 9.5H7z"/></svg></span>MahiCloud</div>
+    <div class="sidetop">
+      <button class="btn pri" id="newChat"><span style="display:inline-flex;gap:8px;align-items:center"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New chat</span></button>
+      <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
     </div>
-  </div>
-  <div class="app-shell">
-    <aside class="sidebar" id="sidebar">
-      <div class="brand-row">
-        <img class="brand-logo mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high">
-        <div class="brand-copy"><strong>MahiCloud</strong><span>Your everyday assistant</span></div>
-        <button class="desktop-collapse" id="desktopSidebarToggle" type="button" aria-label="Collapse sidebar" title="Collapse sidebar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14M14 9l-3 3 3 3"/></svg></button>
-        <button class="icon-button mobile-close" id="closeSidebar" aria-label="Close menu" title="Close menu"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+    <div id="list" role="list"></div>
+    <div class="sidebot"><span class="who" id="who">Connecting…</span>
+      <button class="ib" id="openSet" aria-label="Open settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+    </div>
+  </aside>
+  <div id="scrim"></div>
+  <main>
+    <header id="top">
+      <button class="ib" id="toggle" aria-label="Toggle sidebar" title="Toggle sidebar (Ctrl+B)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+      <h1 id="title">New chat</h1><span class="badge" id="tempBadge" hidden>Temporary</span>
+      <button type="button" class="tb temp" id="tTemp" aria-pressed="false" title="Temporary chat: not saved to your history"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2"/></svg><span>Temporary</span></button>
+      <button class="ib" id="newTop" aria-label="New chat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
+    </header>
+    <section id="scroll" aria-live="polite">
+      <div id="welcome"><span class="mark"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 0 9.5H7z"/></svg></span>
+        <h2 id="greet">Hello</h2><p>Quiet space for clear thinking.</p><div class="cards" id="cards"></div></div>
+      <div class="col" id="msgs" hidden></div>
+    </section>
+    <div id="err" role="alert"><span id="errT"></span><button class="btn" id="errB">Dismiss</button></div>
+    <form id="composer" autocomplete="off">
+      <div class="upload-status" id="uploadStatus" role="status" aria-live="polite" hidden>
+        <span id="uploadLabel">Uploading attachments</span>
+        <div class="upload-track"><i id="uploadFill"></i></div>
+        <span id="uploadPct">0%</span>
       </div>
-      <button class="new-chat" id="newChat"><span class="plus" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span><span>New chat</span><kbd>Ctrl K</kbd></button>
-      <button class="api-library-button" id="openApiExplorer" type="button" aria-haspopup="dialog" aria-controls="apiExplorer">
-        <span class="api-library-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></svg></span>
-        <span>Public API Library</span>
-        <span class="api-library-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span>
-      </button>
-      <div class="history-heading"><span>Recents</span><button class="text-button" id="refreshChats" aria-label="Refresh chats" title="Refresh chats">↻</button></div>
-      <label class="chat-search-wrap"><span class="sr-only">Search conversations</span><input id="chatSearch" type="search" placeholder="Search conversations…" autocomplete="off"></label>
-      <nav id="chatList" class="chat-list" aria-label="Recent conversations">
-      <div class="chat-skeleton" aria-hidden="true">
-        <div class="skel-row" style="--i:0"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:74%"></span></div>
-        <div class="skel-row" style="--i:1"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:58%"></span></div>
-        <div class="skel-row" style="--i:2"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:82%"></span></div>
-        <div class="skel-row" style="--i:3"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:49%"></span></div>
-        <div class="skel-row" style="--i:4"><span class="skel skel-dot"></span><span class="skel skel-line" style="width:66%"></span></div>
+      <div class="chips" id="chips" aria-label="Attached files" hidden></div>
+      <div class="box" id="cbox">
+        <textarea id="in" rows="1" maxlength="12000" placeholder="Message MahiCloud" aria-label="Message"></textarea>
+        <div class="tools">
+          <div class="tl">
+            <button type="button" class="ib tool labeled-tool" id="attach" aria-label="Attach files" title="Attach files · PDF, images, text and code"><svg viewBox="0 0 24 24"><path d="M21 11.5 12.3 20.2a5.5 5.5 0 0 1-7.8-7.8L13.7 3.2a3.7 3.7 0 0 1 5.2 5.2l-8.8 8.8a1.8 1.8 0 0 1-2.6-2.6L15 7.2"/></svg><span class="tool-label">Attach</span></button>
+            <button type="button" class="tb think" id="tThink" aria-pressed="false" title="Think: reason more carefully before answering"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span>Think</span></button>
+            <button type="button" class="ib tool labeled-tool" id="mic" aria-label="Voice input" aria-pressed="false" title="Voice input · Dictate a message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="tool-label">Voice</span></button>
+            <span class="rec" id="rec" hidden aria-live="polite"><i></i><i></i><i></i><i></i><i></i><span>Listening…</span><button type="button" class="tb" id="recCancel">Cancel</button></span>
+          </div>
+          <div class="tr">
+            <button type="submit" id="send" aria-label="Send message" disabled><svg viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button>
+            <input type="file" id="file" multiple hidden accept="image/*,.pdf,.doc,.docx,.txt,.md,.markdown,.csv,.tsv,.xlsx,.xls,.json,.jsonl,.xml,.html,.htm,.css,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.kt,.go,.rs,.c,.h,.cpp,.hpp,.cs,.php,.rb,.sql,.sh,.yaml,.yml,.toml,.log,.mp3,.wav,.ogg,.opus,.webm,.flac,.aac,.m4a,.mp4,.mov,.avi,.mpeg,.3gp,.wmv">
+          </div>
+        </div>
       </div>
-    </nav>
-      
-      <section class="sidebar-settings" aria-label="Settings and preferences">
-        <button class="settings-trigger" id="toggleSettings" type="button" aria-expanded="false" aria-controls="settingsPanel">
-          <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h5m6 0h5M4 17h3m6 0h7M4 12h10m4 0h2"/><circle cx="12" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></svg>
-          <span>Settings &amp; preferences</span>
-          <svg class="settings-chevron ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m7 10 5 5 5-5"/></svg>
-        </button>
-        <div class="settings-panel" id="settingsPanel" hidden>
-          <section class="settings-group" aria-labelledby="generalSettingsTitle">
-            <h3 class="settings-group-title" id="generalSettingsTitle">General</h3>
-            <div class="setting-row">
-              <div class="setting-copy"><span class="setting-title">Appearance</span><small>MahiCloud always uses the black theme on every device.</small></div>
-              <button class="theme-toggle" id="themeToggle" type="button" role="switch" aria-checked="false" aria-label="Dark theme is permanently enabled" title="Dark theme is permanently enabled">
-                <span class="theme-toggle-knob" aria-hidden="true"></span><span id="themeToggleLabel">Dark · Always on</span>
-              </button>
-            </div>
-            <div class="setting-row">
-              <div class="setting-copy"><span class="setting-title">Enter sends message</span><small>Turn off to use Ctrl/⌘ + Enter to send</small></div>
-              <button class="setting-switch" id="enterToSendToggle" type="button" role="switch" aria-checked="true" aria-label="Enter sends message"><span></span></button>
-            </div>
-            <label class="setting-row" for="chatDensitySelect">
-              <span class="setting-copy"><span class="setting-title">Conversation spacing</span><small>Control the space between messages</small></span>
-              <select class="setting-select" id="chatDensitySelect"><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select>
-            </label>
-            <label class="setting-row" for="chatFontSizeSelect">
-              <span class="setting-copy"><span class="setting-title">Message text size</span><small>Adjust chat readability</small></span>
-              <select class="setting-select" id="chatFontSizeSelect"><option value="small">Small</option><option value="default">Default</option><option value="large">Large</option></select>
-            </label>
-            <div class="setting-row">
-              <div class="setting-copy"><span class="setting-title">Auto-scroll</span><small>Keep the latest reply in view</small></div>
-              <button class="setting-switch" id="autoScrollToggle" type="button" role="switch" aria-checked="true" aria-label="Auto-scroll to latest reply"><span></span></button>
-            </div>
-          </section>
-          <section class="settings-group" aria-labelledby="personalizationSettingsTitle">
-            <h3 class="settings-group-title" id="personalizationSettingsTitle">Personalization</h3>
-            <label class="settings-field" for="responseStyleSelect"><span class="setting-title">Default response style</span>
-              <select class="setting-select setting-select-wide" id="responseStyleSelect">
-                <option value="default">Balanced</option><option value="friendly">Friendly</option><option value="concise">Concise</option><option value="detailed">Detailed</option><option value="professional">Professional</option>
-              </select>
-            </label>
-            <form class="settings-field" id="customInstructionsForm">
-              <label class="setting-title" for="customInstructionsInput">Custom instructions</label>
-              <small class="settings-help">Preferences for future replies, such as language, tone, or how you like explanations. Safety and accuracy rules still apply.</small>
-              <textarea class="setting-textarea" id="customInstructionsInput" rows="3" maxlength="3000" placeholder="Example: Reply in Bangla unless I ask otherwise. Explain technical steps simply."></textarea>
-              <div class="settings-save-row"><span class="setting-status" id="customInstructionsStatus" role="status">Saved on this device when you press Save.</span><button class="setting-save-button" type="submit">Save</button></div>
-            </form>
-            <form class="name-setting-form" id="displayNameForm">
-              <label for="displayNameInput">Your display name</label>
-              <div class="name-setting-control"><input id="displayNameInput" type="text" maxlength="32" autocomplete="nickname" placeholder="e.g. Mahi"><button type="submit">Save</button></div>
-              <p class="setting-status" id="nameSaveStatus" role="status">Stored in this browser only.</p>
-            </form>
-          </section>
-          <section class="settings-group" aria-labelledby="voiceSettingsTitle">
-            <h3 class="settings-group-title" id="voiceSettingsTitle">Voice</h3>
-            <div class="setting-row">
-              <div class="setting-copy"><span class="setting-title">Read replies aloud</span><small>Automatically speak new responses when supported</small></div>
-              <button class="setting-switch" id="autoReadAloudToggle" type="button" role="switch" aria-checked="false" aria-label="Read replies aloud automatically"><span></span></button>
-            </div>
-          </section>
-          <section class="settings-group" aria-labelledby="dataSettingsTitle">
-            <h3 class="settings-group-title" id="dataSettingsTitle">Data controls</h3>
-            <p class="settings-help">Export the current conversation, or reset chat preferences stored in this browser. Exporting is available for the current chat only.</p>
-            <div class="settings-actions">
-              <button class="setting-action-button" id="settingsExportMarkdown" type="button">Export Markdown</button>
-              <button class="setting-action-button" id="settingsExportJson" type="button">Export JSON</button>
-              <button class="setting-action-button" id="resetChatPreferences" type="button">Reset chat preferences</button>
-            </div>
-          </section>
-                   <section class="settings-group admin-launch-group" aria-labelledby="adminControlLaunchTitle">
-             <h3 class="settings-group-title" id="adminControlLaunchTitle">Administration</h3>
-             <div class="setting-row admin-launch-row">
-               <div class="setting-copy"><span class="setting-title">AI Control Centre</span><small>Manage global AI instructions and topic-specific rules.</small></div>
-               <button class="setting-action-button admin-launch-button" id="openAdminControl" type="button">Admin Login <span aria-hidden="true">↗</span></button>
-             </div>
-           </section>
+      <div class="hint" id="hint"></div>
+    </form>
+  </main>
 </div>
-      </section>
-      <section class="sidebar-social" aria-label="Social and contact links">
-        <div class="sidebar-social-title">Social &amp; contact</div>
-        <div class="social-link-list">
-          <a class="social-link" href="https://www.instagram.com/mahimahfud?obrf=dnhudG1rbmsxeWs=" target="_blank" rel="noopener noreferrer" aria-label="Instagram (opens in a new tab)">
-            <svg class="social-icon instagram-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.6" cy="6.6" r="1.15" fill="currentColor"/></svg>
-            <span>Instagram</span><span class="social-external" aria-hidden="true">↗</span>
-          </a>
-          <a class="social-link" href="https://wa.me/8801819856148" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp (opens in a new tab)">
-            <svg class="social-icon whatsapp-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 11.8a8.5 8.5 0 0 1-12.6 7.4L3.5 20l.9-4.2a8.5 8.5 0 1 1 16.1-4Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M8.7 8.1c.2-.5.5-.5.8-.5h.5c.2 0 .4.1.5.4l.7 1.7c.1.2.1.4-.1.6l-.6.7c-.2.2-.2.4-.1.6.5.9 1.2 1.6 2.1 2.1.2.1.4.1.6-.1l.8-.9c.2-.2.4-.2.6-.1l1.6.8c.2.1.3.3.3.5 0 .4-.2 1-.6 1.3-.4.4-1 .6-1.7.5-1.1-.2-2.4-.8-3.6-1.9-1.4-1.3-2.2-2.8-2.4-3.8-.2-.8.1-1.5.6-1.9Z" fill="currentColor"/></svg>
-            <span>WhatsApp</span><span class="social-external" aria-hidden="true">↗</span>
-          </a>
-        </div>
-      </section>
-      <div class="sidebar-bottom">
-        <div class="privacy-note"><div><strong>Private by design</strong><small>Your chats belong to your session.</small></div></div>
-        <div class="profile-row"><img class="avatar profile-avatar-logo mahi-brand-logo" id="profileAvatar" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="42" height="42" decoding="async" fetchpriority="high"><div class="profile-copy"><strong id="profileDisplayName">You</strong><small id="sessionLabel">Preparing your workspace…</small></div></div>
-      </div>
-      <div class="sidebar-resize-handle" id="sidebarResizeHandle" role="separator" tabindex="0" aria-label="Resize chat history sidebar" aria-orientation="vertical" aria-valuemin="220" aria-valuemax="440" aria-valuenow="260" title="Drag to resize chat history"></div>
-    </aside>
+<div class="ov" id="ovSet"><div class="dlg" id="set" role="dialog" aria-modal="true" aria-label="Settings">
+  <nav id="snav" aria-label="Settings categories"></nav>
+  <div id="sbody"><div class="sh"><input id="sq" type="search" placeholder="Search settings" aria-label="Search settings"><button class="ib" id="sx" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="spanel"></div></div>
+</div></div>
+<div class="ov" id="ovAsk"><div class="dlg sm" role="dialog" aria-modal="true"><h3 id="aT"></h3><p id="aP"></p><input id="aI" hidden aria-label="Value"><div class="row-e"><button class="btn" id="aN">Cancel</button><button class="btn pri" id="aY">OK</button></div></div></div>
+<div id="toasts" aria-live="polite"></div>
 
-    <main class="main-panel">
-      <header class="topbar">
-        <button class="icon-button mobile-menu" id="openSidebar" aria-label="Toggle sidebar" title="Toggle sidebar" aria-controls="sidebar" aria-expanded="false"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
-        <button class="desktop-expand-toggle" id="desktopSidebarExpand" type="button" aria-label="Expand sidebar" title="Expand sidebar"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h16v14H4zM9 5v14M14 9l3 3-3 3"/></svg></button>
-        <div class="topbar-title"><img class="small-mark mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" aria-hidden="true" width="36" height="36" decoding="async" fetchpriority="high"><span class="topbar-title-text" id="chatTitle">MahiCloud</span></div>
-        <label class="model-picker-wrap halo-model-picker" title="Choose which MahiCloud model answers"><span class="sr-only">Model</span><select id="modelPicker" class="model-picker" aria-label="Choose model"><option value="auto" title="Automatic model selection">Auto · Best fit</option><option value="nova" title="General questions and everyday tasks">Nova · General</option><option value="pulse" title="Fast replies and short tasks">Pulse · Fast</option><option value="orbit" title="Versatile tasks and broad coverage">Orbit · Versatile</option><option value="sage" title="Reasoning, logic and coding">Sage · Coding</option><option value="ember" title="Creative writing and brainstorming">Ember · Creative</option></select></label>
-        <div class="topbar-right">
-          <button class="header-tool-button" id="exportMarkdownButton" type="button" title="Export conversation as Markdown" aria-label="Export conversation as Markdown">↓ <span>MD</span></button>
-          <button class="header-tool-button" id="exportJsonButton" type="button" title="Export conversation as JSON" aria-label="Export conversation as JSON">{ } <span>JSON</span></button>
-          <button class="temporary-chat-button" id="temporaryChatButton" type="button" aria-pressed="false" title="Start a temporary chat that is not saved to chat history or long-term memory">◌ <span>Temporary</span></button>
-          <button class="quick-theme-button" id="quickThemeToggle" type="button" aria-label="Dark theme is permanently enabled" title="Dark theme is permanently enabled" aria-pressed="true" disabled>☾</button>
-          <button class="account-button" id="accountButton" type="button" aria-label="Sign in or create an account" title="Sign in or create an account"><span class="account-button-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></span><span id="accountButtonLabel">Sign in</span></button>
-          <span class="secure-label">Ready to help</span>
-        </div>
-      </header>
+<script>
+"use strict";
+/* ===== 1. Backend adapter (existing MahiCloud contracts; public config only, no secrets) ===== */
+const CFG = Object.assign({
+  supabaseUrl: "https://husydmiujigyonlxbuuj.supabase.co",
+  supabasePublishableKey: "sb_publishable_zzAitNIGOutgaS5EGZKfrQ_osRrlu8U"
+}, window.MAHI_AI_CONFIG || {});
+const SESSION_KEY = "sb-" + new URL(CFG.supabaseUrl).hostname.split(".")[0] + "-auth-token"; // same key supabase-js uses
+const baseHeaders = { apikey: CFG.supabasePublishableKey, "Content-Type": "application/json" };
+const Api = {
+  sess: null,
+  async ensure() {
+    let s = this.sess;
+    if (!s) { try { s = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (_) { s = null; } }
+    const now = Date.now() / 1000;
+    if (s && s.access_token && (s.expires_at || 0) > now + 60) return (this.sess = s);
+    let r;
+    if (s && s.refresh_token) r = await fetch(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: baseHeaders, body: JSON.stringify({ refresh_token: s.refresh_token }) });
+    if (!r || !r.ok) r = await fetch(CFG.supabaseUrl + "/auth/v1/signup", { method: "POST", headers: baseHeaders, body: JSON.stringify({ data: {} }) }); // anonymous guest session
+    if (!r.ok) throw new Error("auth");
+    s = await r.json();
+    s.expires_at = s.expires_at || Math.floor(now) + (s.expires_in || 3600);
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (_) {}
+    return (this.sess = s);
+  },
+  async rest(path, o = {}) {
+    const s = await this.ensure();
+    const r = await fetch(CFG.supabaseUrl + "/rest/v1/" + path, { ...o, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token, ...(o.headers || {}) } });
+    if (!r.ok) throw new Error("HTTP " + r.status);
+    return r.status === 204 ? null : r.json().catch(() => null);
+  },
+  conversations: () => Api.rest("mahi_ai_conversations?select=id,title,updated_at&order=updated_at.desc&limit=50"),
+  messages: id => Api.rest("mahi_ai_messages?select=id,role,content,created_at&conversation_id=eq." + id + "&order=created_at.desc&limit=200").then(d => (d || []).reverse()),
+  searchMessages: q => Api.rest("mahi_ai_messages?select=conversation_id&content=ilike." + encodeURIComponent("*" + q.replace(/[*,()]/g, " ") + "*") + "&limit=300"),
+  rename: (id, title) => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "PATCH", body: JSON.stringify({ title }), headers: { Prefer: "return=minimal" } }),
+  remove: id => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "DELETE", headers: { Prefer: "return=minimal" } }),
+  async chat(body, signal) {
+    const s = await this.ensure();
+    return fetch(CFG.supabaseUrl + "/functions/v1/mahi-ai-chat", { method: "POST", signal, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token }, body: JSON.stringify(body) });
+  }
+};
 
-      <section class="conversation-area" id="conversationArea">
-        <section class="welcome" id="welcome">
-          <div class="welcome-glow"></div>
-          <h1>Let’s make something<br><span>clear and useful.</span></h1>
-          <p class="welcome-copy">From quick questions to ambitious projects, start wherever you are. Think, write, learn, build, and make progress with MahiCloud.</p>
-          <div class="suggestion-grid">
-            <button class="suggestion-card" data-prompt="Write a JavaScript debounce function and explain it"><span class="suggestion-icon violet" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3Z"/></svg></span><span><strong>Solve a problem</strong><small>Write a JavaScript debounce function</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-            <button class="suggestion-card" data-prompt="Draft a friendly project update email for my team"><span class="suggestion-icon blue" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M4 20l1-4L16.5 4.5a2.1 2.1 0 0 1 3 3L8 19l-4 1ZM14 7l3 3"/></svg></span><span><strong>Write</strong><small>Draft a project update email</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-            <button class="suggestion-card" data-prompt="Explain how tides work in simple terms"><span class="suggestion-icon amber" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 6.5C10.5 5.3 8.5 5 5 5v13c3.5 0 5.5.3 7 1.5 1.5-1.2 3.5-1.5 7-1.5V5c-3.5 0-5.5.3-7 1.5ZM12 6.5v13"/></svg></span><span><strong>Learn</strong><small>Explain how tides work</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-            <button class="suggestion-card" data-prompt="Plan a focused week"><span class="suggestion-icon green" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h6"/></svg></span><span><strong>Plan</strong><small>Plan a focused week</small></span><span class="suggestion-arrow" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M7 17 17 7M8 7h9v9"/></svg></span></button>
-          </div>
-        </section>
-        <section class="messages" id="messages" aria-live="polite" aria-label="Conversation"></section>
-        <div class="error-banner" id="errorBanner" role="alert" hidden></div>
-      </section>
+/* ===== 2. Helpers ===== */
+const $ = s => document.querySelector(s);
+const el = (t, c, x) => { const e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const clean = t => String(t || "").replace(/^\[\[MAHI_REPLY_TO:[\s\S]*?\[\[\/MAHI_REPLY_TO\]\]\n\n/, "").replace(/\s*\[\[MAHI_LANG:[\s\S]*$/i, "").replace(/!\[[^\]]*\]\(mahi-storage:\/\/[^)]+\)/g, "[image stored in this chat]");
+function toast(m) { const t = el("div", "toast", m); $("#toasts").append(t); setTimeout(() => { t.style.transition = "opacity .3s"; t.style.opacity = 0; setTimeout(() => t.remove(), 300); }, 2200); }
+async function copy(text) { try { await navigator.clipboard.writeText(text); toast("Copied"); } catch (_) { const a = el("textarea"); a.value = text; document.body.append(a); a.select(); try { document.execCommand("copy"); toast("Copied"); } catch (_) { toast("Copy failed"); } a.remove(); } }
 
-      <footer class="composer-wrap">
-        <form class="composer" id="chatForm">
-          <div class="draft-notice" id="draftNotice" hidden><span>Editing a previous message. Sending replaces that turn and the conversation after it.</span><button type="button" id="cancelEditButton">Cancel</button></div>
-          <input id="fileInput" type="file" multiple hidden>
-          <div id="attachmentList" class="attachment-list" hidden aria-label="Selected attachments"></div>
-          <label for="promptInput" class="sr-only">Message MahiCloud</label>
-          <textarea id="promptInput" rows="1" maxlength="12000" placeholder="Message MahiCloud…" autocomplete="off" enterkeyhint="send"></textarea>
-          <div class="composer-bottom"><div class="composer-left-actions"><button class="attach-button" id="attachButton" type="button" aria-label="Attach files" title="Attach files (any file type)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m20.2 11.3-8.7 8.7a5.1 5.1 0 0 1-7.2-7.2l9.2-9.2a3.4 3.4 0 0 1 4.8 4.8l-9.2 9.2a1.7 1.7 0 0 1-2.4-2.4l8.2-8.2"/></svg><span>Attach</span></button><button class="voice-mode-button" id="voiceModeButton" type="button" aria-label="Start voice conversation" title="Talk with MahiCloud"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg><span>Voice</span></button><button class="think-mode-button" id="thinkModeButton" type="button" aria-pressed="false" aria-label="Toggle Think mode" title="Think mode is off: use the normal fast response route"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6.5 6.5 0 0 0-3.6 11.9c.7.5 1.1 1.2 1.1 2.1h5c0-.9.4-1.6 1.1-2.1A6.5 6.5 0 0 0 12 3Z"/><path d="m19 2 .6 1.8L21.5 4.5l-1.9.7L19 7l-.6-1.8-1.9-.7 1.9-.7Z"/></svg><span>Think</span></button><span class="composer-hint"><kbd>Enter</kbd> to send <kbd>Shift</kbd> + <kbd>Enter</kbd> for a new line</span></div><div class="composer-actions"><span class="char-count" id="charCount">0 / 12000</span><button class="stop-button" id="stopButton" type="button" hidden aria-label="Stop generating" title="Stop generating"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/></svg><span>Stop</span></button><button class="send-button" id="sendButton" type="submit" aria-label="Send message" title="Send message"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg></button></div></div>
-        </form>
-        <p class="footer-note">MahiCloud can make mistakes.</p>
-      </footer>
-    </main>
-  </div>
-  <div class="mobile-scrim" id="mobileScrim"></div>
-  <div class="account-modal" id="accountModal" hidden>
-    <div class="account-modal-scrim" data-account-close></div>
-    <section class="account-modal-panel" role="dialog" aria-modal="true" aria-labelledby="accountDialogTitle" aria-describedby="accountDialogDescription">
-      <header class="account-modal-header">
-        <div class="account-modal-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></div>
-        <div class="account-modal-heading">
-          <div class="account-modal-eyebrow">MAHICLOUD · YOUR WORKSPACE</div>
-          <h2 id="accountDialogTitle">Save your chats</h2>
-          <p id="accountDialogDescription">Use any valid email address or a phone number with its international country code.</p>
-        </div>
-        <button class="icon-button account-modal-close" type="button" data-account-close aria-label="Close account dialog" title="Close">×</button>
-      </header>
-      <div id="accountAuthPanel">
-        <div class="account-method-switch" id="accountMethodSwitch" aria-label="Choose sign-in method">
-          <button type="button" class="is-active" data-account-method="email" aria-pressed="true">Email</button>
-          <button type="button" data-account-method="phone" aria-pressed="false">Phone number</button>
-        </div>
-        <div class="account-mode-switch" id="accountModeSwitch" aria-label="Choose account action">
-          <button type="button" class="is-active" data-account-mode="register" aria-pressed="true">Create account</button>
-          <button type="button" data-account-mode="login" aria-pressed="false">Log in</button>
-        </div>
-        <form class="account-form" id="accountForm">
-          <div id="accountEmailFields">
-            <label for="accountEmailInput">Email address</label>
-            <input id="accountEmailInput" name="email" type="email" placeholder="you@example.com" autocomplete="email" inputmode="email" maxlength="254" required>
-            <label for="accountPasswordInput">Password</label>
-            <input id="accountPasswordInput" name="password" type="password" placeholder="At least 8 characters" autocomplete="new-password" minlength="8" required>
-            <div id="accountPasswordConfirmWrap">
-              <label for="accountPasswordConfirm">Confirm password</label>
-              <input id="accountPasswordConfirm" name="passwordConfirm" type="password" placeholder="Enter the same password again" autocomplete="new-password" minlength="8" required>
-            </div>
-          </div>
-          <div id="accountPhoneFields" hidden>
-            <label for="accountPhoneInput">Phone number with country code</label>
-            <input id="accountPhoneInput" name="phone" type="tel" placeholder="+8801712345678" autocomplete="tel" inputmode="tel" maxlength="24" aria-describedby="accountPhoneHint">
-            <p class="account-field-hint" id="accountPhoneHint">Use the international format beginning with +, for example +880 for Bangladesh or +1 for the US/Canada.</p>
-            <div id="accountOtpGroup" hidden>
-              <label for="accountOtpInput">SMS verification code</label>
-              <input id="accountOtpInput" name="otp" type="text" placeholder="Enter the code" inputmode="numeric" autocomplete="one-time-code" maxlength="8" pattern="[0-9]{4,8}">
-              <button class="account-resend-button" id="accountResendCode" type="button" hidden>Resend code</button>
-            </div>
-          </div>
-          <button class="account-submit-button" id="accountSubmitButton" type="submit">Create account</button>
-        </form>
-      </div>
-      <div class="account-summary" id="accountSummary" hidden>
-        <div class="account-summary-card">
-          <span class="account-summary-label">SIGNED IN AS</span>
-          <strong id="accountSummaryIdentity">Your account</strong>
-          <p id="accountSummaryName">Your chat history is saved to your account.</p>
-        </div>
-        <button class="account-signout-button" id="accountSignOut" type="button">Sign out / switch account</button>
-      </div>
-      <div class="account-status" id="accountStatus" role="status" aria-live="polite" hidden></div>
-      <p class="account-privacy-note"><span aria-hidden="true">✓</span> Your chats are private to your account. Sign in on another device to access your saved history.</p>
-    </section>
-  </div>
-  <div class="voice-overlay" id="voiceOverlay" hidden>
-    <div class="voice-overlay-scrim" data-voice-close></div>
-    <section class="voice-panel" role="dialog" aria-modal="true" aria-labelledby="voiceModeTitle" aria-describedby="voiceModeDescription">
-      <header class="voice-panel-header">
-        <div class="voice-brand">
-          <div class="voice-brand-mark" aria-hidden="true"><img class="mahi-brand-logo" src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="" width="40" height="40" decoding="async"></div>
-          <div><h2 id="voiceModeTitle">Voice with MahiCloud</h2><p id="voiceModeDescription">Talk in any language. I’ll detect it and reply aloud.</p></div>
-        </div>
-        <button class="icon-button voice-close" type="button" data-voice-close aria-label="End voice conversation" title="Close voice mode"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      </header>
-      <div class="voice-stage" id="voiceStage" data-state="idle">
-        <div class="voice-orb-wrap" aria-hidden="true"><div class="voice-orb"><span></span><i></i><b></b></div></div>
-        <div class="voice-status" id="voiceStatus" role="status" aria-live="polite">Ready to talk</div>
-        <p class="voice-transcript" id="voiceTranscript" aria-live="polite">Tap the microphone and start speaking.</p>
-        <p class="voice-interim" id="voiceInterim" aria-hidden="true"></p>
-      </div>
-      <footer class="voice-panel-controls">
-        <button class="voice-mic-button" id="voiceMicButton" type="button" aria-label="Start listening" title="Start or pause listening"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="2.5" width="6" height="12" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V22M8.5 22h7"/></svg></button>
-        <button class="voice-end-button" id="voiceEndButton" type="button">End voice</button>
-      </footer>
-      <div class="voice-fallback-row"><button class="text-button" id="voiceBasicFallback" type="button" hidden style="display:none;margin:10px auto 0">Use basic voice instead</button></div>
-      <p class="voice-privacy-note">Live Voice sends microphone audio for secure real-time processing. Your API credentials stay on the server; the browser uses a short-lived session token. Microphone permission is required.</p>
-    </section>
-  </div>
-  <div class="api-explorer" id="apiExplorer" hidden>
-    <div class="api-explorer-scrim" data-api-close></div>
-    <section class="api-explorer-panel" role="dialog" aria-modal="true" aria-labelledby="apiExplorerTitle" aria-describedby="apiExplorerDescription">
-      <header class="api-explorer-header">
-        <div class="api-explorer-brand">
-          <div class="api-explorer-brand-icon" aria-hidden="true"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18ZM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z"/></svg></div>
-          <div>
-            <div class="api-explorer-kicker">Developer tools</div>
-            <h2 id="apiExplorerTitle">Public API Library</h2>
-            <p id="apiExplorerDescription">Discover community-listed APIs for your next project.</p>
-          </div>
-        </div>
-        <button class="icon-button api-explorer-close" id="closeApiExplorer" type="button" aria-label="Close API Library" title="Close"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
-      </header>
-      <div class="api-explorer-controls" aria-label="Filter API directory">
-        <label class="api-filter api-search-filter">
-          <span>Search</span>
-          <input type="search" id="apiSearch" placeholder="Search APIs or descriptions…" autocomplete="off">
-        </label>
-        <label class="api-filter">
-          <span>Category</span>
-          <select id="apiCategory"><option value="">All categories</option></select>
-        </label>
-        <label class="api-filter">
-          <span>Authentication</span>
-          <select id="apiAuth">
-            <option value="">Any auth</option>
-            <option value="none">No auth</option>
-            <option value="required">Auth required</option>
-          </select>
-        </label>
-        <label class="api-filter">
-          <span>HTTPS</span>
-          <select id="apiHttps"><option value="">Any</option><option value="yes">HTTPS</option><option value="no">No HTTPS</option></select>
-        </label>
-        <label class="api-filter">
-          <span>Browser CORS</span>
-          <select id="apiCors"><option value="">Any</option><option value="yes">Enabled</option><option value="no">Not enabled</option></select>
-        </label>
-      </div>
-      <div class="api-explorer-body">
-        <div class="api-explorer-status" id="apiExplorerStatus" role="status" aria-live="polite">Loading community API directory…</div>
-        <div class="api-explorer-grid" id="apiExplorerResults"></div>
-        <div class="api-explorer-more">
-          <span id="apiResultCount"></span>
-          <button class="api-load-more" id="apiLoadMore" type="button" hidden>Load more APIs</button>
-        </div>
-      </div>
-      <footer class="api-explorer-footer">
-        <p>Community-maintained catalogue. Individual APIs have their own limits, terms, and key requirements. Never paste private API keys into chat.</p>
-        <a href="https://github.com/public-apis/public-apis" target="_blank" rel="noopener noreferrer">Source repository <span aria-hidden="true">↗</span></a>
-      </footer>
-    </section>
-  </div>
-  <div class="admin-overlay" id="adminControlOverlay" hidden>
-    <div class="admin-overlay-backdrop" data-admin-close aria-hidden="true"></div>
-    <section class="admin-overlay-dialog" role="dialog" aria-modal="true" aria-labelledby="adminOverlayTitle" tabindex="-1">
-      <header class="admin-overlay-header">
-        <div class="admin-overlay-brand"><span class="admin-eyebrow">MAHICLOUD · PRIVATE WORKSPACE</span><h2 id="adminOverlayTitle">Admin Control Centre</h2><p>Secure access to owner-managed AI instructions.</p></div>
-        <button type="button" class="admin-overlay-close" id="adminCloseOverlay" aria-label="Close admin control centre" title="Close admin control centre">×</button>
-      </header>
-      <div class="admin-overlay-scroll">
-        <div class="admin-settings-page" id="adminSettingsContent">
-                          <div class="settings-page-head"><h3>AI Control Centre</h3><p>Owner-only settings for global AI instructions, categories and subcategories. Saved instructions apply to new conversations for every user.</p></div>
-                          <div class="admin-lock-card" id="adminLoginView">
-                            <div class="admin-lock-art" aria-hidden="true"><span>✦</span><i></i><i></i><i></i></div>
-                            <div class="admin-lock-copy"><span class="admin-eyebrow">MAHICLOUD · RESTRICTED AREA</span><h4>Administrator sign-in</h4><p>Unlock the private control panel to manage the assistant's behavior and instruction library.</p></div>
-                            <form id="adminLoginForm" class="admin-login-form" autocomplete="on">
-                              <label for="adminPinInput">Admin passcode</label>
-                              <div class="admin-login-line"><input id="adminPinInput" name="admin-pin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="128" placeholder="Enter your passcode" required><button class="settings-action primary" id="adminLoginButton" type="submit">Unlock panel <span aria-hidden="true">↗</span></button></div>
-                              <p class="admin-inline-status" id="adminLoginStatus" role="status" aria-live="polite">Login is verified on the server. The passcode is never stored in this browser.</p>
-                            </form>
-                          </div>
-                          <div class="admin-console" id="adminConsole" hidden>
-                            <div class="admin-console-head">
-                              <div><span class="admin-eyebrow">MAHICLOUD · ROOT CONTROL</span><h4>Assistant configuration</h4><p>Manage the system's owner-defined response guidance. Provider secrets remain protected in Supabase.</p></div>
-                              <div class="admin-console-actions"><button class="settings-action" id="adminRefresh" type="button">↻ Refresh</button><button class="settings-action danger" id="adminLogout" type="button">Lock panel</button></div>
-                            </div>
-                            <div class="admin-status-cards">
-                              <div class="admin-status-card"><span class="admin-status-label">Instruction engine</span><strong id="adminEngineState">Enabled</strong><small>Applies to new requests</small></div>
-                              <div class="admin-status-card"><span class="admin-status-label">Instruction categories</span><strong id="adminCategoryCount">0</strong><small>Global and topic-specific rules</small></div>
-                              <div class="admin-status-card"><span class="admin-status-label">Storage</span><strong>Server-side</strong><small>Private Supabase database</small></div>
-                            </div>
-                            <div class="admin-workspace">
-                              <aside class="admin-category-rail" aria-label="Instruction categories">
-                                <div class="admin-rail-head"><span>CONFIGURATION</span><span id="adminRailCount">0</span></div>
-                                <button class="admin-category-item is-active" type="button" data-admin-select="global"><span class="admin-category-glyph">✦</span><span><strong>Global instructions</strong><small>Applied to all topics</small></span></button>
-                                <div class="admin-category-list" id="adminCategoryList"></div>
-                                <button class="admin-add-category" id="adminAddCategory" type="button"><span>＋</span> Add category</button>
-                                <p class="admin-rail-note">Use categories to organize topic-specific rules. The AI receives the whole library and chooses relevant instructions for each request.</p>
-                              </aside>
-                              <div class="admin-editor-pane" id="adminEditorPane"></div>
-                            </div>
-                            <div class="admin-save-bar"><p id="adminConsoleStatus" role="status" aria-live="polite">Changes are loaded from the server.</p><button class="settings-action primary admin-save-button" id="adminSave" type="button">Save AI controls <span aria-hidden="true">↗</span></button></div>
-                            <p class="admin-security-note"><strong>Important:</strong> Instructions guide the AI, but cannot override platform safety/security rules, privacy protections or honest answers. Never put API keys or passwords in custom instructions.</p>
-                          </div>
-                        </div>
-      </div>
-    </section>
-  </div>
+/* safe markdown: everything is escaped first, only whitelisted tags are produced */
+function md(src) {
+  const blocks = [];
+  src = String(src).replace(/```([\w+-]*)\n([\s\S]*?)(```|$)/g, (m, l, c) => { blocks.push('<div class="code"><div class="code-h"><span>' + esc(l || "code") + '</span><button type="button" data-copy>Copy</button></div><pre><code>' + esc(c.replace(/\n$/, "")) + "</code></pre></div>"); return "\n\u0000" + (blocks.length - 1) + "\u0000\n"; });
+  const inl = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+  let out = "", list = null, para = [];
+  const flushP = () => { if (para.length) out += "<p>" + para.map(inl).join("<br>") + "</p>"; para = []; };
+  const flushL = () => { if (list) out += "</" + list + ">"; list = null; };
+  for (const line of src.split("\n")) {
+    let m;
+    if ((m = line.match(/^\u0000(\d+)\u0000$/))) { flushP(); flushL(); out += blocks[+m[1]]; }
+    else if ((m = line.match(/^(#{1,4})\s+(.*)/))) { flushP(); flushL(); const n = Math.min(m[1].length + 1, 4); out += "<h" + n + ">" + inl(m[2]) + "</h" + n + ">"; }
+    else if ((m = line.match(/^\s*([-*+]|\d+\.)\s+(.*)/))) { flushP(); const t = /\d/.test(m[1]) ? "ol" : "ul"; if (list !== t) { flushL(); out += "<" + t + ">"; list = t; } out += "<li>" + inl(m[2]) + "</li>"; }
+    else if ((m = line.match(/^>\s?(.*)/))) { flushP(); flushL(); out += "<blockquote>" + inl(m[1]) + "</blockquote>"; }
+    else if (!line.trim()) { flushP(); flushL(); }
+    else { flushL(); para.push(line); }
+  }
+  flushP(); flushL(); return out;
+}
+
+/* ===== 3. Settings store (persisted, applied immediately) ===== */
+const SKEY = "mahicloud.settings.v1";
+const DEF = { theme: "dark", accent: "#d4b98a", font: "sans", fontSize: 16, msgWidth: 760, density: "comfortable", radius: 14, motion: "normal", bg: "glow", enterToSend: true, startup: "welcome", confirm: true, time: "12", autoScroll: true, stream: true, markdown: true, timestamps: true, actions: true, instructions: "", style: "default", name: "", hc: false, largeText: false, reduceMotion: false, temp: false, think: false, voiceLang: "" };
+let S = { ...DEF }; try { Object.assign(S, JSON.parse(localStorage.getItem(SKEY)) || {}); } catch (_) {}
+S.temp = false; /* temporary mode never survives a reload */
+const FONTS = { sans: 'Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif', serif: 'ui-serif,Georgia,"Times New Roman",serif', mono: 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace' };
+function save() {
+  try { const persisted = { ...S }; delete persisted.temp; localStorage.setItem(SKEY, JSON.stringify(persisted)); }
+  catch (_) {}
+}
+function applySettings() {
+  const r = document.documentElement;
+  const th = S.theme === "system" ? (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark") : S.theme;
+  r.dataset.theme = th; r.dataset.density = S.density; r.dataset.bg = S.bg; r.dataset.hc = S.hc ? "on" : "off";
+  r.dataset.motion = S.reduceMotion || S.motion === "reduced" ? "reduced" : "normal";
+  r.dataset.actions = S.actions ? "on" : "off"; r.dataset.ts = S.timestamps ? "on" : "off";
+  const st = r.style, c = S.accent, n = parseInt(c.slice(1), 16), lum = ((n >> 16) * 299 + ((n >> 8) & 255) * 587 + (n & 255) * 114) / 1000;
+  st.setProperty("--ac", c); st.setProperty("--ac-tx", lum > 150 ? "#0a0a0c" : "#fff");
+  st.setProperty("--fs", (S.fontSize + (S.largeText ? 2 : 0)) + "px"); st.setProperty("--mw", S.msgWidth + "px"); st.setProperty("--r", S.radius + "px"); st.setProperty("--font", FONTS[S.font] || FONTS.sans);
+  document.querySelector('meta[name=theme-color]').content = th === "light" ? "#f7f7f9" : "#0a0a0c";
+  $("#tempBadge").hidden = !S.temp;
+  $("#tThink").classList.toggle("on", !!S.think);
+  $("#tThink").setAttribute("aria-pressed", String(!!S.think));
+  $("#tThink").title = S.think ? "Think mode is on for the next message" : "Enable Think mode for the next message";
+  $("#tTemp").classList.toggle("on", !!S.temp);
+  $("#tTemp").setAttribute("aria-pressed", String(!!S.temp));
+  $("#tTemp").title = S.temp ? "End temporary chat · this session is not saved" : "Start a temporary chat · not saved to history or memory";
+  $("#hint").textContent = S.temp ? "Temporary chat · this session is not saved to history or memory" : (S.enterToSend ? "Enter to send · Shift+Enter for a new line" : "Ctrl/⌘+Enter to send · Enter for a new line");
+}
+const set = (k, v) => { S[k] = v; save(); applySettings(); };
+matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => S.theme === "system" && applySettings());
+
+/* ===== 4. Adaptive device shell ===== */
+function detectDevice() {
+  const w = innerWidth, h = innerHeight, coarse = matchMedia("(pointer:coarse)").matches;
+  const d = w < 700 || (coarse && h < 500 && w < 950) ? "mobile" : w < 1100 ? "tablet" : "desktop";
+  const r = document.documentElement;
+  if (r.dataset.device !== d) { r.dataset.device = d; $("#app").classList.remove("open", "collapsed"); }
+  r.dataset.input = coarse || navigator.maxTouchPoints > 0 && !matchMedia("(hover:hover)").matches ? "touch" : "mouse";
+  const vv = window.visualViewport;
+  r.style.setProperty("--app-h", (vv ? vv.height : h) + "px");
+  r.style.setProperty("--vv-offset-top", (vv && d !== "desktop" ? vv.offsetTop : 0) + "px");
+}
+["resize", "orientationchange"].forEach(e => addEventListener(e, detectDevice));
+if (window.visualViewport) { visualViewport.addEventListener("resize", () => { detectDevice(); if (S.autoScroll) $("#scroll").scrollTop = $("#scroll").scrollHeight; }); }
+function toggleSide(force) {
+  const app = $("#app"), desk = document.documentElement.dataset.device === "desktop";
+  const cls = desk ? "collapsed" : "open";
+  const shouldOpen = force === undefined ? null : !!force;
+  if (shouldOpen === null) app.classList.toggle(cls, !app.classList.contains(cls));
+  else app.classList.toggle(cls, desk ? !shouldOpen : shouldOpen);
+}
+
+/* ===== 5. Chat state & rendering ===== */
+let convs = [], cid = null, msgs = [], busy = false, ctl = null, pend = null, lastText = "", hits = null, pins = [], gen = 0;
+try { pins = JSON.parse(localStorage.getItem("mahicloud.pins")) || []; } catch (_) {}
+const MAIN = $("#msgs"), SC = $("#scroll");
+const fmtTime = d => new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: S.time === "12" });
+const near = () => SC.scrollHeight - SC.scrollTop - SC.clientHeight < 160;
+const bottom = f => { if (f || S.autoScroll) SC.scrollTop = SC.scrollHeight; };
+function showErr(t, retry) { $("#errT").textContent = t; const b = $("#errB"); b.textContent = retry ? "Retry" : "Dismiss"; b.onclick = () => { $("#err").classList.remove("on"); if (retry) retry(); }; $("#err").classList.add("on"); }
+const hideErr = () => $("#err").classList.remove("on");
+function greet() { const h = new Date().getHours(), g = h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; $("#greet").textContent = g + (S.name ? ", " + S.name : ""); }
+const SUGGEST = [["Explain something", "Explain how neural networks learn, simply."], ["Draft a message", "Help me write a polite follow-up email."], ["Write code", "Write a debounce function in JavaScript with an example."], ["Plan my day", "Help me plan a focused, realistic workday."]];
+SUGGEST.forEach(([t, p]) => { const b = el("button", "card"); b.type = "button"; b.append(el("b", "", t), el("span", "", p)); b.onclick = () => { $("#in").value = p; grow(); $("#in").focus(); }; $("#cards").append(b); });
+function view(chat) { $("#welcome").hidden = chat; MAIN.hidden = !chat; if (!chat) MAIN.replaceChildren(); }
+function paint(node, text, streaming) { const b = node.querySelector(".prose"); b.innerHTML = S.markdown ? md(clean(text)) : esc(clean(text)).replace(/\n/g, "<br>"); b.classList.toggle("caret", !!streaming); }
+function addMsg(m, i, typing) {
+  const n = el("article", "msg " + (m.role === "user" ? "user" : "ai")); n.dataset.i = i;
+  if (m.role === "user") { const w = el("div", "ubox"); if (m.files && m.files.length) { const fl = el("div", "ufiles"); m.files.forEach(f => fl.append(el("span", "ufile", f))); w.append(fl); } if (clean(m.content)) w.append(Object.assign(el("div", "bub"), { textContent: clean(m.content) })); if (m.think) w.append(el("div", "tag", "Thinking mode")); n.append(w); }
+  else { const w = el("div", "who"); w.innerHTML = '<span class="mark"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 0 9.5H7z"/></svg></span>MahiCloud'; n.append(w, el("div", "prose")); if (typing) n.querySelector(".prose").innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; else paint(n, m.content); }
+  if (!typing) decorate(n, m, i);
+  MAIN.append(n); bottom(m.role === "user"); return n;
+}
+function decorate(n, m, i) {
+  n.querySelector(".acts")?.remove(); n.querySelector(".ts")?.remove();
+  const a = el("div", "acts"), btn = (t, f) => { const b = el("button", "", t); b.type = "button"; b.onclick = f; a.append(b); };
+  btn("Copy", () => copy(clean(m.content)));
+  const canEdit = m.created_at && !S.temp;
+  if (m.role === "user" && canEdit) btn("Edit", () => { if (busy) return; pend = { index: i, created_at: m.created_at, content: m.content }; $("#in").value = clean(m.content); grow(); $("#in").focus(); toast("Editing — sending replaces the following turns"); });
+  if (m.role === "assistant" && i === msgs.length - 1 && canEdit) btn("Regenerate", () => { const u = msgs.map(x => x.role).lastIndexOf("user", i); if (u >= 0 && msgs[u].created_at) send(clean(msgs[u].content), { index: u, created_at: msgs[u].created_at, content: msgs[u].content }); });
+  n.append(a); if (m.created_at || m.local) n.append(el("div", "ts", fmtTime(m.created_at || m.local)));
+}
+function renderAll() { MAIN.replaceChildren(); msgs.forEach((m, i) => addMsg(m, i)); }
+MAIN.addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (b) { copy(b.closest(".code").querySelector("code").textContent); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1200); } });
+
+function setBusy(v) {
+  busy = v; const s = $("#send"); s.type = v ? "button" : "submit";
+  s.innerHTML = v ? '<svg viewBox="0 0 24 24" style="fill:currentColor"><rect x="7" y="7" width="10" height="10" rx="2"/></svg>' : '<svg viewBox="0 0 24 24"><path d="M12 19V5M6.5 10.5 12 5l5.5 5.5"/></svg>';
+  s.setAttribute("aria-label", v ? "Stop generating" : "Send message"); s.disabled = !v && !canSend();
+  ["#attach", "#mic", "#tTemp"].forEach(sel => { const b = $(sel); if (b) b.disabled = v || (sel === "#mic" && !SR); });
+}
+/* ===== Attachments: uploaded to the existing mahi-ai-attachments bucket, sent as path references ===== */
+let pendingFiles = [];
+const LIMIT_N = 20, LIMIT_FILE = 50 * 1024 * 1024, LIMIT_TOTAL = 100 * 1024 * 1024, LIMIT_INLINE = 60 * 1024 * 1024;
+const ALLOWED_EXT = new Set(("png jpg jpeg webp gif heic heif avif pdf doc docx txt md markdown csv tsv xlsx xls json jsonl xml html htm css js mjs cjs ts tsx jsx py pyi java kt go rs c h cpp hpp cs php rb sql sh bash zsh bat ps1 yaml yml toml ini conf log diff patch env gitignore dockerfile makefile tf graphql proto mp3 wav ogg opus webm flac aac m4a 3gp mp4 mpeg mov avi flv wmv").split(" "));
+const INLINE_EXT = new Set("png jpg jpeg webp gif heic heif avif pdf mp3 wav ogg opus webm flac aac m4a 3gp mp4 mpeg mov avi flv wmv".split(" "));
+const fileExt = f => (f.name.split(".").pop() || "").toLowerCase();
+const MIME_BY_EXT = {
+  pdf:"application/pdf",png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",webp:"image/webp",gif:"image/gif",heic:"image/heic",heif:"image/heif",avif:"image/avif",
+  txt:"text/plain",md:"text/markdown",markdown:"text/markdown",csv:"text/csv",tsv:"text/tab-separated-values",json:"application/json",jsonl:"application/json",xml:"application/xml",html:"text/html",htm:"text/html",css:"text/css",js:"application/javascript",mjs:"application/javascript",ts:"text/plain",py:"text/x-python",yaml:"application/x-yaml",yml:"application/x-yaml",
+  mp3:"audio/mpeg",wav:"audio/wav",ogg:"audio/ogg",opus:"audio/opus",webm:"audio/webm",flac:"audio/flac",aac:"audio/aac",m4a:"audio/mp4",mp4:"video/mp4",mpeg:"video/mpeg",mov:"video/quicktime",avi:"video/x-msvideo",flv:"video/x-flv",wmv:"video/x-ms-wmv", "3gp":"video/3gpp"
+};
+const inferMime = f => (f.type && f.type !== "application/octet-stream") ? f.type : (MIME_BY_EXT[fileExt(f)] || "application/octet-stream");
+const isInlineFile = f => INLINE_EXT.has(fileExt(f)) || /^(image|audio|video)\//i.test(inferMime(f)) || inferMime(f).toLowerCase() === "application/pdf";
+const fmtSize = n => n < 1024 ? n + " B" : n < 1048576 ? Math.round(n / 1024) + " KB" : (n / 1048576).toFixed(1) + " MB";
+async function removeUploaded(refs) {
+  if (!refs || !refs.length) return true;
+  try {
+    const s = await Api.ensure();
+    const r = await fetch(CFG.supabaseUrl + "/storage/v1/object/mahi-ai-attachments", {
+      method: "DELETE", headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token },
+      body: JSON.stringify({ prefixes: refs.map(r => r.path) })
+    });
+    return r.ok;
+  } catch (_) { return false; }
+}
+function uploadProgress(percent) {
+  const box = $("#uploadStatus");
+  if (percent == null) { box.hidden = true; return; }
+  box.hidden = false;
+  const n = Math.max(0, Math.min(100, Math.round(percent)));
+  $("#uploadFill").style.width = n + "%";
+  $("#uploadPct").textContent = n + "%";
+  $("#uploadLabel").textContent = n >= 100 ? "Preparing message" : "Uploading attachments";
+}
+function uploadOne(file, path, token, onProgress, signal) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const mime = inferMime(file);
+    let settled = false;
+    const finish = (err) => {
+      if (settled) return; settled = true;
+      signal && signal.removeEventListener("abort", abort);
+      err ? reject(err) : resolve();
+    };
+    const abort = () => { try { xhr.abort(); } catch (_) {} finish(new DOMException("Upload aborted", "AbortError")); };
+    xhr.open("POST", CFG.supabaseUrl + "/storage/v1/object/mahi-ai-attachments/" + path.split("/").map(encodeURIComponent).join("/"));
+    xhr.timeout = 120000;
+    xhr.setRequestHeader("apikey", CFG.supabasePublishableKey);
+    xhr.setRequestHeader("Authorization", "Bearer " + token);
+    xhr.setRequestHeader("Content-Type", mime);
+    xhr.setRequestHeader("x-upsert", "false");
+    xhr.setRequestHeader("cache-control", "3600");
+    xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(e.loaded); };
+    xhr.onload = () => xhr.status >= 200 && xhr.status < 300 ? finish() : finish(new Error("Could not upload " + file.name + ". Remove it and try again."));
+    xhr.onerror = () => finish(new Error("Network error while uploading " + file.name + "."));
+    xhr.ontimeout = () => finish(new Error("Upload timed out for " + file.name + "."));
+    xhr.onabort = () => finish(new DOMException("Upload aborted", "AbortError"));
+    if (signal) { if (signal.aborted) return abort(); signal.addEventListener("abort", abort, { once: true }); }
+    xhr.send(file);
+  });
+}
+async function uploadFiles(files, signal) {
+  const s = await Api.ensure(), uid = s.user && s.user.id;
+  if (!uid) throw new Error("Could not prepare your files. Please try again.");
+  const out = [], totalBytes = files.reduce((sum, f) => sum + f.size, 0);
+  let completedBytes = 0;
+  try {
+    for (const f of files) {
+      if (signal && signal.aborted) throw new DOMException("Upload aborted", "AbortError");
+      const safe = f.name.replace(/[^a-zA-Z0-9._ -]/g, "_").slice(-100) || "attachment";
+      const id = crypto.randomUUID ? crypto.randomUUID() : Date.now() + "-" + Math.random().toString(36).slice(2);
+      const path = uid + "/" + id + "/" + safe;
+      await uploadOne(f, path, s.access_token, loaded => uploadProgress((completedBytes + loaded) / Math.max(1, totalBytes) * 100), signal);
+      out.push({ path, name: f.name, mime_type: inferMime(f), size: f.size });
+      completedBytes += f.size;
+      uploadProgress(completedBytes / Math.max(1, totalBytes) * 100);
+    }
+    return out;
+  } catch (e) {
+    const cleaned = await removeUploaded(out);
+    if (!cleaned && out.length) toast("An upload could not be removed from storage after the failed request.");
+    throw e;
+  }
+}
+
+async function send(text, edit) {
+  text = String(text || "").trim(); if (busy || (!text && !pendingFiles.length)) return;
+  if (!navigator.onLine) return showErr("You appear to be offline. Check your connection and try again.", () => send(text, edit));
+  hideErr(); const prev = msgs.slice(), prevCid = cid; lastText = text; edit = edit || pend; pend = null;
+  const files = edit ? [] : pendingFiles.slice(), think = !!S.think; let refs = [];
+  if (rec) { const r = rec; r.onresult = null; r.abort(); rec = null; setRec(false); }
+  pendingFiles = []; renderChips();
+  if (edit) { msgs = msgs.slice(0, edit.index); renderAll(); }
+  view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), think }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
+  const ai = addMsg({ role: "assistant", content: "" }, msgs.length, true);
+  $("#in").value = ""; grow(); setBusy(true); ctl = new AbortController(); let full = "", done = false;
+  try {
+    refs = files.length ? await uploadFiles(files.map(p => p.file), ctl.signal) : [];
+    const res = await Api.chat({
+      conversation_id: S.temp ? null : cid, temporary_chat: S.temp, think_mode: think, selected_model: "", branch_context: false,
+      custom_instructions: S.instructions, response_style: S.style,
+      ...(edit ? { edit_from_created_at: edit.created_at, edit_from_content: edit.content } : {}),
+      messages: msgs.slice(-24).map(m => ({ role: m.role, content: m.content })), attachments: refs
+    }, ctl.signal);
+    if (!res.ok) { let d = ""; try { d = (await res.json()).error || ""; } catch (_) {} throw new Error(d || "Request failed (" + res.status + ")."); }
+    if (!res.body) throw new Error("Streaming is not supported by this browser.");
+    const rd = res.body.getReader(), dec = new TextDecoder(); let buf = "", q = false;
+    const draw = () => { q = false; if (S.stream) { const stick = near(); paint(ai, full, true); if (stick) bottom(); } };
+    const handle = blk => {
+      const data = blk.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("\n"); if (!data) return;
+      let p; try { p = JSON.parse(data); } catch (_) { return; }
+      if (p.type === "meta" && p.conversation_id) cid = p.conversation_id;
+      else if (p.type === "reset") full = "";
+      else if (p.type === "delta" && typeof p.text === "string") { full += p.text; if (!q) { q = true; requestAnimationFrame(draw); } }
+      else if (p.type === "done") { if (p.conversation_id) cid = p.conversation_id; done = true; }
+      else if (p.type === "error") throw new Error(p.message || "The response was interrupted.");
+    };
+    for (;;) {
+      const part = await rd.read(); buf += dec.decode(part.value, { stream: !part.done }).replace(/\r\n/g, "\n"); let k;
+      while ((k = buf.indexOf("\n\n")) !== -1) { handle(buf.slice(0, k)); buf = buf.slice(k + 2); }
+      if (done || part.done) break;
+    }
+    if (!done) throw new Error("The connection ended before the answer finished.");
+    full = full.trim(); if (!full) throw new Error("No response was returned.");
+    files.forEach(p => p.url && URL.revokeObjectURL(p.url));
+    msgs.push({ role: "assistant", content: full, local: Date.now() }); paint(ai, full, false); ai.dataset.i = msgs.length - 1; decorate(ai, msgs[msgs.length - 1], msgs.length - 1); bottom();
+    if (refs.length) {
+      const cleaned = await removeUploaded(refs);
+      if (!cleaned) toast(S.temp ? "Temporary reply received, but an uploaded file could not be removed from storage." : "Reply received, but an uploaded file could not be removed from storage.");
+      refs = [];
+    }
+    if (!S.temp) { await loadList(true); syncMeta(); }
+  } catch (e) {
+    ai.remove(); msgs = prev; cid = e.name === "AbortError" ? cid : prevCid; renderAll(); if (!msgs.length) view(false);
+    $("#in").value = text; if (files.length) { pendingFiles = files; renderChips(); }
+    if (refs.length) { const cleaned = await removeUploaded(refs); if (!cleaned) toast("An uploaded file could not be removed from storage."); }
+    grow();
+    if (e.name === "AbortError") toast("Generation stopped"); else showErr(friendly(e), () => send(text, edit));
+  } finally { uploadProgress(null); ctl = null; setBusy(false); if (document.documentElement.dataset.input === "mouse") $("#in").focus(); }
+}
+const friendly = e => /failed to fetch|network|load failed/i.test(e.message) ? "Could not reach MahiCloud. Check your connection (or the site's allowed origins) and retry." : e.message;
+async function syncMeta() { try { if (!cid) return; const rows = await Api.messages(cid), off = Math.max(0, rows.length - msgs.length); msgs.forEach((m, i) => { const r = rows[off + i]; if (r && r.role === m.role && r.content === m.content) { m.id = r.id; m.created_at = r.created_at; } }); [...MAIN.children].forEach(n => { const i = +n.dataset.i; if (msgs[i]) decorate(n, msgs[i], i); }); } catch (_) {} }
+
+/* ===== 6. Conversations ===== */
+let ask$;
+function ask({ title, text, input, ok = "OK", danger }) {
+  return new Promise(res => {
+    $("#aT").textContent = title; $("#aP").textContent = text || ""; const i = $("#aI"), y = $("#aY"); i.hidden = !input; i.value = input || ""; y.textContent = ok; y.className = "btn " + (danger ? "dng" : "pri");
+    const ov = $("#ovAsk"); ov.classList.add("on"); (input ? i : y).focus(); if (input) i.select();
+    const end = v => { ov.classList.remove("on"); ask$ = null; res(v); }; ask$ = () => end(null);
+    y.onclick = () => end(input ? i.value : true); $("#aN").onclick = () => end(null); i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); end(i.value); } };
+  });
+}
+async function loadList(quiet) {
+  const l = $("#list"); if (!quiet) { l.replaceChildren(); for (let i = 0; i < 5; i++) l.append(el("div", "sk")); }
+  try { convs = await Api.conversations() || []; $("#who").textContent = "Guest workspace · synced"; drawList(); return true; }
+  catch (_) { $("#who").textContent = "Offline / not connected"; l.replaceChildren(); const d = el("div", "empty", "Couldn’t load conversations."), b = el("button", "btn", "Retry"); b.onclick = () => loadList(); d.append(el("br"), b); l.append(d); return false; }
+}
+function drawList() {
+  const l = $("#list"), q = $("#search").value.trim().toLowerCase(); l.replaceChildren();
+  let v = convs.filter(c => !q || (c.title || "New chat").toLowerCase().includes(q) || (hits && hits.has(c.id)));
+  v = [...v.filter(c => pins.includes(c.id)), ...v.filter(c => !pins.includes(c.id))];
+  if (!v.length) return void l.append(el("div", "empty", q ? "No conversations match." : "Your conversations will appear here."));
+  v.forEach(c => {
+    const r = el("div", "ci" + (c.id === cid ? " on" : "")); r.setAttribute("role", "listitem");
+    const t = el("button", "t", (pins.includes(c.id) ? "📌 " : "") + (c.title || "New chat")); t.title = c.title || "New chat"; t.onclick = () => openConv(c.id);
+    const m = el("button", "ib"); m.setAttribute("aria-label", "Conversation actions"); m.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>';
+    m.onclick = e => { e.stopPropagation(); menu(m, c); }; r.oncontextmenu = e => { e.preventDefault(); menu(m, c); }; r.append(t, m); l.append(r);
+  });
+}
+function menu(anchor, c) {
+  document.querySelector(".menu")?.remove(); const m = el("div", "menu"); m.setAttribute("role", "menu"); const b = anchor.getBoundingClientRect();
+  const item = (t, f, d) => { const x = el("button", d ? "dng" : "", t); x.setAttribute("role", "menuitem"); x.onclick = () => { m.remove(); f(); }; m.append(x); };
+  item(pins.includes(c.id) ? "Unpin (this device)" : "Pin (this device)", () => { pins = pins.includes(c.id) ? pins.filter(x => x !== c.id) : [...pins, c.id]; localStorage.setItem("mahicloud.pins", JSON.stringify(pins)); drawList(); });
+  item("Rename", () => renameConv(c)); item("Export Markdown", () => exportConv("md", c.id)); item("Delete", () => deleteConv(c), true);
+  document.body.append(m); m.style.left = Math.max(8, Math.min(b.left, innerWidth - m.offsetWidth - 8)) + "px"; m.style.top = Math.min(b.bottom + 4, innerHeight - m.offsetHeight - 8) + "px";
+  const off = e => { if (!m.contains(e.target)) { m.remove(); removeEventListener("pointerdown", off, true); } }; setTimeout(() => addEventListener("pointerdown", off, true));
+  m.querySelector("button").focus();
+}
+async function renameConv(c) {
+  const v = await ask({ title: "Rename conversation", input: c.title || "New chat", ok: "Save" }); if (v == null) return;
+  const t = v.replace(/\s+/g, " ").trim().slice(0, 120); if (!t) return toast("Title can’t be empty");
+  try { await Api.rename(c.id, t); await loadList(true); if (c.id === cid) $("#title").textContent = t; toast("Renamed"); } catch (_) { toast("Could not rename"); }
+}
+async function deleteConv(c) {
+  if (S.confirm && !await ask({ title: "Delete conversation?", text: "This deletes it from your MahiCloud account and can’t be undone.", ok: "Delete", danger: true })) return;
+  try { await Api.remove(c.id); if (c.id === cid) newChat(); await loadList(true); toast("Deleted"); } catch (_) { toast("Could not delete"); }
+}
+async function openConv(id) {
+  if (busy) return; const my = ++gen;
+  try { const rows = await Api.messages(id); if (my !== gen) return; cid = id; pend = null; msgs = rows.map(r => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at })); S.temp = false; applySettings(); view(true); renderAll(); bottom(true); $("#title").textContent = (convs.find(c => c.id === id) || {}).title || "Conversation"; drawList(); hideErr(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  catch (_) { showErr("Could not load that conversation.", () => openConv(id)); }
+}
+function newChat() { if (busy) return; gen++; cid = null; msgs = []; pend = null; $("#title").textContent = "New chat"; view(false); greet(); hideErr(); $("#in").value = ""; grow(); drawList(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); $("#in").focus(); }
+function exportConv(fmt, id) {
+  const go = rows => {
+    if (!rows.length) return toast("Nothing to export");
+    const t = (convs.find(c => c.id === (id || cid)) || {}).title || "MahiCloud conversation", name = t.replace(/[^a-z0-9_-]+/gi, "-").slice(0, 50) || "mahicloud-chat";
+    const body = fmt === "json" ? JSON.stringify({ title: t, exportedAt: new Date().toISOString(), messages: rows.map(m => ({ role: m.role, content: clean(m.content) })) }, null, 2)
+      : "# " + t + "\n\n" + rows.map(m => (m.role === "user" ? "## You" : "## MahiCloud") + "\n\n" + clean(m.content)).join("\n\n---\n\n") + "\n";
+    const a = el("a"); a.href = URL.createObjectURL(new Blob([body], { type: fmt === "json" ? "application/json" : "text/markdown" })); a.download = name + "." + fmt; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  };
+  if (!id || id === cid) go(msgs); else Api.messages(id).then(go).catch(() => toast("Export failed"));
+}
+let st; $("#search").addEventListener("input", () => { hits = null; drawList(); clearTimeout(st); const q = $("#search").value.trim(); if (q.length < 2) return; st = setTimeout(async () => { try { const d = await Api.searchMessages(q); hits = new Set((d || []).map(r => r.conversation_id)); drawList(); } catch (_) {} }, 350); });
+
+/* ===== 7. Composer ===== */
+const canSend = () => !!($("#in").value.trim() || pendingFiles.length);
+function grow() { const t = $("#in"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px"; if (!busy) $("#send").disabled = !canSend(); }
+function renderChips() {
+  const c = $("#chips"); c.replaceChildren(); c.hidden = !pendingFiles.length;
+  pendingFiles.forEach((p, i) => {
+    const chip = el("div", "chip");
+    if (inferMime(p.file).startsWith("image/")) { const im = el("img"); im.alt = "Preview of " + p.file.name; im.src = p.url || (p.url = URL.createObjectURL(p.file)); chip.append(im); }
+    else chip.append(el("span", "chip-ext", (p.file.name.split(".").pop() || "file").slice(0, 4)));
+    const meta = el("div", "chip-meta"); meta.append(el("b", "", p.file.name), el("span", "", fmtSize(p.file.size)));
+    const x = el("button"); x.type = "button"; x.title = "Remove"; x.setAttribute("aria-label", "Remove " + p.file.name);
+    x.innerHTML = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    x.onclick = () => { if (p.url) URL.revokeObjectURL(p.url); pendingFiles.splice(i, 1); renderChips(); };
+    chip.append(meta, x); c.append(chip);
+  });
+  grow();
+}
+function addFiles(list) {
+  let total = pendingFiles.reduce((a, p) => a + p.file.size, 0);
+  let inlineTotal = pendingFiles.reduce((a, p) => a + (isInlineFile(p.file) ? p.file.size : 0), 0);
+  for (const f of [...list]) {
+    const ext = fileExt(f);
+    if (!ALLOWED_EXT.has(ext)) { toast("“" + f.name + "” is not an allowed file type"); continue; }
+    if (pendingFiles.length >= LIMIT_N) { toast("Up to 20 files per message"); break; }
+    if (!f.size) { toast(f.name + " is empty"); continue; }
+    if (f.size > LIMIT_FILE) { toast(f.name + " is larger than 50 MB"); continue; }
+    if (total + f.size > LIMIT_TOTAL) { toast("Attachments together must be 100 MB or smaller"); break; }
+    if (isInlineFile(f) && inlineTotal + f.size > LIMIT_INLINE) { toast("Images, PDFs, audio and video must total 60 MB or less"); continue; }
+    total += f.size; if (isInlineFile(f)) inlineTotal += f.size;
+    pendingFiles.push({ file: f, url: null });
+  }
+  renderChips();
+}
+/* voice input: browser speech recognition only; text lands in the composer and is never auto-sent */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+let rec = null, preVoice = "";
+function setRec(on) {
+  $("#rec").hidden = !on;
+  const m = $("#mic"); m.classList.toggle("on", on);
+  m.setAttribute("aria-pressed", String(on));
+  m.setAttribute("aria-label", on ? "Stop voice input" : "Voice input");
+  m.title = on ? "Stop voice input" : "Voice input · Dictate a message";
+}
+function toggleMic() {
+  if (rec) return rec.stop();
+  if (!SR) return toast("Voice input isn’t supported in this browser");
+  const r = new SR(); rec = r; r.lang = S.voiceLang || navigator.language || "en-US"; r.interimResults = true; r.continuous = true;
+  preVoice = $("#in").value; let done = "";
+  r.onresult = e => { let live = ""; for (let i = e.resultIndex; i < e.results.length; i++) { const t = e.results[i][0].transcript; if (e.results[i].isFinal) done += t; else live += t; } const base = preVoice && !/\s$/.test(preVoice) ? preVoice + " " : preVoice; $("#in").value = base + (done + live).trimStart(); grow(); };
+  r.onerror = e => { if (e.error === "not-allowed" || e.error === "service-not-allowed") toast("Microphone access is blocked for this site"); else if (e.error !== "aborted" && e.error !== "no-speech") toast("Voice input stopped (" + e.error + ")"); };
+  r.onend = () => { if (rec === r) rec = null; setRec(false); grow(); };
+  try { r.start(); setRec(true); } catch (_) { rec = null; toast("Could not start voice input"); }
+}
+function cancelVoice() { if (!rec) return; const r = rec; r.onresult = null; $("#in").value = preVoice; grow(); r.abort(); }
+/* leaving a draft: ask first so unsent text and files are never lost silently */
+function clearPendingFiles() {
+  pendingFiles.forEach(p => { if (p.url) URL.revokeObjectURL(p.url); });
+  pendingFiles = []; renderChips();
+}
+function guardLeave(go) {
+  if (!canSend()) return go();
+  ask({ title: "Discard unsent message?", text: "Your draft and attached files will be cleared.", ok: "Discard", danger: true }).then(y => {
+    if (!y) return; $("#in").value = ""; clearPendingFiles(); grow(); go();
+  });
+}
+function toggleTemp() {
+  if (busy) return toast("Wait for the reply to finish");
+  const next = !S.temp;
+  const switchMode = () => {
+    guardLeave(() => {
+      S.temp = next; save(); applySettings();
+      if (msgs.length || cid) newChat();
+      else { cid = null; msgs = []; view(false); greet(); drawList(); }
+      toast(next ? "Temporary chat started · not saved to history or memory" : "Temporary chat ended");
+    });
+  };
+  if (S.temp && !next && msgs.length) {
+    ask({
+      title: "End temporary chat?",
+      text: "This conversation exists only in this temporary session. Ending it clears the messages from this page; they cannot be recovered from chat history.",
+      ok: "End temporary chat",
+      danger: true
+    }).then(confirmed => { if (confirmed) switchMode(); });
+  } else switchMode();
+}
+$("#in").addEventListener("input", grow);
+$("#in").addEventListener("keydown", e => {
+  if (e.key !== "Enter" || e.isComposing || e.shiftKey) return;
+  if (S.enterToSend || e.ctrlKey || e.metaKey) { e.preventDefault(); if (!busy) send($("#in").value); }
+});
+$("#composer").addEventListener("submit", e => { e.preventDefault(); send($("#in").value); });
+$("#send").addEventListener("click", () => { if (busy && ctl) ctl.abort(); });
+$("#attach").onclick = () => $("#file").click();
+$("#file").addEventListener("change", e => { addFiles(e.target.files); e.target.value = ""; });
+$("#tThink").onclick = () => set("think", !S.think);
+$("#tTemp").onclick = toggleTemp;
+$("#mic").onclick = toggleMic; $("#recCancel").onclick = cancelVoice;
+if (!SR) { const m = $("#mic"); m.disabled = true; m.title = "Voice input isn’t supported in this browser"; m.setAttribute("aria-label", "Voice input unavailable"); }
+const cbox = $("#cbox"); let dragN = 0;
+cbox.addEventListener("dragenter", e => { if (!e.dataTransfer || !e.dataTransfer.types.includes("Files")) return; e.preventDefault(); dragN++; cbox.classList.add("drop"); });
+cbox.addEventListener("dragover", e => { if (e.dataTransfer && e.dataTransfer.types.includes("Files")) e.preventDefault(); });
+cbox.addEventListener("dragleave", () => { if (--dragN <= 0) { dragN = 0; cbox.classList.remove("drop"); } });
+cbox.addEventListener("drop", e => { e.preventDefault(); dragN = 0; cbox.classList.remove("drop"); addFiles(e.dataTransfer.files); });
+addEventListener("dragover", e => { if (e.dataTransfer && e.dataTransfer.types.includes("Files")) e.preventDefault(); });
+addEventListener("drop", e => { if (e.dataTransfer && e.dataTransfer.types.includes("Files") && !cbox.contains(e.target)) e.preventDefault(); });
+$("#in").addEventListener("paste", e => { const f = [...((e.clipboardData && e.clipboardData.files) || [])]; if (f.length) { e.preventDefault(); addFiles(f); } });
+
+/* ===== 8. Settings center ===== */
+const opt = a => a.map(x => Array.isArray(x) ? x : [x, x]);
+const SCHEMA = [
+  { id: "general", t: "General", i: [
+    { k: "enterToSend", l: "Enter to send", d: "Off: Ctrl/⌘+Enter sends, Enter adds a line.", c: "sw" },
+    { k: "startup", l: "Startup screen", d: "What opens when MahiCloud loads.", c: "sel", o: [["welcome", "Welcome screen"], ["last", "Most recent chat"]] },
+    { k: "time", l: "Time format", c: "sel", o: [["12", "12-hour"], ["24", "24-hour"]] },
+    { k: "confirm", l: "Confirm destructive actions", d: "Ask before deleting conversations.", c: "sw" }] },
+  { id: "appearance", t: "Appearance", i: [
+    { k: "theme", l: "Theme", c: "sel", o: [["dark", "Dark"], ["light", "Light"], ["system", "System"]] },
+    { k: "accent", l: "Accent color", d: "Pick any color.", c: "col" },
+    { k: "bg", l: "Chat background", c: "sel", o: [["glow", "Soft ambient glow"], ["plain", "Plain"]] },
+    { k: "density", l: "Message density", c: "sel", o: [["comfortable", "Comfortable"], ["compact", "Compact"]] },
+    { k: "fontSize", l: "Font size", c: "rng", min: 13, max: 20, u: "px" },
+    { k: "font", l: "Font family", c: "sel", o: [["sans", "Sans-serif"], ["serif", "Serif"], ["mono", "Monospace"]] },
+    { k: "msgWidth", l: "Message width", c: "rng", min: 560, max: 1000, step: 20, u: "px" },
+    { k: "radius", l: "Roundedness", c: "rng", min: 6, max: 24, u: "px" },
+    { k: "motion", l: "Animation intensity", c: "sel", o: [["normal", "Full"], ["reduced", "Minimal"]] }] },
+  { id: "chat", t: "Chat", i: [
+    { k: "stream", l: "Show streaming text", d: "Off: the answer appears when complete.", c: "sw" },
+    { k: "think", l: "Think mode", d: "Also shown in the composer. Applies when no model is selected.", c: "sw" },
+    { k: "autoScroll", l: "Auto-scroll", c: "sw" },
+    { k: "markdown", l: "Render Markdown", d: "Off shows plain text.", c: "sw" },
+    { k: "timestamps", l: "Show timestamps", c: "sw" },
+    { k: "actions", l: "Show message actions", c: "sw" }] },
+  { id: "voice", t: "Voice", i: [
+    { k: "voiceLang", l: "Recognition language", d: "Used for voice input. Auto follows your browser language.", c: "sel", o: [["", "Auto"], ["en-US", "English (US)"], ["en-GB", "English (UK)"], ["bn-BD", "Bangla"], ["hi-IN", "Hindi"], ["es-ES", "Spanish"], ["fr-FR", "French"], ["de-DE", "German"]] }] },
+  { id: "personal", t: "Personalization", i: [
+    { k: "name", l: "Your name", d: "Used for the greeting, stored on this device.", c: "txt" },
+    { k: "style", l: "Response style", d: "Sent with each request.", c: "sel", o: [["default", "Default"], ["friendly", "Friendly"], ["concise", "Concise"], ["detailed", "Detailed"], ["professional", "Professional"]] },
+    { k: "instructions", l: "Custom instructions", d: "Sent with each request (max 3,000 characters).", c: "area" }] },
+  { id: "access", t: "Accessibility", i: [
+    { k: "reduceMotion", l: "Reduce motion", d: "Disables transitions and animations.", c: "sw" },
+    { k: "hc", l: "High contrast", c: "sw" },
+    { k: "largeText", l: "Larger text", c: "sw" }] },
+  { id: "privacy", t: "Privacy & Data", i: [
+    { l: "Temporary chat", d: "Start or end a temporary session from the control beside the chat title. MahiCloud’s chat endpoint excludes temporary turns from saved conversations and long-term memory.", c: "info" },
+    { l: "Export current conversation", c: "btn", b: [["Markdown", () => exportConv("md")], ["JSON", () => exportConv("json")]] },
+    { l: "Clear local preferences", d: "Resets settings and pins on this device only. Your server-side conversations are NOT deleted.", c: "btn", b: [["Clear", async () => { if (await ask({ title: "Clear local preferences?", text: "Only this browser’s settings and pins are removed. Conversations stored in your account stay.", ok: "Clear", danger: true })) { S = { ...DEF }; save(); pins = []; localStorage.removeItem("mahicloud.pins"); applySettings(); renderSettings(); toast("Local preferences cleared"); } }, 1]] },
+    { l: "Delete conversations", d: "Use the ⋯ menu on a conversation in the sidebar to delete it from your account.", c: "info" }] },
+  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
+  { id: "adv", t: "Advanced", i: [{ l: "Diagnostics", c: "diag" }, { l: "Reset all settings to defaults", c: "btn", b: [["Reset", () => { S = { ...DEF }; save(); applySettings(); renderSettings(); toast("Defaults restored"); }]] }] }
+];
+let tab = "general";
+function ctl_(it) {
+  const v = S[it.k];
+  if (it.c === "sw") { const b = el("button", "sw"); b.type = "button"; b.setAttribute("role", "switch"); b.setAttribute("aria-checked", !!v); b.setAttribute("aria-label", it.l); b.onclick = () => { set(it.k, !S[it.k]); b.setAttribute("aria-checked", !!S[it.k]); it.after && it.after(); }; return b; }
+  if (it.c === "sel") { const s = el("select"); s.setAttribute("aria-label", it.l); it.o.forEach(([a, b]) => { const o = el("option", "", b); o.value = a; s.append(o); }); s.value = v; s.onchange = () => set(it.k, s.value); return s; }
+  if (it.c === "col") { const i = el("input"); i.type = "color"; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => set(it.k, i.value); return i; }
+  if (it.c === "rng") { const w = el("div"); w.style.cssText = "display:flex;gap:8px;align-items:center"; const i = el("input"); i.type = "range"; i.min = it.min; i.max = it.max; i.step = it.step || 1; i.value = v; i.setAttribute("aria-label", it.l); const o = el("span", "kbd", v + it.u); i.oninput = () => { o.textContent = i.value + it.u; set(it.k, +i.value); }; w.append(i, o); return w; }
+  if (it.c === "txt") { const i = el("input"); i.type = "text"; i.maxLength = 32; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => { set(it.k, i.value.replace(/[\u0000-\u001f]/g, "").slice(0, 32)); greet(); }; return i; }
+  if (it.c === "btn") { const w = el("div"); w.style.cssText = "display:flex;gap:6px"; it.b.forEach(([t, f, d]) => { const b = el("button", "btn" + (d ? " dng" : ""), t); b.type = "button"; b.onclick = f; w.append(b); }); return w; }
+  if (it.c === "key") return el("span", "kbd", it.v);
+  return null;
+}
+function renderSettings() {
+  const q = $("#sq").value.trim().toLowerCase(), nav = $("#snav"), p = $("#spanel"); nav.replaceChildren(); p.replaceChildren();
+  SCHEMA.forEach(s => { const b = el("button", s.id === tab && !q ? "on" : "", s.t); b.type = "button"; b.onclick = () => { tab = s.id; $("#sq").value = ""; renderSettings(); }; nav.append(b); });
+  const box = el("div"); let n = 0;
+  SCHEMA.filter(s => q || s.id === tab).forEach(s => {
+    const rows = s.i.filter(it => !q || (it.l + " " + (it.d || "") + " " + s.t).toLowerCase().includes(q)); if (!rows.length) return;
+    box.append(el("div", "sec", s.t));
+    rows.forEach(it => {
+      n++; const r = el("div", "set" + (it.c === "area" ? " col2" : "")), t = el("div"); t.append(el("div", "", it.l)); if (it.d) t.append(el("div", "d", it.d)); r.append(t);
+      if (it.c === "area") { const a = el("textarea"); a.maxLength = 3000; a.value = S.instructions; a.setAttribute("aria-label", it.l); a.oninput = () => set("instructions", a.value.slice(0, 3000)); r.append(a); }
+      else if (it.c === "diag") { const d = el("div", "diag"); const dev = document.documentElement.dataset; d.innerHTML = "Layout: <b>" + dev.device + "</b> · Input: <b>" + dev.input + "</b> · Viewport: <b>" + innerWidth + "×" + innerHeight + "</b><br>Network: <b>" + (navigator.onLine ? "online" : "offline") + "</b> · Backend: <b>" + (Api.sess ? "session active" : "no session") + "</b><br>Account: <b>" + (Api.sess && Api.sess.user && Api.sess.user.is_anonymous ? "guest" : "unknown") + "</b>"; r.append(d); }
+      else if (it.c === "info") { /* explanatory row; intentionally no misleading control */ }
+      else { const c = ctl_(it); if (c) r.append(c); }      box.append(r);
+    });
+  });
+  if (!n) box.append(el("div", "empty", "No settings match your search."));
+  p.append(box);
+}
+let setReturn;
+function openSettings() { setReturn = document.activeElement; $("#ovSet").classList.add("on"); renderSettings(); $("#snav button.on, #snav button")?.focus(); }
+function closeSettings() { $("#ovSet").classList.remove("on"); setReturn && setReturn.focus && setReturn.focus(); }
+$("#sq").addEventListener("input", renderSettings); $("#sx").onclick = closeSettings; $("#openSet").onclick = openSettings;
+$("#ovSet").addEventListener("pointerdown", e => { if (e.target.id === "ovSet") closeSettings(); });
+
+/* ===== 9. Wiring: navigation, shortcuts, boot ===== */
+$("#toggle").onclick = () => toggleSide(); $("#scrim").onclick = () => toggleSide(false); $("#newChat").onclick = () => guardLeave(newChat); $("#newTop").onclick = () => guardLeave(newChat);
+addEventListener("keydown", e => {
+  const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), typing = /input|textarea|select/i.test(document.activeElement.tagName);
+  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovSet").classList.contains("on")) return closeSettings(); document.querySelector(".menu")?.remove(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
+  else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
+  else if (mod && k === "b") { e.preventDefault(); toggleSide(); }
+  else if (mod && e.key === ",") { e.preventDefault(); openSettings(); }
+  else if (e.key === "/" && !typing && !mod) { e.preventDefault(); toggleSide(true); $("#search").focus(); }
+});
+addEventListener("beforeunload", e => {
+  if (S.temp && msgs.length) { e.preventDefault(); e.returnValue = ""; }
+});
+addEventListener("online", () => { hideErr(); loadList(true); });
+addEventListener("offline", () => toast("You’re offline"));
+(async function boot() {
+  applySettings(); detectDevice(); greet(); setBusy(false); view(false);
+  if (!CFG.supabaseUrl || !CFG.supabasePublishableKey) { $("#who").textContent = "Configuration missing"; showErr("MahiCloud is missing its public Supabase configuration (window.MAHI_AI_CONFIG)."); $("#in").disabled = true; return; }
+  try { await Api.ensure(); } catch (_) { $("#who").textContent = "Setup required"; showErr("Could not start a guest session. Enable anonymous sign-ins in Supabase and check allowed origins.", () => location.reload()); return; }
+  const ok = await loadList();
+  if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
+})();
+</script>
 </body>
 </html>
