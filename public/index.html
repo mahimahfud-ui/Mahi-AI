@@ -481,6 +481,97 @@ main{min-height:0}
   [data-device=mobile] #in{max-height:22dvh}
 }
 
+
+/* ===== Overall product polish: clearer hierarchy, comfort and accessibility ===== */
+:root{
+  --surface-glass:color-mix(in srgb,var(--s1) 88%,transparent);
+  --line-soft:color-mix(in srgb,var(--bd) 72%,transparent);
+  --shadow-card:0 16px 38px -28px rgba(0,0,0,.62);
+}
+#app{isolation:isolate}
+#side{background:linear-gradient(180deg,color-mix(in srgb,var(--s1) 98%,var(--ac) 2%),var(--s1) 46%)}
+.brand{min-height:58px;letter-spacing:-.025em}
+.brand .mark{box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 24%,transparent),0 8px 22px -12px color-mix(in srgb,var(--ac) 48%,transparent)}
+#search{transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
+#search:focus{background:var(--s1);box-shadow:0 0 0 3px color-mix(in srgb,var(--ac) 13%,transparent)}
+#top{min-height:54px;border-bottom:1px solid var(--line-soft);background:color-mix(in srgb,var(--bg) 82%,transparent);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+#top h1{color:var(--tx);font-weight:560;letter-spacing:-.025em}
+#scroll{scroll-padding-block:22px}
+#welcome{gap:0}
+#welcome .mark{box-shadow:0 0 0 1px color-mix(in srgb,var(--ac) 25%,transparent),0 14px 38px -20px color-mix(in srgb,var(--ac) 52%,transparent)}
+#welcome h2{letter-spacing:-.045em}
+#welcome p{font-size:.94rem;color:var(--tx2);max-width:32ch}
+.cards .card{
+  min-height:96px;display:flex;flex-direction:column;justify-content:center;gap:5px;
+  background:linear-gradient(145deg,color-mix(in srgb,var(--s1) 97%,var(--ac) 3%),var(--s1));
+  box-shadow:var(--shadow-card);position:relative;overflow:hidden;
+}
+.cards .card::after{content:"";position:absolute;inset:auto 14px 0;height:1px;background:linear-gradient(90deg,transparent,color-mix(in srgb,var(--ac) 30%,transparent),transparent);opacity:0;transition:opacity .22s ease}
+.cards .card:hover{border-color:color-mix(in srgb,var(--ac) 48%,var(--bd));box-shadow:0 14px 28px -22px color-mix(in srgb,var(--ac) 50%,transparent);transform:translateY(-2px)}
+.cards .card:hover::after{opacity:1}
+.cards .card b{font-weight:620;letter-spacing:-.015em}
+.cards .card span{line-height:1.45}
+.msg{scroll-margin-block:18px}
+.msg.ai .who{font-weight:560;letter-spacing:-.01em}
+.msg.user .bub{line-height:1.65;box-shadow:0 5px 18px -15px rgba(0,0,0,.55)}
+.prose{font-size:1rem;line-height:1.72}
+.prose p{line-height:1.72}
+.prose h2,.prose h3,.prose h4{margin-top:1.15em;letter-spacing:-.03em}
+.prose ul,.prose ol{line-height:1.7}
+.prose a{overflow-wrap:anywhere;text-decoration-thickness:1px}
+.code{box-shadow:var(--shadow-card)}
+.code-h{position:sticky;top:0;z-index:1;border-bottom:1px solid var(--line-soft)}
+.code pre{max-width:100%;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.acts{gap:5px}
+.acts button{min-height:32px;border:1px solid transparent;transition:background .18s ease,border-color .18s ease,color .18s ease}
+.acts button:hover{border-color:var(--line-soft)}
+.box{box-shadow:0 12px 34px -26px rgba(0,0,0,.7)}
+.box:focus-within{box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 12%,transparent),0 16px 34px -26px color-mix(in srgb,var(--ac) 35%,transparent)}
+#send{box-shadow:0 4px 12px -8px color-mix(in srgb,var(--ac) 75%,transparent),inset 0 1px 0 color-mix(in srgb,#fff 24%,transparent)}
+#send:disabled{filter:saturate(.45)}
+#jumpLatest{
+  position:absolute;z-index:8;left:50%;bottom:18px;transform:translateX(-50%);
+  display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 15px;
+  border:1px solid color-mix(in srgb,var(--bd) 85%,transparent);border-radius:999px;
+  color:var(--tx);background:color-mix(in srgb,var(--s1) 88%,transparent);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 10px 28px -14px rgba(0,0,0,.75);
+  font-size:.8rem;font-weight:560;letter-spacing:-.01em;
+  animation:toast-arrive .22s var(--ease-premium) both;
+}
+#jumpLatest svg{width:16px;height:16px;color:var(--ac)}
+#jumpLatest:hover{border-color:color-mix(in srgb,var(--ac) 45%,var(--bd));background:var(--s2)}
+#jumpLatest[hidden]{display:none!important}
+#err{border-radius:14px;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.toast{max-width:min(560px,calc(100vw - 32px));text-align:center;line-height:1.4}
+.menu{min-width:190px;border-color:var(--line-soft);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+.menu button{min-height:40px}
+:focus-visible{outline:2px solid var(--ac);outline-offset:3px;box-shadow:0 0 0 4px color-mix(in srgb,var(--ac) 12%,transparent)}
+button:disabled{cursor:not-allowed}
+@media (hover:none){
+  .ib,.tb,.btn,.card,.menu button,.acts button{-webkit-tap-highlight-color:transparent}
+  .ib,.tb,.menu button{min-height:40px}
+  .acts button{min-height:40px;padding-inline:11px}
+}
+@media (max-width:700px){
+  #top{min-height:52px}
+  #welcome{padding-top:26px;padding-bottom:24px}
+  .cards .card{min-height:82px;padding:13px 14px}
+  .msg{padding-block:13px}
+  .msg.ai .prose{font-size:.97rem;line-height:1.72}
+  #jumpLatest{bottom:12px;min-height:42px}
+  #composer{padding-top:7px}
+}
+@media (min-width:1101px){
+  #side{width:min(var(--sw),22vw)}
+  #top{padding-inline:22px}
+}
+@media (prefers-reduced-motion:reduce){
+  #jumpLatest{animation:none}
+  .cards .card::after{transition:none}
+  .cards .card:hover{transform:none}
+}
+
 </style>
 </head>
 <body>
@@ -499,7 +590,7 @@ main{min-height:0}
   <div id="scrim"></div>
   <main>
     <header id="top">
-      <button class="ib" id="toggle" aria-label="Toggle sidebar" title="Toggle sidebar (Ctrl+B)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
+      <button class="ib" id="toggle" aria-label="Toggle sidebar" aria-controls="side" aria-expanded="true" title="Toggle sidebar (Ctrl+B)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M9 4v16"/></svg></button>
       <h1 id="title">New chat</h1><span class="badge" id="tempBadge" hidden>Temporary</span>
       <button type="button" class="tb temp" id="tTemp" aria-pressed="false" title="Temporary chat: not saved to your history"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 7v5l3 2"/></svg><span>Temporary</span></button>
       <button class="ib" id="newTop" aria-label="New chat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -508,6 +599,7 @@ main{min-height:0}
       <div id="welcome"><span class="mark"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud face logo" loading="eager" decoding="async"></span>
         <h2 id="greet">Hello</h2><p>Quiet space for clear thinking.</p><div class="cards" id="cards"></div></div>
       <div class="col" id="msgs" hidden></div>
+      <button type="button" id="jumpLatest" aria-label="Jump to latest message" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6.5 13.5 12 19l5.5-5.5"/></svg><span>Latest response</span></button>
     </section>
     <div id="err" role="alert"><span id="errT"></span><button class="btn" id="errB">Dismiss</button></div>
     <form id="composer" autocomplete="off">
@@ -651,7 +743,7 @@ function detectDevice() {
   const w = innerWidth, h = innerHeight, coarse = matchMedia("(pointer:coarse)").matches;
   const d = w < 700 || (coarse && h < 500 && w < 950) ? "mobile" : w < 1100 ? "tablet" : "desktop";
   const r = document.documentElement;
-  if (r.dataset.device !== d) { r.dataset.device = d; $("#app").classList.remove("open", "collapsed"); }
+  if (r.dataset.device !== d) { r.dataset.device = d; $("#app").classList.remove("open", "collapsed"); if ($("#ovSet").classList.contains("on")) renderSettings(); }
   r.dataset.input = coarse || navigator.maxTouchPoints > 0 && !matchMedia("(hover:hover)").matches ? "touch" : "mouse";
   const vv = window.visualViewport;
   r.style.setProperty("--app-h", (vv ? vv.height : h) + "px");
@@ -665,6 +757,8 @@ function toggleSide(force) {
   const shouldOpen = force === undefined ? null : !!force;
   if (shouldOpen === null) app.classList.toggle(cls, !app.classList.contains(cls));
   else app.classList.toggle(cls, desk ? !shouldOpen : shouldOpen);
+  const opened = desk ? !app.classList.contains("collapsed") : app.classList.contains("open");
+  $("#toggle").setAttribute("aria-expanded", String(opened));
 }
 
 /* ===== 5. Chat state & rendering ===== */
@@ -673,13 +767,15 @@ try { pins = JSON.parse(localStorage.getItem("mahicloud.pins")) || []; } catch (
 const MAIN = $("#msgs"), SC = $("#scroll");
 const fmtTime = d => new Date(d).toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: S.time === "12" });
 const near = () => SC.scrollHeight - SC.scrollTop - SC.clientHeight < 160;
-const bottom = f => { if (f || S.autoScroll) SC.scrollTop = SC.scrollHeight; };
+const bottom = f => { if (f || S.autoScroll) { SC.scrollTop = SC.scrollHeight; $("#jumpLatest").hidden = true; } };
+SC.addEventListener("scroll", () => { if (near()) $("#jumpLatest").hidden = true; }, { passive: true });
+$("#jumpLatest").addEventListener("click", () => SC.scrollTo({ top: SC.scrollHeight, behavior: document.documentElement.dataset.motion === "reduced" ? "auto" : "smooth" }));
 function showErr(t, retry) { $("#errT").textContent = t; const b = $("#errB"); b.textContent = retry ? "Retry" : "Dismiss"; b.onclick = () => { $("#err").classList.remove("on"); if (retry) retry(); }; $("#err").classList.add("on"); }
 const hideErr = () => $("#err").classList.remove("on");
 function greet() { const h = new Date().getHours(), g = h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; $("#greet").textContent = g + (S.name ? ", " + S.name : ""); }
 const SUGGEST = [["Explain something", "Explain how neural networks learn, simply."], ["Draft a message", "Help me write a polite follow-up email."], ["Write code", "Write a debounce function in JavaScript with an example."], ["Plan my day", "Help me plan a focused, realistic workday."]];
 SUGGEST.forEach(([t, p]) => { const b = el("button", "card"); b.type = "button"; b.append(el("b", "", t), el("span", "", p)); b.onclick = () => { $("#in").value = p; grow(); $("#in").focus(); }; $("#cards").append(b); });
-function view(chat) { $("#welcome").hidden = chat; MAIN.hidden = !chat; if (!chat) MAIN.replaceChildren(); }
+function view(chat) { $("#welcome").hidden = chat; MAIN.hidden = !chat; if (!chat) { MAIN.replaceChildren(); $("#jumpLatest").hidden = true; } }
 function paint(node, text, streaming) { const b = node.querySelector(".prose"); b.innerHTML = S.markdown ? md(clean(text)) : esc(clean(text)).replace(/\n/g, "<br>"); b.classList.toggle("caret", !!streaming); }
 function addMsg(m, i, typing) {
   const n = el("article", "msg " + (m.role === "user" ? "user" : "ai")); n.dataset.i = i;
@@ -813,7 +909,7 @@ async function send(text, edit) {
     if (!res.ok) { let d = ""; try { d = (await res.json()).error || ""; } catch (_) {} throw new Error(d || "Request failed (" + res.status + ")."); }
     if (!res.body) throw new Error("Streaming is not supported by this browser.");
     const rd = res.body.getReader(), dec = new TextDecoder(); let buf = "", q = false;
-    const draw = () => { q = false; if (S.stream) { const stick = near(); paint(ai, full, true); if (stick) bottom(); } };
+    const draw = () => { q = false; if (S.stream) { const stick = near(); paint(ai, full, true); if (stick) bottom(); else $("#jumpLatest").hidden = false; } };
     const handle = blk => {
       const data = blk.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("\n"); if (!data) return;
       let p; try { p = JSON.parse(data); } catch (_) { return; }
@@ -876,14 +972,60 @@ function drawList() {
     m.onclick = e => { e.stopPropagation(); menu(m, c); }; r.oncontextmenu = e => { e.preventDefault(); menu(m, c); }; r.append(t, m); l.append(r);
   });
 }
+let closeActiveMenu = null;
 function menu(anchor, c) {
-  document.querySelector(".menu")?.remove(); const m = el("div", "menu"); m.setAttribute("role", "menu"); const b = anchor.getBoundingClientRect();
-  const item = (t, f, d) => { const x = el("button", d ? "dng" : "", t); x.setAttribute("role", "menuitem"); x.onclick = () => { m.remove(); f(); }; m.append(x); };
-  item(pins.includes(c.id) ? "Unpin (this device)" : "Pin (this device)", () => { pins = pins.includes(c.id) ? pins.filter(x => x !== c.id) : [...pins, c.id]; localStorage.setItem("mahicloud.pins", JSON.stringify(pins)); drawList(); });
-  item("Rename", () => renameConv(c)); item("Export Markdown", () => exportConv("md", c.id)); item("Delete", () => deleteConv(c), true);
-  document.body.append(m); m.style.left = Math.max(8, Math.min(b.left, innerWidth - m.offsetWidth - 8)) + "px"; m.style.top = Math.min(b.bottom + 4, innerHeight - m.offsetHeight - 8) + "px";
-  const off = e => { if (!m.contains(e.target)) { m.remove(); removeEventListener("pointerdown", off, true); } }; setTimeout(() => addEventListener("pointerdown", off, true));
-  m.querySelector("button").focus();
+  if (closeActiveMenu) closeActiveMenu(false);
+  const m = el("div", "menu");
+  m.setAttribute("role", "menu");
+  m.setAttribute("aria-label", "Conversation actions");
+  const rect = anchor.getBoundingClientRect();
+  const item = (label, action, danger) => {
+    const button = el("button", danger ? "dng" : "", label);
+    button.type = "button";
+    button.setAttribute("role", "menuitem");
+    button.onclick = () => { close(false); action(); };
+    m.append(button);
+  };
+  item(pins.includes(c.id) ? "Unpin (this device)" : "Pin (this device)", () => {
+    pins = pins.includes(c.id) ? pins.filter(x => x !== c.id) : [...pins, c.id];
+    localStorage.setItem("mahicloud.pins", JSON.stringify(pins));
+    drawList();
+  });
+  item("Rename", () => renameConv(c));
+  item("Export Markdown", () => exportConv("md", c.id));
+  item("Delete", () => deleteConv(c), true);
+  document.body.append(m);
+  m.style.left = Math.max(8, Math.min(rect.left, innerWidth - m.offsetWidth - 8)) + "px";
+  m.style.top = Math.min(rect.bottom + 4, innerHeight - m.offsetHeight - 8) + "px";
+
+  const outside = event => {
+    if (!m.contains(event.target) && !anchor.contains(event.target)) close(false);
+  };
+  const keys = event => {
+    if (event.key === "Escape") { event.preventDefault(); close(true); return; }
+    const buttons = [...m.querySelectorAll("button:not(:disabled)")];
+    const current = buttons.indexOf(document.activeElement);
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      const step = event.key === "ArrowDown" ? 1 : -1;
+      buttons[(current + step + buttons.length) % buttons.length]?.focus();
+    } else if (event.key === "Home") { event.preventDefault(); buttons[0]?.focus(); }
+    else if (event.key === "End") { event.preventDefault(); buttons[buttons.length - 1]?.focus(); }
+  };
+  function close(restoreFocus) {
+    m.remove();
+    removeEventListener("pointerdown", outside, true);
+    removeEventListener("keydown", keys, true);
+    if (closeActiveMenu === close) closeActiveMenu = null;
+    if (restoreFocus && anchor.isConnected) anchor.focus();
+  }
+  closeActiveMenu = close;
+  requestAnimationFrame(() => {
+    if (!m.isConnected) return;
+    addEventListener("pointerdown", outside, true);
+    addEventListener("keydown", keys, true);
+    m.querySelector("button")?.focus();
+  });
 }
 async function renameConv(c) {
   const v = await ask({ title: "Rename conversation", input: c.title || "New chat", ok: "Save" }); if (v == null) return;
@@ -1180,7 +1322,19 @@ $("#ovSet").addEventListener("pointerdown", e => { if (e.target.id === "ovSet") 
 $("#toggle").onclick = () => toggleSide(); $("#scrim").onclick = () => toggleSide(false); $("#newChat").onclick = () => guardLeave(newChat); $("#newTop").onclick = () => guardLeave(newChat);
 addEventListener("keydown", e => {
   const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), typing = /input|textarea|select/i.test(document.activeElement.tagName);
-  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovSet").classList.contains("on")) return closeSettings(); document.querySelector(".menu")?.remove(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  if (e.key === "Tab") {
+    const overlay = document.querySelector(".ov.on");
+    if (overlay) {
+      const focusable = [...overlay.querySelectorAll("button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex=\"-1\"])")].filter(node => !node.hidden && node.getClientRects().length);
+      if (focusable.length) {
+        const first = focusable[0], last = focusable[focusable.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      return;
+    }
+  }
+  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
   else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
   else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
   else if (mod && k === "b") { e.preventDefault(); toggleSide(); }
