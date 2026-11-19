@@ -33,7 +33,7 @@ svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke
 #app.collapsed #side{margin-left:calc(var(--sw)*-1)}
 .brand{display:flex;align-items:center;gap:10px;padding:16px 16px 8px;font-weight:650;letter-spacing:-.01em}
 .mark{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--ac),color-mix(in srgb,var(--ac) 40%,#000));display:grid;place-items:center;color:var(--ac-tx)}
-.mark svg{width:15px;height:15px;stroke-width:2.2}
+.mark svg{width:15px;height:15px;stroke-width:2.2}.mark{overflow:hidden}.mark img{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
 .sidetop{padding:8px 12px;display:grid;gap:8px}
 #search{width:100%;padding:9px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--bd);outline:0;font-size:.875rem}
 #search:focus{border-color:var(--ac)}
@@ -397,7 +397,7 @@ main[data-bg=glow] main::before{background:radial-gradient(60% 38% at 50% -8%,co
 <body>
 <div id="app">
   <aside id="side" aria-label="Conversations">
-    <div class="brand"><span class="mark"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 0 9.5H7z"/></svg></span>MahiCloud</div>
+    <div class="brand"><span class="mark"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud face logo" loading="eager" decoding="async"></span>MahiCloud</div>
     <div class="sidetop">
       <button class="btn pri" id="newChat"><span style="display:inline-flex;gap:8px;align-items:center"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New chat</span></button>
       <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
@@ -416,7 +416,7 @@ main[data-bg=glow] main::before{background:radial-gradient(60% 38% at 50% -8%,co
       <button class="ib" id="newTop" aria-label="New chat"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button>
     </header>
     <section id="scroll" aria-live="polite">
-      <div id="welcome"><span class="mark"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 0 9.5H7z"/></svg></span>
+      <div id="welcome"><span class="mark"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud face logo" loading="eager" decoding="async"></span>
         <h2 id="greet">Hello</h2><p>Quiet space for clear thinking.</p><div class="cards" id="cards"></div></div>
       <div class="col" id="msgs" hidden></div>
     </section>
@@ -595,7 +595,7 @@ function paint(node, text, streaming) { const b = node.querySelector(".prose"); 
 function addMsg(m, i, typing) {
   const n = el("article", "msg " + (m.role === "user" ? "user" : "ai")); n.dataset.i = i;
   if (m.role === "user") { const w = el("div", "ubox"); if (m.files && m.files.length) { const fl = el("div", "ufiles"); m.files.forEach(f => fl.append(el("span", "ufile", f))); w.append(fl); } if (clean(m.content)) w.append(Object.assign(el("div", "bub"), { textContent: clean(m.content) })); if (m.think) w.append(el("div", "tag", "Thinking mode")); n.append(w); }
-  else { const w = el("div", "who"); w.innerHTML = '<span class="mark"><svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.5-7.97A5.5 5.5 0 0 1 17 8.5a4.75 4.75 0 0 1 0 9.5H7z"/></svg></span>MahiCloud'; n.append(w, el("div", "prose")); if (typing) n.querySelector(".prose").innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; else paint(n, m.content); }
+  else { const w = el("div", "who"); w.innerHTML = '<span class="mark"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud face logo" loading="eager" decoding="async"></span>MahiCloud'; n.append(w, el("div", "prose")); if (typing) n.querySelector(".prose").innerHTML = '<span class="dots"><i></i><i></i><i></i></span>'; else paint(n, m.content); }
   if (!typing) decorate(n, m, i);
   MAIN.append(n); bottom(m.role === "user"); return n;
 }
