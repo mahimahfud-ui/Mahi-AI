@@ -1187,7 +1187,7 @@ function grow() { const t = $("#in"); t.style.height = "auto"; t.style.height = 
 function renderChips() {
   const c = $("#chips"); c.replaceChildren(); c.hidden = !pendingFiles.length;
   pendingFiles.forEach((p, i) => {
-    const chip = el("div", "chip");
+    const chip = el("div", "chip"); chip.setAttribute("role", "listitem");
     if (inferMime(p.file).startsWith("image/")) { const im = el("img"); im.alt = "Preview of " + p.file.name; im.src = p.url || (p.url = URL.createObjectURL(p.file)); chip.append(im); }
     else chip.append(el("span", "chip-ext", (p.file.name.split(".").pop() || "file").slice(0, 4)));
     const meta = el("div", "chip-meta"); meta.append(el("b", "", p.file.name), el("span", "", fmtSize(p.file.size)));
@@ -1273,8 +1273,10 @@ $("#in").addEventListener("keydown", e => {
 });
 $("#composer").addEventListener("submit", e => { e.preventDefault(); send($("#in").value); });
 $("#send").addEventListener("click", () => { if (busy && ctl) ctl.abort(); });
+let restoreComposerAfterFilePicker = false;
+$("#attach").addEventListener("pointerdown", () => { restoreComposerAfterFilePicker = document.activeElement === $("#in"); }, { passive: true });
 $("#attach").onclick = () => $("#file").click();
-$("#file").addEventListener("change", e => { const selected = e.target.files; addFiles(selected); e.target.value = ""; if (selected && selected.length && document.documentElement.dataset.input === "touch") requestAnimationFrame(() => $("#in").focus({ preventScroll: true })); });
+$("#file").addEventListener("change", e => { const selected = [...(e.target.files || [])]; const hasFiles = selected.length > 0; addFiles(selected); e.target.value = ""; if (hasFiles && restoreComposerAfterFilePicker && document.documentElement.dataset.input === "touch") requestAnimationFrame(() => $("#in").focus({ preventScroll: true })); restoreComposerAfterFilePicker = false; });
 $("#tThink").onclick = () => set("think", !S.think);
 $("#tTemp").onclick = toggleTemp;
 $("#mic").onclick = toggleMic; $("#recCancel").onclick = cancelVoice;
