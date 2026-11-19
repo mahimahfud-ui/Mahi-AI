@@ -2,7 +2,7 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#0a0a0c">
 <title>MahiCloud</title>
 <style>
@@ -392,6 +392,73 @@ main[data-bg=glow] main::before{background:radial-gradient(60% 38% at 50% -8%,co
 #uploadPct{min-width:32px;text-align:right;font-variant-numeric:tabular-nums;color:var(--tx2)}
 @media(max-width:700px){.upload-status{margin-inline:2px}}
 
+
+/* ===== Mobile fit & settings navigation refinement ===== */
+html,body{width:100%;height:100%;min-height:100%;overscroll-behavior:none}
+#app{height:var(--app-h,100dvh);min-height:0}
+main{min-height:0}
+#scroll{min-height:0;flex:1 1 auto;-webkit-overflow-scrolling:touch}
+#composer{flex:0 0 auto}
+@media (hover:none){button,.ib,.tb,.btn,.card{ -webkit-tap-highlight-color:transparent }}
+[data-device=mobile] body{height:var(--app-h,100dvh);min-height:0}
+[data-device=mobile] #app{height:var(--app-h,100dvh);width:100%;min-height:0;overflow:hidden}
+[data-device=mobile] main{height:var(--app-h,100dvh);min-height:0;min-width:0}
+[data-device=mobile] #top{flex:0 0 auto;min-height:52px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));gap:5px}
+[data-device=mobile] #top h1{min-width:0;font-size:.9rem}
+[data-device=mobile] #scroll{flex:1 1 0;min-height:0;overflow-x:hidden;overscroll-behavior-y:contain;scrollbar-width:none}
+[data-device=mobile] #welcome{min-height:100%;padding:20px 16px;justify-content:safe center}
+[data-device=mobile] #welcome p{margin-bottom:20px}
+[data-device=mobile] #composer{flex:0 0 auto;padding:8px 10px max(10px,env(safe-area-inset-bottom));background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 92%,transparent),var(--bg) 28%)}
+[data-device=mobile] #err{flex:0 0 auto;width:calc(100% - 20px);margin:0 10px 6px}
+[data-device=mobile] .box{max-width:none;width:100%;padding:8px;border-radius:19px;gap:5px}
+[data-device=mobile] #in{width:100%;min-height:42px;max-height:min(170px,28dvh);font-size:16px;line-height:1.45;padding:7px 4px}
+[data-device=mobile] .tools{min-width:0;align-items:center;gap:4px}
+[data-device=mobile] .tl{flex:1;min-width:0;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;gap:4px}
+[data-device=mobile] .tl::-webkit-scrollbar{display:none}
+[data-device=mobile] .ib.tool{width:38px;height:38px;flex:none}
+[data-device=mobile] .labeled-tool .tool-label{display:none}
+[data-device=mobile] .tb.think{height:38px;padding-inline:11px;flex:none}
+[data-device=mobile] .tr{margin-left:0;gap:4px}
+[data-device=mobile] #send{width:40px;height:40px;flex:none}
+[data-device=mobile] .chips{max-width:none;margin:0 0 7px}
+[data-device=mobile] #toasts{bottom:calc(82px + env(safe-area-inset-bottom));max-width:calc(100% - 28px)}
+[data-device=mobile] #ovSet{padding:0;align-items:stretch;justify-items:stretch;inset:0}
+[data-device=mobile] #ovSet.on{display:grid}
+[data-device=mobile] #set{width:100%;height:var(--app-h,100dvh);max-height:var(--app-h,100dvh);min-height:0;flex-direction:column;border:0;border-radius:0;padding-top:env(safe-area-inset-top)}
+[data-device=mobile] #sbody{order:0;flex:0 0 auto;min-width:0;min-height:0}
+[data-device=mobile] #set[data-settings-view=detail] #sbody{flex:1 1 auto;min-height:0}
+[data-device=mobile] #sbody .sh{min-height:60px;padding:9px 12px;gap:7px}
+[data-device=mobile] #sheading{display:block;flex:none;font-size:.98rem;font-weight:600;white-space:nowrap}
+[data-device=mobile] #sback{display:grid;width:38px;height:38px;flex:none}
+[data-device=mobile] #sq{min-width:0;width:100%;font-size:16px;padding:9px 10px}
+[data-device=mobile] #snav{order:1;display:flex;flex:1 1 auto;min-height:0;width:100%;height:auto;flex-direction:column;gap:9px;overflow:auto;overscroll-behavior:contain;border:0;padding:12px 16px calc(18px + env(safe-area-inset-bottom))}
+[data-device=mobile] #snav button.settings-cat{width:100%;min-height:72px;display:grid;grid-template-columns:42px minmax(0,1fr) 18px;align-items:center;gap:12px;text-align:left;white-space:normal;padding:11px 13px;border:1px solid var(--bd);border-radius:15px;background:linear-gradient(145deg,var(--s2),color-mix(in srgb,var(--s1) 90%,var(--bg)));color:var(--tx);transition:transform .18s var(--ease),border-color .18s,background .18s}
+[data-device=mobile] #snav button.settings-cat:active{transform:scale(.985);border-color:var(--ac)}
+[data-device=mobile] .cat-icon{width:40px;height:40px;display:grid;place-items:center;border-radius:12px;background:color-mix(in srgb,var(--ac) 13%,var(--s1));color:var(--ac);font-size:1.12rem}
+[data-device=mobile] .cat-copy{display:grid;gap:2px;min-width:0}
+[data-device=mobile] .cat-title{font-size:.92rem;font-weight:600;color:var(--tx)}
+[data-device=mobile] .cat-desc{font-size:.76rem;line-height:1.35;color:var(--tx2)}
+[data-device=mobile] .cat-arrow{font-size:1.5rem;line-height:1;color:var(--tx3);justify-self:end}
+[data-device=mobile] #sbody #spanel{flex:1 1 auto;min-height:0;padding:4px 16px calc(24px + env(safe-area-inset-bottom));overscroll-behavior:contain}
+[data-device=mobile] #spanel .set{align-items:flex-start;gap:12px;padding:15px 0}
+[data-device=mobile] #spanel .set>div:first-child{max-width:68%;font-size:.9rem}
+[data-device=mobile] #spanel .set .d{font-size:.76rem;line-height:1.4}
+[data-device=mobile] #spanel .set select{max-width:48%;min-width:110px;font-size:16px}
+[data-device=mobile] #spanel .set input[type=range]{width:min(36vw,140px)}
+[data-device=mobile] #spanel .set.col2>div:first-child{max-width:none}
+[data-device=mobile] #spanel .set textarea{font-size:16px}
+[data-device=mobile] #set[data-settings-view=categories] #spanel{display:none}
+[data-device=mobile] #set[data-settings-view=categories] #snav{flex:1 1 auto}
+[data-device=mobile] #set[data-settings-view=detail] #snav{display:none}
+[data-device=mobile] #set[data-settings-view=detail] #sbody .sh{flex:0 0 auto}
+[data-device=mobile] #set[data-settings-view=detail] #spanel{display:block;overflow:auto}
+[data-device=mobile] #snav[hidden], [data-device=mobile] #sbody[hidden], [data-device=mobile] #spanel[hidden]{display:none!important}
+@media (max-height:520px) and (pointer:coarse){
+  [data-device=mobile] #welcome{justify-content:flex-start}
+  [data-device=mobile] #composer{padding-top:4px}
+  [data-device=mobile] #in{max-height:22dvh}
+}
+
 </style>
 </head>
 <body>
@@ -449,7 +516,7 @@ main[data-bg=glow] main::before{background:radial-gradient(60% 38% at 50% -8%,co
 </div>
 <div class="ov" id="ovSet"><div class="dlg" id="set" role="dialog" aria-modal="true" aria-label="Settings">
   <nav id="snav" aria-label="Settings categories"></nav>
-  <div id="sbody"><div class="sh"><input id="sq" type="search" placeholder="Search settings" aria-label="Search settings"><button class="ib" id="sx" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="spanel"></div></div>
+  <div id="sbody"><div class="sh"><button class="ib" id="sback" type="button" aria-label="Back to settings categories" title="Back to categories" hidden><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><strong id="sheading">Settings</strong><input id="sq" type="search" placeholder="Search settings" aria-label="Search settings"><button class="ib" id="sx" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="spanel"></div></div>
 </div></div>
 <div class="ov" id="ovAsk"><div class="dlg sm" role="dialog" aria-modal="true"><h3 id="aT"></h3><p id="aP"></p><input id="aI" hidden aria-label="Value"><div class="row-e"><button class="btn" id="aN">Cancel</button><button class="btn pri" id="aY">OK</button></div></div></div>
 <div id="toasts" aria-live="polite"></div>
@@ -974,39 +1041,117 @@ const SCHEMA = [
   { id: "adv", t: "Advanced", i: [{ l: "Diagnostics", c: "diag" }, { l: "Reset all settings to defaults", c: "btn", b: [["Reset", () => { S = { ...DEF }; save(); applySettings(); renderSettings(); toast("Defaults restored"); }]] }] }
 ];
 let tab = "general";
+let mobileSettingsDetail = false;
+const CATEGORY_DESC = {
+  general: "Everyday app behavior and startup",
+  appearance: "Theme, colors, typography and layout",
+  chat: "How conversations are displayed",
+  voice: "Speech input and recognition language",
+  personal: "Your name and response preferences",
+  access: "Motion, contrast and readable text",
+  privacy: "Temporary chats, exports and local data",
+  keys: "Keyboard shortcuts and quick actions",
+  adv: "Diagnostics and reset controls"
+};
+const CATEGORY_GLYPH = {
+  general: "◷", appearance: "◐", chat: "✦", voice: "⌁",
+  personal: "◎", access: "◈", privacy: "▣", keys: "⌘", adv: "⚙"
+};
 function ctl_(it) {
   const v = S[it.k];
   if (it.c === "sw") { const b = el("button", "sw"); b.type = "button"; b.setAttribute("role", "switch"); b.setAttribute("aria-checked", !!v); b.setAttribute("aria-label", it.l); b.onclick = () => { set(it.k, !S[it.k]); b.setAttribute("aria-checked", !!S[it.k]); it.after && it.after(); }; return b; }
   if (it.c === "sel") { const s = el("select"); s.setAttribute("aria-label", it.l); it.o.forEach(([a, b]) => { const o = el("option", "", b); o.value = a; s.append(o); }); s.value = v; s.onchange = () => set(it.k, s.value); return s; }
   if (it.c === "col") { const i = el("input"); i.type = "color"; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => set(it.k, i.value); return i; }
   if (it.c === "rng") { const w = el("div"); w.style.cssText = "display:flex;gap:8px;align-items:center"; const i = el("input"); i.type = "range"; i.min = it.min; i.max = it.max; i.step = it.step || 1; i.value = v; i.setAttribute("aria-label", it.l); const o = el("span", "kbd", v + it.u); i.oninput = () => { o.textContent = i.value + it.u; set(it.k, +i.value); }; w.append(i, o); return w; }
-  if (it.c === "txt") { const i = el("input"); i.type = "text"; i.maxLength = 32; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => { set(it.k, i.value.replace(/[\u0000-\u001f]/g, "").slice(0, 32)); greet(); }; return i; }
-  if (it.c === "btn") { const w = el("div"); w.style.cssText = "display:flex;gap:6px"; it.b.forEach(([t, f, d]) => { const b = el("button", "btn" + (d ? " dng" : ""), t); b.type = "button"; b.onclick = f; w.append(b); }); return w; }
+  if (it.c === "txt") { const i = el("input"); i.type = "text"; i.maxLength = 32; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => { set(it.k, i.value.replace(/[\\u0000-\\u001f]/g, "").slice(0, 32)); greet(); }; return i; }
+  if (it.c === "btn") { const w = el("div"); w.style.cssText = "display:flex;gap:6px;flex-wrap:wrap"; it.b.forEach(([t, f, d]) => { const b = el("button", "btn" + (d ? " dng" : ""), t); b.type = "button"; b.onclick = f; w.append(b); }); return w; }
   if (it.c === "key") return el("span", "kbd", it.v);
   return null;
 }
 function renderSettings() {
-  const q = $("#sq").value.trim().toLowerCase(), nav = $("#snav"), p = $("#spanel"); nav.replaceChildren(); p.replaceChildren();
-  SCHEMA.forEach(s => { const b = el("button", s.id === tab && !q ? "on" : "", s.t); b.type = "button"; b.onclick = () => { tab = s.id; $("#sq").value = ""; renderSettings(); }; nav.append(b); });
-  const box = el("div"); let n = 0;
+  const q = $("#sq").value.trim().toLowerCase();
+  const nav = $("#snav"), p = $("#spanel"), body = $("#sbody");
+  const isMobile = document.documentElement.dataset.device === "mobile";
+  const showDetail = isMobile && (mobileSettingsDetail || !!q);
+  nav.replaceChildren(); p.replaceChildren();
+  $("#set").dataset.settingsView = isMobile ? (showDetail ? "detail" : "categories") : "desktop";
+  nav.hidden = showDetail;
+  p.hidden = isMobile && !showDetail;
+  $("#sback").hidden = !showDetail;
+  $("#sheading").textContent = q && isMobile ? "Search results" : (showDetail ? (SCHEMA.find(s => s.id === tab)?.t || "Settings") : "Settings");
+  $("#sq").placeholder = isMobile ? "Search settings" : "Search settings";
+
+  if (isMobile && !showDetail) {
+    SCHEMA.forEach(s => {
+      const b = el("button", "settings-cat");
+      b.type = "button";
+      b.setAttribute("aria-label", s.t + ": " + CATEGORY_DESC[s.id]);
+      const glyph = el("span", "cat-icon", CATEGORY_GLYPH[s.id] || "•");
+      const copy = el("span", "cat-copy");
+      copy.append(el("span", "cat-title", s.t), el("span", "cat-desc", CATEGORY_DESC[s.id] || ""));
+      b.append(glyph, copy, el("span", "cat-arrow", "›"));
+      b.onclick = () => {
+        tab = s.id;
+        mobileSettingsDetail = true;
+        $("#sq").value = "";
+        renderSettings();
+        p.scrollTop = 0;
+      };
+      nav.append(b);
+    });
+    return;
+  }
+
+  if (!isMobile) {
+    SCHEMA.forEach(s => {
+      const b = el("button", s.id === tab && !q ? "on" : "", s.t);
+      b.type = "button";
+      b.onclick = () => { tab = s.id; $("#sq").value = ""; renderSettings(); };
+      nav.append(b);
+    });
+  }
+
+  const box = el("div");
+  let n = 0;
   SCHEMA.filter(s => q || s.id === tab).forEach(s => {
-    const rows = s.i.filter(it => !q || (it.l + " " + (it.d || "") + " " + s.t).toLowerCase().includes(q)); if (!rows.length) return;
+    const rows = s.i.filter(it => !q || (it.l + " " + (it.d || "") + " " + s.t).toLowerCase().includes(q));
+    if (!rows.length) return;
     box.append(el("div", "sec", s.t));
     rows.forEach(it => {
-      n++; const r = el("div", "set" + (it.c === "area" ? " col2" : "")), t = el("div"); t.append(el("div", "", it.l)); if (it.d) t.append(el("div", "d", it.d)); r.append(t);
-      if (it.c === "area") { const a = el("textarea"); a.maxLength = 3000; a.value = S.instructions; a.setAttribute("aria-label", it.l); a.oninput = () => set("instructions", a.value.slice(0, 3000)); r.append(a); }
-      else if (it.c === "diag") { const d = el("div", "diag"); const dev = document.documentElement.dataset; d.innerHTML = "Layout: <b>" + dev.device + "</b> · Input: <b>" + dev.input + "</b> · Viewport: <b>" + innerWidth + "×" + innerHeight + "</b><br>Network: <b>" + (navigator.onLine ? "online" : "offline") + "</b> · Backend: <b>" + (Api.sess ? "session active" : "no session") + "</b><br>Account: <b>" + (Api.sess && Api.sess.user && Api.sess.user.is_anonymous ? "guest" : "unknown") + "</b>"; r.append(d); }
-      else if (it.c === "info") { /* explanatory row; intentionally no misleading control */ }
-      else { const c = ctl_(it); if (c) r.append(c); }      box.append(r);
+      n++;
+      const r = el("div", "set" + (it.c === "area" ? " col2" : ""));
+      const t = el("div");
+      t.append(el("div", "", it.l));
+      if (it.d) t.append(el("div", "d", it.d));
+      r.append(t);
+      if (it.c === "area") {
+        const a = el("textarea");
+        a.maxLength = 3000;
+        a.value = S.instructions;
+        a.setAttribute("aria-label", it.l);
+        a.oninput = () => set("instructions", a.value.slice(0, 3000));
+        r.append(a);
+      } else if (it.c === "diag") {
+        const d = el("div", "diag");
+        const dev = document.documentElement.dataset;
+        d.innerHTML = "Layout: <b>" + dev.device + "</b> · Input: <b>" + dev.input + "</b> · Viewport: <b>" + innerWidth + "×" + innerHeight + "</b><br>Network: <b>" + (navigator.onLine ? "online" : "offline") + "</b> · Backend: <b>" + (Api.sess ? "session active" : "no session") + "</b><br>Account: <b>" + (Api.sess && Api.sess.user && Api.sess.user.is_anonymous ? "guest" : "unknown") + "</b>";
+        r.append(d);
+      } else if (it.c === "info") {
+        /* explanatory row; intentionally no misleading control */
+      } else {
+        const c = ctl_(it);
+        if (c) r.append(c);
+      }
+      box.append(r);
     });
   });
   if (!n) box.append(el("div", "empty", "No settings match your search."));
   p.append(box);
 }
 let setReturn;
-function openSettings() { setReturn = document.activeElement; $("#ovSet").classList.add("on"); renderSettings(); $("#snav button.on, #snav button")?.focus(); }
-function closeSettings() { $("#ovSet").classList.remove("on"); setReturn && setReturn.focus && setReturn.focus(); }
-$("#sq").addEventListener("input", renderSettings); $("#sx").onclick = closeSettings; $("#openSet").onclick = openSettings;
+function openSettings() { setReturn = document.activeElement; mobileSettingsDetail = false; $("#sq").value = ""; $("#ovSet").classList.add("on"); renderSettings(); (document.documentElement.dataset.device === "mobile" ? $("#sq") : $("#snav button.on, #snav button"))?.focus(); }
+function closeSettings() { $("#ovSet").classList.remove("on"); mobileSettingsDetail = false; $("#sq").value = ""; setReturn && setReturn.focus && setReturn.focus(); }
+$("#sq").addEventListener("input", renderSettings); $("#sback").onclick = () => { mobileSettingsDetail = false; $("#sq").value = ""; renderSettings(); $("#snav").scrollTop = 0; }; $("#sx").onclick = closeSettings; $("#openSet").onclick = openSettings;
 $("#ovSet").addEventListener("pointerdown", e => { if (e.target.id === "ovSet") closeSettings(); });
 
 /* ===== 9. Wiring: navigation, shortcuts, boot ===== */
