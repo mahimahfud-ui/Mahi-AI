@@ -1063,7 +1063,7 @@ function ctl_(it) {
   if (it.c === "sel") { const s = el("select"); s.setAttribute("aria-label", it.l); it.o.forEach(([a, b]) => { const o = el("option", "", b); o.value = a; s.append(o); }); s.value = v; s.onchange = () => set(it.k, s.value); return s; }
   if (it.c === "col") { const i = el("input"); i.type = "color"; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => set(it.k, i.value); return i; }
   if (it.c === "rng") { const w = el("div"); w.style.cssText = "display:flex;gap:8px;align-items:center"; const i = el("input"); i.type = "range"; i.min = it.min; i.max = it.max; i.step = it.step || 1; i.value = v; i.setAttribute("aria-label", it.l); const o = el("span", "kbd", v + it.u); i.oninput = () => { o.textContent = i.value + it.u; set(it.k, +i.value); }; w.append(i, o); return w; }
-  if (it.c === "txt") { const i = el("input"); i.type = "text"; i.maxLength = 32; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => { set(it.k, i.value.replace(/[\\u0000-\\u001f]/g, "").slice(0, 32)); greet(); }; return i; }
+  if (it.c === "txt") { const i = el("input"); i.type = "text"; i.maxLength = 32; i.value = v; i.setAttribute("aria-label", it.l); i.oninput = () => { set(it.k, i.value.replace(/[\u0000-\u001f]/g, "").slice(0, 32)); greet(); }; return i; }
   if (it.c === "btn") { const w = el("div"); w.style.cssText = "display:flex;gap:6px;flex-wrap:wrap"; it.b.forEach(([t, f, d]) => { const b = el("button", "btn" + (d ? " dng" : ""), t); b.type = "button"; b.onclick = f; w.append(b); }); return w; }
   if (it.c === "key") return el("span", "kbd", it.v);
   return null;
