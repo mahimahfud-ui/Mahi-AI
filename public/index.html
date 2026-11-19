@@ -572,6 +572,98 @@ button:disabled{cursor:not-allowed}
   .cards .card:hover{transform:none}
 }
 
+
+/* ===== Dedicated mobile interaction pass: keyboard, safe areas and touch ergonomics ===== */
+#app{
+  position:fixed;
+  inset-inline:0;
+  top:var(--vv-offset-top,0px);
+  width:100%;
+  height:var(--app-h,100dvh);
+  min-height:0;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+#scroll{
+  min-height:0;
+  overflow-x:hidden;
+  overscroll-behavior-y:contain;
+  scroll-padding-block:18px 28px;
+  -webkit-overflow-scrolling:touch;
+}
+#composer{flex:0 0 auto;min-width:0}
+#in{min-width:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+#chips{min-width:0;max-width:100%;scroll-padding-inline:8px;scroll-snap-type:x proximity;touch-action:pan-x}
+.chip{scroll-snap-align:start}
+.chip button{width:34px;height:34px;min-width:34px;min-height:34px;display:grid;place-items:center;touch-action:manipulation}
+.chip img{width:42px;height:42px}
+#uploadStatus{min-height:24px}
+#err{line-height:1.4}
+#err button{min-height:40px;flex:none}
+#snav button.settings-cat{touch-action:manipulation}
+#spanel{overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+@media (max-width:700px){
+  html,body{width:100%;height:100%;min-height:0;overflow:hidden}
+  #app{height:var(--app-h,100dvh);top:var(--vv-offset-top,0px)}
+  #side{height:var(--app-h,100dvh);max-height:var(--app-h,100dvh);overscroll-behavior:contain}
+  #side #list{min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  #scrim{touch-action:pan-y}
+  #top{flex:none;min-height:50px;padding-top:max(5px,env(safe-area-inset-top))}
+  #toggle,#newTop{width:42px;height:42px;min-width:42px;min-height:42px}
+  #scroll{flex:1 1 0;min-height:0;scroll-padding-bottom:26px}
+  #composer{
+    flex:0 0 auto;
+    padding:7px 10px calc(10px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,color-mix(in srgb,var(--bg) 90%,transparent),var(--bg) 32%);
+  }
+  .box{min-width:0;padding:8px 8px 7px 11px;gap:5px}
+  #in{min-height:42px;max-height:min(160px,30dvh);font-size:16px;line-height:1.45;padding:7px 4px}
+  .tl{flex:1;min-width:0;gap:4px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+  .tl>*{flex:none}
+  .tl .ib.tool{width:42px;height:42px;min-width:42px;min-height:42px}
+  .tb.think{height:42px;min-height:42px;padding-inline:12px}
+  .tr{gap:5px;align-items:center}
+  #send{width:44px;height:44px;min-width:44px;min-height:44px;border-radius:13px}
+  #chips{gap:7px;padding:2px 1px 6px;margin-bottom:3px}
+  .chip{min-height:54px;max-width:min(248px,calc(100vw - 72px));padding:5px 6px}
+  .chip-meta{min-width:0}
+  .chip-meta b{max-width:min(148px,calc(100vw - 150px))}
+  .chip button{border-radius:10px}
+  #uploadStatus{margin-bottom:5px}
+  #err{margin-bottom:5px;gap:8px;padding:9px 11px;font-size:.82rem}
+  #jumpLatest{bottom:10px}
+  #ovSet,#ovAsk{padding:0}
+  #set{height:var(--app-h,100dvh);max-height:var(--app-h,100dvh);padding-bottom:env(safe-area-inset-bottom)}
+  #set #sbody .sh{padding-top:max(9px,env(safe-area-inset-top))}
+  #snav{padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+  #spanel{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+  .sm{max-height:calc(var(--app-h,100dvh) - env(safe-area-inset-top));overflow:auto;padding-bottom:calc(18px + env(safe-area-inset-bottom))}
+  .acts{display:flex;flex-wrap:wrap;gap:5px}
+  .acts button{min-height:42px;padding:7px 12px}
+  .msg.user .bub{max-width:min(92%,calc(100vw - 52px));overflow-wrap:anywhere}
+  .prose pre,.code pre{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain}
+  .ufiles{max-width:100%}
+}
+@media (max-width:360px){
+  .tb.think{padding-inline:9px;gap:5px}
+  #tTemp{width:36px;min-width:36px;justify-content:center}
+  #tTemp span{display:none!important}
+  #composer{padding-inline:7px}
+  .box{padding-inline:7px}
+  .tr{gap:3px}
+}
+@media (max-height:560px) and (pointer:coarse){
+  #welcome{justify-content:flex-start;padding-top:16px;padding-bottom:16px}
+  #welcome .mark{width:42px;height:42px;margin-bottom:10px}
+  #welcome p{margin-bottom:13px}
+  .cards{gap:7px}
+  .cards .card{min-height:68px;padding:10px 12px}
+}
+@media (prefers-reduced-motion:reduce){
+  #scroll{scroll-behavior:auto}
+  .chip{animation:none}
+}
+
 </style>
 </head>
 <body>
@@ -608,7 +700,7 @@ button:disabled{cursor:not-allowed}
         <div class="upload-track"><i id="uploadFill"></i></div>
         <span id="uploadPct">0%</span>
       </div>
-      <div class="chips" id="chips" aria-label="Attached files" hidden></div>
+      <div class="chips" id="chips" role="list" aria-label="Attached files" aria-live="polite" aria-relevant="additions removals" hidden></div>
       <div class="box" id="cbox">
         <textarea id="in" rows="1" maxlength="12000" placeholder="Message MahiCloud" aria-label="Message"></textarea>
         <div class="tools">
@@ -749,8 +841,43 @@ function detectDevice() {
   r.style.setProperty("--app-h", (vv ? vv.height : h) + "px");
   r.style.setProperty("--vv-offset-top", (vv && d !== "desktop" ? vv.offsetTop : 0) + "px");
 }
-["resize", "orientationchange"].forEach(e => addEventListener(e, detectDevice));
-if (window.visualViewport) { visualViewport.addEventListener("resize", () => { detectDevice(); if (S.autoScroll) $("#scroll").scrollTop = $("#scroll").scrollHeight; }); }
+let keyboardWasOpen = false, keyboardScrollSnapshot = 0, keyboardWasNearBottom = false, deviceSyncFrame = 0;
+function scheduleDeviceViewportSync() {
+  if (deviceSyncFrame) return;
+  deviceSyncFrame = requestAnimationFrame(() => {
+    deviceSyncFrame = 0;
+    const vv = window.visualViewport;
+    const active = document.activeElement;
+    const editorFocused = !!(active && (
+      active === $("#in") || active === $("#sq") ||
+      active.tagName === "TEXTAREA" ||
+      (active.tagName === "INPUT" && !["button", "checkbox", "color", "file", "range", "submit"].includes(active.type))
+    ));
+    const touchDevice = matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints > 0;
+    const keyboardOpen = !!(vv && touchDevice && editorFocused && window.innerHeight - vv.height > 120);
+    if (keyboardOpen && !keyboardWasOpen) {
+      const sc = $("#scroll");
+      keyboardScrollSnapshot = sc.scrollTop;
+      keyboardWasNearBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 160;
+    }
+    detectDevice();
+    if (!keyboardOpen && keyboardWasOpen) {
+      requestAnimationFrame(() => {
+        const sc = $("#scroll");
+        if (keyboardWasNearBottom && S.autoScroll) sc.scrollTop = sc.scrollHeight;
+        else sc.scrollTop = Math.min(keyboardScrollSnapshot, Math.max(0, sc.scrollHeight - sc.clientHeight));
+      });
+    }
+    keyboardWasOpen = keyboardOpen;
+  });
+}
+["resize", "orientationchange"].forEach(e => addEventListener(e, scheduleDeviceViewportSync, { passive: true }));
+document.addEventListener("focusin", scheduleDeviceViewportSync, { passive: true });
+document.addEventListener("focusout", scheduleDeviceViewportSync, { passive: true });
+if (window.visualViewport) {
+  visualViewport.addEventListener("resize", scheduleDeviceViewportSync, { passive: true });
+  visualViewport.addEventListener("scroll", scheduleDeviceViewportSync, { passive: true });
+}
 function toggleSide(force) {
   const app = $("#app"), desk = document.documentElement.dataset.device === "desktop";
   const cls = desk ? "collapsed" : "open";
@@ -1147,7 +1274,7 @@ $("#in").addEventListener("keydown", e => {
 $("#composer").addEventListener("submit", e => { e.preventDefault(); send($("#in").value); });
 $("#send").addEventListener("click", () => { if (busy && ctl) ctl.abort(); });
 $("#attach").onclick = () => $("#file").click();
-$("#file").addEventListener("change", e => { addFiles(e.target.files); e.target.value = ""; });
+$("#file").addEventListener("change", e => { const selected = e.target.files; addFiles(selected); e.target.value = ""; if (selected && selected.length && document.documentElement.dataset.input === "touch") requestAnimationFrame(() => $("#in").focus({ preventScroll: true })); });
 $("#tThink").onclick = () => set("think", !S.think);
 $("#tTemp").onclick = toggleTemp;
 $("#mic").onclick = toggleMic; $("#recCancel").onclick = cancelVoice;
