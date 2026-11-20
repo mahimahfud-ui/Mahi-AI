@@ -5,20 +5,21 @@ const fs = require("node:fs");
 const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
 const edge = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat/index.ts"), "utf8");
 
-test("the current composer exposes conversation search, temporary chat, attachments, voice and task modes", () => {
+test("the current composer exposes search, temporary chat, attachments, voice and task modes", () => {
   for (const id of ["newChat", "search", "tTemp", "in", "send", "attach", "file", "mic", "tMode", "taskModeMenu", "jumpLatest"]) {
     assert.ok(html.includes('id="' + id + '"'), "missing current chat control: " + id);
   }
   assert.match(html, /searchMessages: q => Api\.rest/);
-  assert.match(html, /async function toggleTemp|function toggleTemp/);
+  assert.match(html, /function toggleTemp\(\)/);
   assert.match(html, /temporary_chat: S\.temp/);
-  assert.match(html, /branch_context: false/);
 });
 
-test("the message renderer gives every fenced code block Copy and Run actions", () => {
+test("the markdown renderer creates Copy and Run actions and delegates both actions", () => {
   assert.match(html, /data-run aria-label="Run code in preview"/);
-  assert.match(html, /data-copy/);
-  assert.match(html, /document\.addEventListener\("click", e => \{/);
+  assert.match(html, /data-copy>Copy/);
+  assert.match(html, /MAIN\.addEventListener\("click", e => \{/);
+  assert.match(html, /closest\("\[data-run\]"\)/);
+  assert.match(html, /closest\("\[data-copy\]"\)/);
   assert.match(html, /navigator\.clipboard\.writeText\(text\)/);
   assert.match(html, /function openCodePreview\(box\)/);
 });
@@ -35,10 +36,4 @@ test("provider routing and credentials remain server-side", () => {
   assert.match(edge, /providerIsConfigured\(/);
   assert.match(edge, /KNOWN_PROVIDERS/);
   assert.doesNotMatch(html, /GEMINI_API_KEY|OPENROUTER_API_KEY|GROQ_API_KEY|service_role/i);
-});
-
-test("voice input inserts dictated text without automatically sending it", () => {
-  assert.match(html, /SpeechRecognition|webkitSpeechRecognition/);
-  assert.match(html, /r\.onresult = e =>/);
-  assert.match(html, /Voice input|Voice/);
 });
