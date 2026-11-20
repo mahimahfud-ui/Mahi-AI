@@ -463,7 +463,7 @@
     const current = getActiveTask();
     state.taskId = id;
     const preferred = current?.task_id === id
-      ? state.branches.find(branch => branch.task_id === id && branch.id === current.branch_id)
+      ? state.branches.find(branch => branch.task_id === id && branch.id === current.branch_id && branch.status !== "archived")
       : null;
     const first = preferred || state.branches.find(branch => branch.task_id === id && branch.status !== "archived");
     state.branchId = first ? first.id : "";
@@ -475,6 +475,11 @@
     render();
   }
   async function forkBranch() {
+    const task = state.tasks.find(item => item.id === state.taskId);
+    const source = state.branches.find(item => item.id === state.branchId && item.task_id === state.taskId);
+    if (!task || task.status === "archived" || !source || source.status === "archived") {
+      return status("Restore the task and source branch before forking.", true);
+    }
     const name = await ask({ title: "Create a parallel branch", text: "Name this alternative work track.", input: "experiment", ok: "Fork branch" });
     if (name == null || !String(name).trim()) return;
     try {
@@ -483,7 +488,11 @@
     } catch (error) { status(error.message, true); }
   }
   function setActiveTask(enabled) {
-    if (enabled && state.taskId && state.branchId) {
+    if (enabled) {
+      const task = state.tasks.find(item => item.id === state.taskId);
+      const branch = state.branches.find(item => item.id === state.branchId && item.task_id === state.taskId);
+      if (!task || task.status === "archived") return status("Restore this task before using it in chats.", true);
+      if (!branch || branch.status === "archived") return status("Restore this branch before using it in chats.", true);
       localStorage.setItem(activeKey(), JSON.stringify({ task_id: state.taskId, branch_id: state.branchId }));
       state.activeTask = activeTask();
       toast("This task branch will be included in relevant chats");
