@@ -2150,7 +2150,7 @@ async function send(text, edit) {
   if (edit) { msgs = msgs.slice(0, edit.index); renderAll(); }
   view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), taskMode }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
   const ai = addMsg({ role: "assistant", content: "" }, msgs.length, true);
-  $("#in").value = ""; grow(); setBusy(true); ctl = new AbortController(); let full = "", done = false;
+  clearDraft(); $("#in").value = ""; grow(); setBusy(true); ctl = new AbortController(); let full = "", done = false;
   try {
     refs = files.length ? await uploadFiles(files.map(p => p.file), ctl.signal) : [];
     const res = await Api.chat({
@@ -2299,11 +2299,30 @@ async function deleteConv(c) {
   try { await Api.remove(c.id); if (c.id === cid) newChat(); await loadList(true); toast("Deleted"); } catch (_) { toast("Could not delete"); }
 }
 async function openConv(id) {
-  if (busy) return; const my = ++gen;
-  try { const rows = await Api.messages(id); if (my !== gen) return; cid = id; pend = null; msgs = rows.map(r => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at })); S.temp = false; applySettings(); view(true); renderAll(); bottom(true); $("#title").textContent = (convs.find(c => c.id === id) || {}).title || "Conversation"; drawList(); hideErr(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
-  catch (_) { showErr("Could not load that conversation.", () => openConv(id)); }
+  if (busy) return;
+  persistDraft();
+  const my = ++gen;
+  try {
+    const rows = await Api.messages(id);
+    if (my !== gen) return;
+    cid = id; pend = null;
+    msgs = rows.map(r => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at }));
+    S.temp = false; applySettings(); view(true); renderAll(); bottom(true);
+    $("#title").textContent = (convs.find(c => c.id === id) || {}).title || "Conversation";
+    $("#in").value = ""; restoreDraft(); grow();
+    drawList(); hideErr();
+    if (document.documentElement.dataset.device !== "desktop") toggleSide(false);
+  } catch (_) { showErr("Could not load that conversation.", () => openConv(id)); }
 }
-function newChat() { if (busy) return; gen++; cid = null; msgs = []; pend = null; $("#title").textContent = "New chat"; view(false); greet(); hideErr(); $("#in").value = ""; grow(); drawList(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); $("#in").focus(); }
+function newChat() {
+  if (busy) return;
+  persistDraft();
+  gen++; cid = null; msgs = []; pend = null;
+  $("#title").textContent = "New chat"; view(false); greet(); hideErr();
+  $("#in").value = ""; restoreDraft(); grow(); drawList();
+  if (document.documentElement.dataset.device !== "desktop") toggleSide(false);
+  $("#in").focus();
+}
 async function exportCapsule(id) {
   try {
     const rows = !id || id === cid ? msgs : await Api.messages(id);
@@ -2388,8 +2407,44 @@ function exportConv(fmt, id) {
 let st; $("#search").addEventListener("input", () => { hits = null; drawList(); clearTimeout(st); const q = $("#search").value.trim(); if (q.length < 2) return; st = setTimeout(async () => { try { const d = await Api.searchMessages(q); hits = new Set((d || []).map(r => r.conversation_id)); drawList(); } catch (_) {} }, 350); });
 
 /* ===== 7. Composer ===== */
+const DRAFT_PREFIX = "mahicloud.draft.v1:";
+const DRAFT_MAX_AGE = 24 * 60 * 60 * 1000;
+function draftStorageKey(contextId = cid) { return DRAFT_PREFIX + (contextId || "new"); }
+function clearDraft(contextId = cid) {
+  try { sessionStorage.removeItem(draftStorageKey(contextId)); } catch (_) {}
+}
+function persistDraft() {
+  if (S.temp) return;
+  try {
+    const text = $("#in").value.slice(0, 12000);
+    const key = draftStorageKey();
+    if (!text.trim()) { sessionStorage.removeItem(key); return; }
+    sessionStorage.setItem(key, JSON.stringify({ text, updatedAt: Date.now() }));
+  } catch (_) {}
+}
+function restoreDraft({ notify = false } = {}) {
+  if (S.temp) return false;
+  try {
+    const key = draftStorageKey();
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    const age = Date.now() - Number(saved?.updatedAt || 0);
+    if (!saved || typeof saved.text !== "string" || !saved.text.trim() || !Number.isFinite(age) || age < 0 || age > DRAFT_MAX_AGE) {
+      sessionStorage.removeItem(key);
+      return false;
+    }
+    $("#in").value = saved.text.slice(0, 12000);
+    if (notify) toast("Unsent draft restored · attachments need to be reattached");
+    return true;
+  } catch (_) { return false; }
+}
 const canSend = () => !!($("#in").value.trim() || pendingFiles.length);
-function grow() { const t = $("#in"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px"; if (!busy) $("#send").disabled = !canSend(); }
+function grow() {
+  const t = $("#in"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px";
+  if (!busy) $("#send").disabled = !canSend();
+  persistDraft();
+}
 function renderChips() {
   const c = $("#chips"); c.replaceChildren(); c.hidden = !pendingFiles.length;
   pendingFiles.forEach((p, i) => {
@@ -2449,7 +2504,7 @@ function clearPendingFiles() {
 function guardLeave(go) {
   if (!canSend()) return go();
   ask({ title: "Discard unsent message?", text: "Your draft and attached files will be cleared.", ok: "Discard", danger: true }).then(y => {
-    if (!y) return; $("#in").value = ""; clearPendingFiles(); grow(); go();
+    if (!y) return; clearDraft(); $("#in").value = ""; clearPendingFiles(); grow(); go();
   });
 }
 function toggleTemp() {
@@ -2744,7 +2799,7 @@ const SCHEMA = [
     { l: "Export current conversation", c: "btn", b: [["Markdown", () => exportConv("md")], ["JSON", () => exportConv("json")]] },
     { l: "Clear local preferences", d: "Resets settings and pins on this device only. Your server-side conversations are NOT deleted.", c: "btn", b: [["Clear", async () => { if (await ask({ title: "Clear local preferences?", text: "Only this browser’s settings and pins are removed. Conversations stored in your account stay.", ok: "Clear", danger: true })) { S = { ...DEF }; save(); pins = []; localStorage.removeItem("mahicloud.pins"); applySettings(); renderSettings(); toast("Local preferences cleared"); } }, 1]] },
     { l: "Delete conversations", d: "Use the ⋯ menu on a conversation in the sidebar to delete it from your account.", c: "info" }] },
-  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
+  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Prompt library", "Ctrl/⌘ Shift P"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
   { id: "adv", t: "Advanced", i: [{ l: "Diagnostics", c: "diag" }, { l: "Reset all settings to defaults", c: "btn", b: [["Reset", () => { S = { ...DEF }; save(); applySettings(); renderSettings(); toast("Defaults restored"); }]] }] }
 ];
 let tab = "general";
@@ -2941,7 +2996,8 @@ addEventListener("keydown", e => {
       return;
     }
   }
-  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  else if (mod && e.shiftKey && k === "p") { e.preventDefault(); openPromptLibrary(); }
   else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
   else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
   else if (mod && k === "b") { e.preventDefault(); toggleSide(); }
@@ -2996,7 +3052,8 @@ addEventListener("offline", () => toast("You’re offline"));
   renderAccountUI();
   setMahiBootStage("loading conversations", "Loading conversations…");
   const ok = await loadList();
-  if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
+  if (ok && S.startup === "last" && convs.length) await openConv(convs[0].id);
+  else restoreDraft({ notify: true });
   finishMahiBoot();
   } catch (error) {
     markMahiStartupFailure(error);
