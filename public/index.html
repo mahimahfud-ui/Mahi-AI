@@ -664,6 +664,128 @@ button:disabled{cursor:not-allowed}
   .chip{animation:none}
 }
 
+
+
+/* ===== Premium motion pass: cohesive, subtle and GPU-friendly transitions ===== */
+:root{
+  --motion-fast:160ms;
+  --motion-base:240ms;
+  --motion-slow:340ms;
+  --ease-smooth:cubic-bezier(.22,.75,.18,1);
+  --ease-enter:cubic-bezier(.16,1,.3,1);
+}
+html,body,#app,#side,main,#top,#composer,.box,.ib,.btn,.tb,.card,.ci,
+#search,.menu,.toast,.chip,.settings-cat,.set select,.set input,.set textarea{
+  transition-timing-function:var(--ease-smooth);
+}
+#side{
+  will-change:transform;
+  transition:transform var(--motion-slow) var(--ease-enter),margin var(--motion-slow) var(--ease-enter),background var(--motion-base) var(--ease-smooth);
+}
+#scrim{
+  transition:opacity var(--motion-slow) var(--ease-smooth),visibility var(--motion-slow);
+}
+#top,#composer,.box,.card,.ci,.ib,.btn,.tb,#search,.menu,.toast,.chip,.settings-cat{
+  transition-duration:var(--motion-base);
+}
+.msg{
+  animation:message-enter 380ms var(--ease-enter) both;
+}
+@keyframes message-enter{
+  from{opacity:0;transform:translate3d(0,10px,0) scale(.992)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+#welcome{
+  animation:welcome-enter 520ms var(--ease-enter) both;
+}
+@keyframes welcome-enter{
+  from{opacity:0;transform:translate3d(0,12px,0) scale(.99)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+.cards .card{
+  transition:transform var(--motion-base) var(--ease-enter),border-color var(--motion-base),background var(--motion-base),box-shadow var(--motion-base);
+}
+.ib,.btn,.tb,.menu button,.acts button,.settings-cat{
+  transition-property:background,color,border-color,box-shadow,transform,opacity;
+}
+.ib:active,.btn:active,.tb:active,.menu button:active,.acts button:active{
+  transition-duration:90ms;
+}
+.box{
+  transition:border-color var(--motion-base),box-shadow var(--motion-base),background var(--motion-base);
+}
+#send{
+  transition:background var(--motion-base),opacity var(--motion-base),transform 150ms var(--ease-enter),box-shadow var(--motion-base),filter var(--motion-base);
+}
+.sw,.sw::after{
+  transition-duration:260ms;
+  transition-timing-function:var(--ease-enter);
+}
+/* Keep overlays mounted so opacity and panel movement can animate on open and close. */
+.ov{
+  display:grid;
+  visibility:hidden;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 220ms var(--ease-smooth),visibility 220ms;
+}
+.ov.on{
+  display:grid;
+  visibility:visible;
+  opacity:1;
+  pointer-events:auto;
+  animation:none;
+}
+.ov .dlg{
+  opacity:0;
+  transform:translate3d(0,12px,0) scale(.985);
+  transition:opacity 260ms var(--ease-enter),transform 320ms var(--ease-enter);
+  will-change:transform,opacity;
+}
+.ov.on .dlg{
+  opacity:1;
+  transform:translate3d(0,0,0) scale(1);
+}
+#set{
+  transition:transform 320ms var(--ease-enter),opacity 240ms var(--ease-smooth);
+}
+#spanel>div{
+  animation:settings-enter 300ms var(--ease-enter) both;
+}
+@keyframes settings-enter{
+  from{opacity:0;transform:translate3d(0,7px,0)}
+  to{opacity:1;transform:translate3d(0,0,0)}
+}
+#jumpLatest{
+  transition:opacity 180ms var(--ease-smooth),transform 220ms var(--ease-enter),background var(--motion-base),border-color var(--motion-base);
+}
+.toast{
+  animation:toast-enter 260ms var(--ease-enter) both;
+}
+@keyframes toast-enter{
+  from{opacity:0;transform:translate3d(0,8px,0) scale(.98)}
+  to{opacity:1;transform:translate3d(0,0,0) scale(1)}
+}
+@media (hover:hover) and (pointer:fine){
+  .card:hover{transform:translateY(-3px)}
+  .ib:hover,.tb:hover,.btn:hover{transform:translateY(-1px)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
+    scroll-behavior:auto!important;
+  }
+  .msg,.welcome,.ov .dlg{transform:none!important}
+}
+[data-motion=reduced] *,[data-motion=reduced] *::before,[data-motion=reduced] *::after{
+  animation-duration:.001ms!important;
+  animation-iteration-count:1!important;
+  transition-duration:.001ms!important;
+  scroll-behavior:auto!important;
+}
+
 </style>
 </head>
 <body>
