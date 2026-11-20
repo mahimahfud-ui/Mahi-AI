@@ -1120,9 +1120,9 @@ body{min-width:0}
  #ovPrompts{padding:8px}
  #ovPrompts .prompt-dialog{height:calc(100% - 8px);border-radius:16px}
  .prompt-head{padding:15px 14px 11px}
- .prompt-tools{grid-template-columns:minmax(0,1fr) auto;padding:10px 12px}
+ .prompt-tools{grid-template-columns:minmax(0,1fr) auto auto;padding:10px 12px}
+ .prompt-tools input{grid-column:1/-1}
  .prompt-tools select{grid-column:1}
- .prompt-tools #promptNew,.prompt-tools #promptSaveCurrent{grid-row:2}
  .prompt-editor{grid-template-columns:minmax(0,1fr);padding:11px 12px}
  .prompt-editor textarea,.prompt-editor-actions{grid-column:1}
  .prompt-list{grid-template-columns:minmax(0,1fr);padding:11px 12px 16px}
