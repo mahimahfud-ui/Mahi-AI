@@ -60,6 +60,8 @@ test("task continuity supports branches, checkpoints, event history and selected
   assert.match(ui, /Checkpoint now/);
   assert.match(edge, /workspaceTaskId/);
   assert.match(edge, /workspaceService\.saveChatEvent/);
+  assert.match(ui, /workspace_task_id: selected\.task_id/);
+  assert.match(ui, /workspace_branch_id: selected\.branch_id/);
   assert.match(html, /workspace_branch_id/);
 });
 
