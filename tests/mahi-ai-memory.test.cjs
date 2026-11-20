@@ -24,8 +24,8 @@ test("memory tables are private and scoped to one authenticated user", () => {
 });
 
 test("AI memory context uses only editable, versioned entries and never opaque chat excerpts", () => {
-  assert.match(structuredMigration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_entries/);
-  assert.match(structuredMigration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_versions/);
+  assert.match(structuredMigration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_entries/i);
+  assert.match(structuredMigration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_versions/i);
   assert.match(structuredMigration, /p_exclude_conversation_id uuid default null/);
   assert.match(structuredMigration, /'recent_messages', '\[\]'/);
   assert.match(structuredMigration, /limit 40/);
