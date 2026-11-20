@@ -95,6 +95,10 @@
     root.classList.remove("on");
     document.body.classList.remove("workspace-open");
   }
+  function setUserId(id) {
+    state.userId = id || "";
+    state.activeTask = state.userId ? activeTask() : null;
+  }
   function getActiveTask() {
     if (!state.userId) return null;
     return activeTask();
@@ -488,12 +492,8 @@
   function init(options) {
     api = options.api; toast = options.toast || toast; ask = options.ask || ask; getUserId = options.getUserId || getUserId;
     makeShell();
-    Promise.resolve(getUserId()).then(id => {
-      state.userId = id || "";
-      state.activeTask = state.userId ? activeTask() : null;
-    }).catch(() => {});
     const trigger = document.getElementById("openWorkspace");
     if (trigger) trigger.addEventListener("click", open);
   }
-  window.MahiWorkspace = { init, open, close, getActiveTask };
+  window.MahiWorkspace = { init, open, close, setUserId, getActiveTask };
 })();
