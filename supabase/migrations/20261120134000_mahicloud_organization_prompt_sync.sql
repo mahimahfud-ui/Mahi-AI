@@ -50,11 +50,17 @@ ALTER TABLE public.mahi_ai_prompts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage their own MahiCloud prompts"
   ON public.mahi_ai_prompts;
-CREATE POLICY "Users can manage their own MahiCloud prompts"
+CREATE POLICY "Permanent users can manage their own MahiCloud prompts"
   ON public.mahi_ai_prompts
   FOR ALL TO authenticated
-  USING ((SELECT auth.uid()) = user_id)
-  WITH CHECK ((SELECT auth.uid()) = user_id);
+  USING (
+    (SELECT auth.uid()) = user_id
+    AND COALESCE(((SELECT auth.jwt())->>'is_anonymous')::boolean, true) = false
+  )
+  WITH CHECK (
+    (SELECT auth.uid()) = user_id
+    AND COALESCE(((SELECT auth.jwt())->>'is_anonymous')::boolean, true) = false
+  );
 
 -- Newly-created tables are not granted to browser roles automatically.
 -- Only authenticated users get the Data API privileges; RLS scopes every row.
