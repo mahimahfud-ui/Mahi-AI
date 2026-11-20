@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta name="theme-color" content="#0a0a0c">
 <meta name="description" content="MahiCloud is a multilingual AI assistant for clear thinking, writing, coding, research and everyday work.">
 <meta name="application-name" content="MahiCloud">
@@ -1166,6 +1169,45 @@ body{min-width:0}
 
 <script>
 "use strict";
+// Surface startup failures instead of leaving the sidebar stuck on "Connecting…".
+window.__MAHI_BOOT_COMPLETE = false;
+let mahiBootStage = "loading application script";
+function setMahiBootStage(stage, label) {
+  mahiBootStage = stage;
+  const who = document.getElementById("who");
+  if (who && label) who.textContent = label;
+}
+function markMahiStartupFailure(error) {
+  const message = String(error?.message || error || "Unknown browser error").slice(0, 260);
+  const who = document.getElementById("who");
+  if (who) who.textContent = "App startup error";
+  const box = document.getElementById("err");
+  const text = document.getElementById("errT");
+  const button = document.getElementById("errB");
+  if (box && text) {
+    text.textContent = "MahiCloud stopped during " + mahiBootStage + ": " + message;
+    box.classList.add("on");
+  }
+  if (button) {
+    button.textContent = "Reload";
+    button.onclick = () => window.location.reload();
+  }
+  console.error("[MahiCloud startup]", mahiBootStage, error);
+}
+function finishMahiBoot() {
+  window.__MAHI_BOOT_COMPLETE = true;
+  window.clearTimeout(mahiBootStallTimer);
+}
+window.addEventListener("error", event => {
+  if (!window.__MAHI_BOOT_COMPLETE) markMahiStartupFailure(event.error || event.message);
+});
+window.addEventListener("unhandledrejection", event => {
+  if (!window.__MAHI_BOOT_COMPLETE) markMahiStartupFailure(event.reason);
+});
+const mahiBootStallTimer = window.setTimeout(() => {
+  if (!window.__MAHI_BOOT_COMPLETE) markMahiStartupFailure(new Error("startup exceeded 30 seconds"));
+}, 30000);
+setMahiBootStage("loading application script", "Starting…");
 /* ===== 1. Backend adapter (existing MahiCloud contracts; public config only, no secrets) ===== */
 const CFG = Object.assign({
   supabaseUrl: "https://husydmiujigyonlxbuuj.supabase.co",
@@ -1583,7 +1625,30 @@ const TASK_MODES = [
   { id: "general", label: "General", description: "Balanced multi-provider help for everyday tasks" }
 ];
 const DEF = { theme: "dark", accent: "#d4b98a", font: "sans", fontSize: 16, msgWidth: 760, density: "comfortable", radius: 14, motion: "normal", bg: "glow", enterToSend: true, startup: "welcome", confirm: true, time: "12", autoScroll: true, stream: true, markdown: true, timestamps: true, actions: true, instructions: "", style: "default", name: "", hc: false, largeText: false, reduceMotion: false, temp: false, taskMode: "auto", voiceLang: "" };
-let S = { ...DEF }; try { Object.assign(S, JSON.parse(localStorage.getItem(SKEY)) || {}); } catch (_) {}
+let S = { ...DEF };
+try {
+  const saved = JSON.parse(localStorage.getItem(SKEY) || "null");
+  if (saved && typeof saved === "object" && !Array.isArray(saved)) {
+    for (const [key, fallback] of Object.entries(DEF)) {
+      const value = saved[key];
+      if (value !== null && typeof value === typeof fallback) S[key] = value;
+    }
+  }
+} catch (_) {}
+// Validate persisted preferences before they can interrupt application startup.
+if (!/^#[0-9a-f]{6}$/i.test(S.accent)) S.accent = DEF.accent;
+if (!["dark", "light", "system"].includes(S.theme)) S.theme = DEF.theme;
+if (!["sans", "serif", "mono"].includes(S.font)) S.font = DEF.font;
+if (!["comfortable", "compact"].includes(S.density)) S.density = DEF.density;
+if (!["normal", "reduced"].includes(S.motion)) S.motion = DEF.motion;
+if (!["glow", "none"].includes(S.bg)) S.bg = DEF.bg;
+if (!["welcome", "last"].includes(S.startup)) S.startup = DEF.startup;
+if (!Number.isFinite(S.fontSize)) S.fontSize = DEF.fontSize;
+if (!Number.isFinite(S.msgWidth)) S.msgWidth = DEF.msgWidth;
+if (!Number.isFinite(S.radius)) S.radius = DEF.radius;
+S.fontSize = Math.max(12, Math.min(24, S.fontSize));
+S.msgWidth = Math.max(480, Math.min(1200, S.msgWidth));
+S.radius = Math.max(6, Math.min(24, S.radius));
 if (!TASK_MODES.some(mode => mode.id === S.taskMode)) S.taskMode = S.think === true ? "think" : "auto";
 delete S.think;
 S.temp = false; /* temporary mode never survives a reload */
@@ -2624,8 +2689,11 @@ addEventListener("beforeunload", e => {
 addEventListener("online", () => { hideErr(); loadList(true); });
 addEventListener("offline", () => toast("You’re offline"));
 (async function boot() {
+  try {
+  setMahiBootStage("initializing interface", "Starting…");
   applySettings(); detectDevice(); greet(); setBusy(false); view(false);
-  if (!CFG.supabaseUrl || !CFG.supabasePublishableKey) { $("#who").textContent = "Configuration missing"; showErr("MahiCloud is missing its public Supabase configuration (window.MAHI_AI_CONFIG)."); $("#in").disabled = true; return; }
+  if (!CFG.supabaseUrl || !CFG.supabasePublishableKey) { $("#who").textContent = "Configuration missing"; showErr("MahiCloud is missing its public Supabase configuration (window.MAHI_AI_CONFIG)."); $("#in").disabled = true; finishMahiBoot(); return; }
+  setMahiBootStage("checking account session", "Checking account…");
   const pendingGoogleFlow = readGoogleAuthPending();
   if (pendingGoogleFlow) {
     try {
@@ -2639,11 +2707,13 @@ addEventListener("offline", () => toast("You’re offline"));
       authRecoveryRequired = false;
     } catch (_) {
       showGoogleAuthRecovery();
+      finishMahiBoot();
       return;
     }
   }
   // Normal chat startup uses the small Auth REST adapter above. The Supabase JS
   // bundle is only needed for an actual Google OAuth callback or account action.
+  setMahiBootStage("connecting to Supabase Auth", "Connecting to account service…");
   try { await Api.ensure(); }
   catch (_) {
     let savedSessionPresent = false;
@@ -2655,11 +2725,20 @@ addEventListener("offline", () => toast("You’re offline"));
       showErr("Could not start a guest session. Enable anonymous sign-ins in Supabase and check the site's allowed origins.");
     }
     $("#in").disabled = true;
+    finishMahiBoot();
     return;
   }
   renderAccountUI();
+  setMahiBootStage("loading conversations", "Loading conversations…");
   const ok = await loadList();
   if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
+  finishMahiBoot();
+  } catch (error) {
+    markMahiStartupFailure(error);
+    const input = document.getElementById("in");
+    if (input) input.disabled = true;
+    finishMahiBoot();
+  }
 })();
 </script>
 
