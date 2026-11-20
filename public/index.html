@@ -913,6 +913,28 @@ body{min-width:0}
   #capsuleImport{width:38px;height:38px;min-width:38px;min-height:38px}
 }
 
+
+/* ===== Google account identity and workspace persistence ===== */
+#openAccount{flex:none}
+.account-dlg{display:flex;flex-direction:column;gap:12px}
+.account-heading{display:flex;align-items:center;gap:12px;margin-bottom:2px}
+.account-heading h3{margin:0 0 2px}
+.account-heading p{margin:0;color:var(--tx2);font-size:.84rem;line-height:1.4}
+.google-g{width:42px;height:42px;display:grid;place-items:center;flex:none;border-radius:13px;background:#fff;color:#4285f4;font:800 27px/1 Arial,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.14)}
+.account-identity{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0;padding:10px 12px;background:var(--bg);border:1px solid var(--bd);border-radius:11px;font-size:.82rem;color:var(--tx2)}
+#accountIdentity{min-width:0;overflow-wrap:anywhere}
+.account-badge{flex:none;padding:3px 8px;border-radius:99px;background:var(--s3);color:var(--tx2);font-size:.68rem;font-weight:650}
+.account-badge.connected{background:color-mix(in srgb,var(--ok) 13%,var(--s1));color:var(--ok)}
+.account-action{width:100%;min-height:42px}
+.account-note{margin:0!important;padding:0 2px;color:var(--tx2);font-size:.78rem;line-height:1.5}
+.account-footer{width:100%;justify-content:space-between;align-items:center;margin-top:2px}
+#accountSignOut[hidden],#googleLink[hidden],#googleExisting[hidden]{display:none}
+@media(max-width:700px){
+  #ovAccount{padding:12px}
+  .account-dlg{width:min(440px,100%);padding:19px}
+  .account-action{min-height:44px}
+}
+
 </style>
 </head>
 <body>
@@ -925,6 +947,7 @@ body{min-width:0}
     </div>
     <div id="list" role="list"></div>
     <div class="sidebot"><span class="who" id="who">Connecting…</span>
+      <button class="ib" id="openAccount" aria-label="Google account and sign-in" title="Google account and sign-in"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
       <button class="ib" id="capsuleImport" aria-label="Import Mahi Capsule" title="Resume a project from a Mahi Capsule"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></button>
       <button class="ib" id="openSet" aria-label="Open settings" title="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
     </div>
@@ -976,6 +999,14 @@ body{min-width:0}
   <div id="sbody"><div class="sh"><button class="ib" id="sback" type="button" aria-label="Back to settings categories" title="Back to categories" hidden><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><strong id="sheading">Settings</strong><input id="sq" type="search" placeholder="Search settings" aria-label="Search settings"><button class="ib" id="sx" aria-label="Close settings"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div><div id="spanel"></div></div>
 </div></div>
 <div class="ov" id="ovAsk"><div class="dlg sm" role="dialog" aria-modal="true"><h3 id="aT"></h3><p id="aP"></p><input id="aI" hidden aria-label="Value"><div class="row-e"><button class="btn" id="aN">Cancel</button><button class="btn pri" id="aY">OK</button></div></div></div>
+<div class="ov" id="ovAccount"><div class="dlg sm account-dlg" role="dialog" aria-modal="true" aria-labelledby="accountHeading">
+  <div class="account-heading"><span class="google-g" aria-hidden="true">G</span><div><h3 id="accountHeading">Your MahiCloud account</h3><p id="accountSubheading">Keep your conversations with you.</p></div></div>
+  <div class="account-identity"><span id="accountIdentity">Checking account…</span><span id="accountBadge" class="account-badge">Guest</span></div>
+  <button type="button" class="btn pri account-action" id="googleLink">Continue with Google</button>
+  <button type="button" class="btn account-action" id="googleExisting">Sign in to an existing Google account</button>
+  <p class="account-note" id="accountNote">Link Google to this guest workspace to preserve its existing chat history and memory.</p>
+  <div class="row-e account-footer"><button type="button" class="btn dng" id="accountSignOut" hidden>Sign out</button><button type="button" class="btn" id="accountClose">Close</button></div>
+</div></div>
 <div id="toasts" aria-live="polite"></div>
 
 <script>
@@ -1019,6 +1050,212 @@ const Api = {
     return fetch(CFG.supabaseUrl + "/functions/v1/mahi-ai-chat", { method: "POST", signal, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token }, body: JSON.stringify(body) });
   }
 };
+
+
+/* ===== Google account linking — Supabase Auth PKCE =====
+   Load the official SDK only when needed. Existing guest sessions are kept under
+   the same storage key; linking Google preserves auth.uid() and all RLS-owned data.
+*/
+const SUPABASE_JS_CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/+esm";
+let supabaseAuthClient = null;
+let supabaseAuthClientPromise = null;
+
+async function getSupabaseAuthClient() {
+  if (supabaseAuthClient) return supabaseAuthClient;
+  if (!supabaseAuthClientPromise) {
+    supabaseAuthClientPromise = (async () => {
+      const module = await import(SUPABASE_JS_CDN);
+      if (typeof module.createClient !== "function") throw new Error("The secure sign-in library could not be loaded.");
+      const client = module.createClient(CFG.supabaseUrl, CFG.supabasePublishableKey, {
+        auth: {
+          storage: window.localStorage,
+          storageKey: SESSION_KEY,
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          flowType: "pkce"
+        }
+      });
+      client.auth.onAuthStateChange((event, session) => {
+        if (session) Api.sess = session;
+        else if (event === "SIGNED_OUT") Api.sess = null;
+        if (typeof renderAccountUI === "function") queueMicrotask(renderAccountUI);
+      });
+      const { data, error } = await client.auth.getSession();
+      if (error) throw error;
+      if (data.session) Api.sess = data.session;
+      supabaseAuthClient = client;
+      return client;
+    })().catch(error => {
+      supabaseAuthClientPromise = null;
+      throw error;
+    });
+  }
+  return supabaseAuthClientPromise;
+}
+
+async function syncSupabaseAuthSession(client) {
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  if (data.session) {
+    Api.sess = data.session;
+    return data.session;
+  }
+  const local = Api.sess;
+  if (!local?.access_token || !local?.refresh_token) throw new Error("Your guest session is not available. Refresh the page and try again.");
+  const restored = await client.auth.setSession({
+    access_token: local.access_token,
+    refresh_token: local.refresh_token
+  });
+  if (restored.error) throw restored.error;
+  Api.sess = restored.data.session;
+  return restored.data.session;
+}
+
+function googleAuthError(error) {
+  const code = String(error?.code || "");
+  const message = String(error?.message || error || "");
+  if (/manual_linking_disabled/i.test(code + " " + message)) {
+    return "Google account linking is not enabled yet. In Supabase Auth settings, enable manual identity linking, then try again.";
+  }
+  if (/identity_already_exists|identity.*already.*linked|already.*another user/i.test(code + " " + message)) {
+    return "This Google account is already connected to another MahiCloud account. Use “Sign in to an existing Google account” instead. Your current guest chats stay in the guest workspace; export them as Mahi Capsules before switching.";
+  }
+  if (/provider.*(disabled|not enabled)|unsupported provider/i.test(code + " " + message)) {
+    return "Google sign-in is not configured in Supabase yet. Add the Google OAuth Client ID and Client Secret in Authentication → Sign In / Providers.";
+  }
+  if (/redirect.*(not allowed|allowlist|whitelist)/i.test(code + " " + message)) {
+    return "Supabase rejected the return address. Add this site's URL to Authentication → URL Configuration → Redirect URLs.";
+  }
+  if (/popup|blocked/i.test(message)) return "The browser blocked the Google sign-in window. Allow redirects/pop-ups for this site and try again.";
+  return message.slice(0, 260) || "Google sign-in could not be started. Please try again.";
+}
+
+function currentAuthUser() {
+  return Api.sess && Api.sess.user && typeof Api.sess.user === "object" ? Api.sess.user : null;
+}
+function isGuestAuthUser(user) {
+  return !user || user.is_anonymous === true;
+}
+function isGoogleIdentity(user) {
+  if (!user) return false;
+  const providers = user.app_metadata?.providers;
+  if (Array.isArray(providers) && providers.includes("google")) return true;
+  return Array.isArray(user.identities) && user.identities.some(identity => identity?.provider === "google");
+}
+function accountDisplayName(user) {
+  const meta = user?.user_metadata || {};
+  return String(meta.full_name || meta.name || meta.display_name || user?.email || "MahiCloud user").trim();
+}
+function renderAccountUI() {
+  const user = currentAuthUser();
+  const guest = isGuestAuthUser(user);
+  const linked = isGoogleIdentity(user);
+  const name = accountDisplayName(user);
+  const email = String(user?.email || "");
+  const identity = $("#accountIdentity");
+  const badge = $("#accountBadge");
+  if (!identity || !badge) return;
+
+  identity.textContent = guest ? "Guest workspace · this browser only" : (email || name);
+  badge.textContent = guest ? "Guest" : (linked ? "Google linked" : "Account");
+  badge.classList.toggle("connected", !guest);
+  $("#accountHeading").textContent = guest ? "Save your MahiCloud workspace" : "Your MahiCloud account";
+  $("#accountSubheading").textContent = guest
+    ? "Use Google to keep your chats and memory when you change devices."
+    : "Your conversations are saved to this signed-in account.";
+  $("#googleLink").hidden = !guest && linked;
+  $("#googleLink").textContent = guest ? "Continue with Google" : "Link Google to this account";
+  $("#googleExisting").hidden = !guest;
+  $("#accountSignOut").hidden = guest;
+  $("#accountNote").textContent = guest
+    ? "Recommended: Continue with Google links Google to this guest account. It keeps the same user ID, so existing chat history, attachments and saved memory stay with this account."
+    : (linked
+        ? "Google is connected. Sign in with this same Google account on another device to access this account's conversations."
+        : "This account is permanent, but Google is not linked yet. Link Google to make sign-in easier across devices.");
+  if ($("#who")) $("#who").textContent = guest ? "Guest workspace" : (email || name);
+}
+
+function accountRedirectUrl() {
+  return window.location.origin + window.location.pathname;
+}
+async function startGoogleIdentityLink() {
+  const button = $("#googleLink");
+  button.disabled = true;
+  button.textContent = "Connecting…";
+  try {
+    await Api.ensure();
+    const client = await getSupabaseAuthClient();
+    const session = await syncSupabaseAuthSession(client);
+    if (!session?.user) throw new Error("Your MahiCloud session could not be verified.");
+    const { data, error } = await client.auth.linkIdentity({
+      provider: "google",
+      options: {
+        redirectTo: accountRedirectUrl(),
+        queryParams: { prompt: "select_account" },
+        skipBrowserRedirect: true
+      }
+    });
+    if (error) throw error;
+    if (!data?.url) throw new Error("Supabase did not return a Google authorization URL.");
+    window.location.assign(data.url);
+  } catch (error) {
+    toast(googleAuthError(error));
+    button.disabled = false;
+    renderAccountUI();
+  }
+}
+async function startGoogleExistingAccountSignIn() {
+  const confirmed = await ask({
+    title: "Sign in to an existing Google account?",
+    text: "This switches from the current guest workspace to the Google account you select. Existing guest chats are not automatically merged into that account. Cancel and use “Continue with Google” to preserve this guest workspace, or export chats as Mahi Capsules before switching.",
+    ok: "Continue to Google"
+  });
+  if (!confirmed) return;
+  const button = $("#googleExisting");
+  button.disabled = true;
+  button.textContent = "Opening Google…";
+  try {
+    const client = await getSupabaseAuthClient();
+    const { data, error } = await client.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: accountRedirectUrl(),
+        queryParams: { prompt: "select_account" },
+        skipBrowserRedirect: true
+      }
+    });
+    if (error) throw error;
+    if (!data?.url) throw new Error("Supabase did not return a Google authorization URL.");
+    window.location.assign(data.url);
+  } catch (error) {
+    toast(googleAuthError(error));
+    button.disabled = false;
+    renderAccountUI();
+  }
+}
+async function signOutGoogleAccount() {
+  const confirmed = await ask({
+    title: "Sign out of MahiCloud?",
+    text: "Your saved conversations and memory remain with this Google-linked account. Sign in with the same Google account later to access them again.",
+    ok: "Sign out",
+    danger: true
+  });
+  if (!confirmed) return;
+  const button = $("#accountSignOut");
+  button.disabled = true;
+  try {
+    const client = await getSupabaseAuthClient();
+    const { error } = await client.auth.signOut({ scope: "local" });
+    if (error) throw error;
+    Api.sess = null;
+    $("#ovAccount").classList.remove("on");
+    window.location.replace(accountRedirectUrl());
+  } catch (error) {
+    toast(googleAuthError(error));
+    button.disabled = false;
+  }
+}
 
 /* ===== 2. Helpers ===== */
 const $ = s => document.querySelector(s);
@@ -1898,6 +2135,26 @@ $("#capsuleFile").addEventListener("change", e => {
   e.target.value = "";
   if (file) importCapsuleFile(file);
 });
+$("#openAccount").onclick = async () => {
+  renderAccountUI();
+  $("#ovAccount").classList.add("on");
+  $("#googleLink").focus();
+  try {
+    await Api.ensure();
+    const client = await getSupabaseAuthClient();
+    await syncSupabaseAuthSession(client);
+    renderAccountUI();
+  } catch (error) {
+    toast("Account status could not be refreshed. " + googleAuthError(error));
+  }
+};
+$("#accountClose").onclick = () => $("#ovAccount").classList.remove("on");
+$("#ovAccount").addEventListener("pointerdown", e => {
+  if (e.target.id === "ovAccount") $("#ovAccount").classList.remove("on");
+});
+$("#googleLink").onclick = startGoogleIdentityLink;
+$("#googleExisting").onclick = startGoogleExistingAccountSignIn;
+$("#accountSignOut").onclick = signOutGoogleAccount;
 $("#sq").addEventListener("input", renderSettings); $("#sback").onclick = () => { mobileSettingsDetail = false; $("#sq").value = ""; renderSettings(); $("#snav").scrollTop = 0; }; $("#sx").onclick = closeSettings; $("#openSet").onclick = openSettings;
 $("#ovSet").addEventListener("pointerdown", e => { if (e.target.id === "ovSet") closeSettings(); });
 
@@ -1932,7 +2189,13 @@ addEventListener("offline", () => toast("You’re offline"));
 (async function boot() {
   applySettings(); detectDevice(); greet(); setBusy(false); view(false);
   if (!CFG.supabaseUrl || !CFG.supabasePublishableKey) { $("#who").textContent = "Configuration missing"; showErr("MahiCloud is missing its public Supabase configuration (window.MAHI_AI_CONFIG)."); $("#in").disabled = true; return; }
+  // Supabase JS processes the PKCE callback first, then the existing app adapter reads the saved session.
+  try { const auth = await getSupabaseAuthClient(); const result = await auth.auth.getSession(); if (result.data?.session) Api.sess = result.data.session; }
+  catch (_) { /* guest chat remains available if the optional OAuth SDK CDN is unreachable */ }
   try { await Api.ensure(); } catch (_) { $("#who").textContent = "Setup required"; showErr("Could not start a guest session. Enable anonymous sign-ins in Supabase and check allowed origins.", () => location.reload()); return; }
+  try { const auth = await getSupabaseAuthClient(); await syncSupabaseAuthSession(auth); }
+  catch (_) { /* Google sign-in will explain if the Auth SDK could not load */ }
+  renderAccountUI();
   const ok = await loadList();
   if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
 })();
