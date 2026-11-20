@@ -21,8 +21,8 @@ test("HTML, CSS and JavaScript receive native live preview handling", () => {
 test("preview runs in an isolated iframe with restrictive content policy", () => {
   assert.match(html, /sandbox="allow-scripts"/);
   assert.doesNotMatch(html, /sandbox="[^"]*allow-same-origin/);
-  assert.ok(html.includes("default-src \'none\'"));
-  assert.ok(html.includes("connect-src \'none\'"));
+  assert.match(html, /default-src .none.;/);
+  assert.match(html, /connect-src .none.;/);
   assert.match(html, /referrerpolicy="no-referrer"/);
 });
 
