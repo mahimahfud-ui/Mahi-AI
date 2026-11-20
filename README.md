@@ -8,6 +8,8 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 
 - Streaming replies with a stop-generation control, per-message copy/share, browser-local helpful/not-helpful feedback, edit-and-replace, and regenerate.
 - Search chat titles and message contents, rename or delete a chat, branch from an earlier assistant response into a separate conversation, and export the current conversation as Markdown or JSON.
+- **Answer Lab:** inspect any assistant answer with current-source claim verification, red-team challenge, decision maps with assumption sensitivity, execution plans, and adaptive teach-back. Save selected insights through the existing per-user memory controls.
+- **Mahi Capsules:** export a conversation as a portable `.mahi-capsule` file and resume it on another device as a new project context. Imports are schema/size validated and require confirmation; exports require a privacy confirmation because they contain conversation text.
 - Temporary chats stay out of saved conversation history and long-term memory; they remain only in the open browser session until you leave or start another chat.
 - Existing capabilities remain available: responsive dark UI, multilingual chats, authenticated history, attachments, voice input/read-aloud, web research and source links, image generation where explicitly enabled, code execution/live previews, public API discovery, and per-user memory controls.
 
