@@ -290,8 +290,15 @@ export function createWorkspaceService(
         const taskId = String(input.task_id || ""), parentId = String(input.parent_branch_id || "");
         const name = typeof input.name === "string" ? input.name.trim().slice(0, 80) : "";
         if (!UUID.test(taskId) || !UUID.test(parentId) || !name) return json(400, { error: "Task, source branch and branch name are required." }, headers);
-        const parent = await rows("mahi_ai_task_branches?select=id,task_id,state,summary&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(parentId) + "&limit=1");
+        const [parent, taskRows] = await Promise.all([
+          rows("mahi_ai_task_branches?select=id,task_id,state,summary,status&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(parentId) + "&limit=1"),
+          rows("mahi_ai_tasks?select=id,status&user_id=" + eq(userId) + "&id=" + eq(taskId) + "&limit=1")
+        ]);
         if (!Array.isArray(parent) || !parent.length) return json(404, { error: "Source task branch not found." }, headers);
+        if (!Array.isArray(taskRows) || !taskRows.length || taskRows[0].status === "archived") {
+          throw new Error("Restore the task before creating another branch.");
+        }
+        if (parent[0].status === "archived") throw new Error("Restore the source branch before forking it.");
         const branchCount = await rows("mahi_ai_task_branches?select=id&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&status=neq.archived&limit=6");
         if (!Array.isArray(branchCount) || branchCount.length >= 5) throw new Error("Branch limit reached (5 branches per task). Archive an unused branch before creating another.");
         const made = await rows("mahi_ai_task_branches?select=id,task_id,name,parent_branch_id,state,summary,status,revision,created_at,updated_at", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ task_id: taskId, user_id: userId, name, parent_branch_id: parentId, state: parent[0].state || {}, summary: parent[0].summary || "", status: "active" }) });
@@ -308,8 +315,14 @@ export function createWorkspaceService(
             !["active", "paused", "archived"].includes(nextStatus)) {
           return json(400, { error: "Choose a valid task branch status." }, headers);
         }
-        const found = await rows("mahi_ai_task_branches?select=id,revision,status&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(branchId) + "&limit=1");
+        const [found, taskRows] = await Promise.all([
+          rows("mahi_ai_task_branches?select=id,revision,status&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(branchId) + "&limit=1"),
+          rows("mahi_ai_tasks?select=id,status&user_id=" + eq(userId) + "&id=" + eq(taskId) + "&limit=1")
+        ]);
         if (!Array.isArray(found) || !found.length) return json(404, { error: "Task branch not found." }, headers);
+        if (nextStatus !== "archived" && (!Array.isArray(taskRows) || !taskRows.length || taskRows[0].status === "archived")) {
+          throw new Error("Restore the task before reactivating one of its branches.");
+        }
         if (nextStatus === "archived" && found[0].status !== "archived") {
           const active = await rows("mahi_ai_task_branches?select=id&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&status=neq.archived&limit=2");
           if (!Array.isArray(active) || active.length <= 1) {
