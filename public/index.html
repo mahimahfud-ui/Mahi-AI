@@ -1083,6 +1083,25 @@ body{min-width:0}
 @media(prefers-reduced-motion:reduce){#codePreview.on{animation:none}}
 
 
+/* ===== Conversation folders and tags ===== */
+.folder-filters{display:flex;gap:6px;overflow-x:auto;padding:2px 12px 9px;scrollbar-width:none}
+.folder-filters::-webkit-scrollbar{display:none}
+.folder-filter{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--bd);border-radius:999px;background:var(--s1);color:var(--tx2);font-size:.72rem;white-space:nowrap}
+.folder-filter:hover{border-color:var(--ac);color:var(--tx)}
+.folder-filter.on{background:color-mix(in srgb,var(--ac) 13%,var(--s1));border-color:color-mix(in srgb,var(--ac) 40%,var(--bd));color:var(--ac)}
+.folder-filter small{font-size:.65rem;opacity:.7}
+.ci{flex-wrap:wrap}
+.ci .t{min-width:0}
+.ci-meta{display:flex;align-items:center;gap:4px;flex-basis:100%;padding:0 0 7px 10px;overflow:hidden;flex-wrap:wrap}
+.ci-folder,.ci-tag{font-size:.63rem;line-height:1.5;padding:1px 6px;border-radius:6px;background:var(--s2);color:var(--tx3);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-folder{color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--s2))}
+#list .ci .t{flex:1}
+.voice-mode{height:32px;padding:0 9px;gap:6px;border:1px solid var(--bd);border-radius:10px;color:var(--tx2);font-size:.78rem;white-space:nowrap}
+.voice-mode svg{width:15px;height:15px}
+.voice-mode.on{color:var(--ac);border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));background:color-mix(in srgb,var(--ac) 12%,var(--s1))}
+@media(max-width:700px){.folder-filters{padding-left:10px;padding-right:10px}.voice-mode{padding:0 8px;font-size:.73rem}}
+@media(prefers-reduced-motion:reduce){.folder-filter{transition:none}}
+
 /* ===== Reusable prompt library ===== */
 #openPrompts{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
 #openPrompts .kbd{font-size:.65rem;color:var(--tx3);white-space:nowrap}
@@ -1140,6 +1159,7 @@ body{min-width:0}
       <button class="btn" id="openPrompts" type="button"><span>Prompt library</span><kbd class="kbd">Ctrl ⇧ P</kbd></button>
       <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
     </div>
+    <nav id="folderFilters" class="folder-filters" aria-label="Chat folders"></nav>
     <div id="list" role="list"></div>
     <div class="sidebot"><span class="who" id="who">Connecting…</span>
       <button class="ib" id="openAccount" aria-label="Google account and sign-in" title="Google account and sign-in"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
@@ -1177,6 +1197,7 @@ body{min-width:0}
             <button type="button" class="ib tool" id="savePrompt" aria-label="Save composer text as a prompt" title="Save current text to your Prompt Library"><svg viewBox="0 0 24 24"><path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v14l-7.5-4-7.5 4V6A1.5 1.5 0 0 1 6 4.5z"/><path d="M9 4.5v5h6v-5"/></svg></button>
             <button type="button" class="tb think task-mode-trigger" id="tMode" aria-haspopup="menu" aria-expanded="false" aria-controls="taskModeMenu" aria-pressed="false" title="Choose how MahiCloud should work on your request"><svg viewBox="0 0 24 24"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg><span id="tModeLabel">Auto</span><svg class="mode-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
             <button type="button" class="ib tool labeled-tool" id="mic" aria-label="Voice input" aria-pressed="false" title="Voice input · Dictate a message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="tool-label">Voice</span></button>
+            <button type="button" class="tb voice-mode" id="voiceMode" aria-label="Start voice conversation" aria-pressed="false" title="Hands-free voice conversation · listen and speak replies"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v3M8 21h8"/></svg><span>Talk</span></button>
             <span class="rec" id="rec" hidden aria-live="polite"><i></i><i></i><i></i><i></i><i></i><span>Listening…</span><button type="button" class="tb" id="recCancel">Cancel</button></span>
           </div>
           <div class="tr">
@@ -1219,7 +1240,7 @@ body{min-width:0}
 <div class="ov" id="ovPrompts">
   <section class="dlg prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptHeading">
     <header class="prompt-head">
-      <div><h3 id="promptHeading">Prompt Library</h3><p>Reusable instructions stored only in this browser.</p></div>
+      <div><h3 id="promptHeading">Prompt Library</h3><p id="promptSyncStatus">Saved in this browser · Sign in with Google to sync across devices</p></div>
       <button type="button" class="ib" id="promptClose" aria-label="Close Prompt Library">✕</button>
     </header>
     <div class="prompt-tools">
@@ -1227,6 +1248,7 @@ body{min-width:0}
       <select id="promptCategoryFilter" aria-label="Filter by category">
         <option value="">All categories</option><option>General</option><option>Study</option><option>Coding</option><option>Research</option><option>Writing</option><option>Planning</option>
       </select>
+      <button class="btn" type="button" id="promptSyncNow">Sync now</button>
       <button class="btn" type="button" id="promptNew">New prompt</button>
       <button class="btn pri" type="button" id="promptSaveCurrent">Save current</button>
     </div>
@@ -1417,7 +1439,12 @@ const Api = {
     if (!response.ok) throw new Error("HTTP " + response.status);
     return response.status === 204 ? null : data;
   },
-  conversations: () => Api.rest("mahi_ai_conversations?select=id,title,updated_at&order=updated_at.desc&limit=50"),
+  conversations: () => Api.rest("mahi_ai_conversations?select=id,title,updated_at,folder,tags&order=updated_at.desc&limit=100"),
+  organizeConversation: (id, patch) => Api.rest("mahi_ai_conversations?id=eq." + id, {
+    method: "PATCH",
+    body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
+    headers: { Prefer: "return=minimal" }
+  }),
   messages: id => Api.rest("mahi_ai_messages?select=id,role,content,created_at&conversation_id=eq." + id + "&order=created_at.desc&limit=200").then(d => (d || []).reverse()),
   searchMessages: q => Api.rest("mahi_ai_messages?select=conversation_id&content=ilike." + encodeURIComponent("*" + q.replace(/[*,()]/g, " ") + "*") + "&limit=300"),
   rename: (id, title) => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "PATCH", body: JSON.stringify({ title }), headers: { Prefer: "return=minimal" } }),
@@ -2146,6 +2173,14 @@ async function send(text, edit) {
   hideErr(); const prev = msgs.slice(), prevCid = cid; lastText = text; edit = edit || pend; pend = null;
   const files = edit ? [] : pendingFiles.slice(), taskMode = TASK_MODES.some(mode => mode.id === S.taskMode) ? S.taskMode : "auto"; let refs = [];
   if (rec) { const r = rec; r.onresult = null; r.abort(); rec = null; setRec(false); }
+  if (voiceModeRecognition) {
+    const activeRecognition = voiceModeRecognition;
+    voiceModeRecognition = null;
+    activeRecognition.onresult = null;
+    activeRecognition.onend = null;
+    activeRecognition.onerror = null;
+    try { activeRecognition.abort(); } catch (_) {}
+  }
   pendingFiles = []; renderChips();
   if (edit) { msgs = msgs.slice(0, edit.index); renderAll(); }
   view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), taskMode }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
@@ -2181,6 +2216,7 @@ async function send(text, edit) {
     full = full.trim(); if (!full) throw new Error("No response was returned.");
     files.forEach(p => p.url && URL.revokeObjectURL(p.url));
     msgs.push({ role: "assistant", content: full, local: Date.now() }); paint(ai, full, false); ai.dataset.i = msgs.length - 1; decorate(ai, msgs[msgs.length - 1], msgs.length - 1); bottom();
+    if (voiceModeActive) speakVoiceResponse(full);
     if (refs.length) {
       const cleaned = await removeUploaded(refs);
       if (!cleaned) toast(S.temp ? "Temporary reply received, but an uploaded file could not be removed from storage." : "Reply received, but an uploaded file could not be removed from storage.");
@@ -2193,45 +2229,144 @@ async function send(text, edit) {
     if (refs.length) { const cleaned = await removeUploaded(refs); if (!cleaned) toast("An uploaded file could not be removed from storage."); }
     grow();
     if (e.name === "AbortError") toast("Generation stopped"); else showErr(friendly(e), () => send(text, edit));
-  } finally { uploadProgress(null); ctl = null; setBusy(false); if (document.documentElement.dataset.input === "mouse") $("#in").focus(); }
+  } finally {
+    uploadProgress(null); ctl = null; setBusy(false);
+    if (document.documentElement.dataset.input === "mouse" && !voiceModeActive) $("#in").focus();
+    if (voiceModeActive && !voiceModeUtterance) scheduleVoiceModeListen(500);
+  }
 }
 const friendly = e => /failed to fetch|network|load failed/i.test(e.message) ? "Could not reach MahiCloud. Check your connection (or the site's allowed origins) and retry." : e.message;
 async function syncMeta() { try { if (!cid) return; const rows = await Api.messages(cid), off = Math.max(0, rows.length - msgs.length); msgs.forEach((m, i) => { const r = rows[off + i]; if (r && r.role === m.role && r.content === m.content) { m.id = r.id; m.created_at = r.created_at; } }); [...MAIN.children].forEach(n => { const i = +n.dataset.i; if (msgs[i]) decorate(n, msgs[i], i); }); } catch (_) {} }
 
 /* ===== 6. Conversations ===== */
 let ask$;
-function ask({ title, text, input, ok = "OK", danger }) {
+function ask({ title, text, input, ok = "OK", danger, placeholder }) {
   return new Promise(res => {
-    $("#aT").textContent = title; $("#aP").textContent = text || ""; const i = $("#aI"), y = $("#aY"); i.hidden = !input; i.value = input || ""; y.textContent = ok; y.className = "btn " + (danger ? "dng" : "pri");
-    const ov = $("#ovAsk"); ov.classList.add("on"); (input ? i : y).focus(); if (input) i.select();
+    const showInput = input !== undefined && input !== false;
+    $("#aT").textContent = title; $("#aP").textContent = text || "";
+    const i = $("#aI"), y = $("#aY");
+    i.hidden = !showInput; i.value = typeof input === "string" ? input : "";
+    i.placeholder = placeholder || "";
+    y.textContent = ok; y.className = "btn " + (danger ? "dng" : "pri");
+    const ov = $("#ovAsk"); ov.classList.add("on"); (showInput ? i : y).focus(); if (showInput) i.select();
     const end = v => { ov.classList.remove("on"); ask$ = null; res(v); }; ask$ = () => end(null);
-    y.onclick = () => end(input ? i.value : true); $("#aN").onclick = () => end(null); i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); end(i.value); } };
+    y.onclick = () => end(showInput ? i.value : true);
+    $("#aN").onclick = () => end(null);
+    i.onkeydown = e => { if (e.key === "Enter" && showInput) { e.preventDefault(); end(i.value); } };
   });
 }
+let activeFolderFilter = "";
 async function loadList(quiet) {
   const l = $("#list"); if (!quiet) { l.replaceChildren(); for (let i = 0; i < 5; i++) l.append(el("div", "sk")); }
   try {
-    convs = await Api.conversations() || [];
+    convs = (await Api.conversations() || []).map(c => ({
+      ...c,
+      folder: typeof c.folder === "string" ? c.folder : "",
+      tags: Array.isArray(c.tags) ? c.tags.filter(tag => typeof tag === "string").slice(0, 8) : []
+    }));
     const user = Api.sess && Api.sess.user;
     const guest = !user || user.is_anonymous === true || (!user.email && !user.phone);
     const name = user && (user.email || user.user_metadata?.full_name || user.user_metadata?.name);
     $("#who").textContent = guest ? "Guest workspace · synced" : (name || "Account · synced");
+    activatePromptScope();
     drawList();
+    void syncPromptLibrary({ silent: true });
     return true;
   }
   catch (_) { $("#who").textContent = "Offline / not connected"; l.replaceChildren(); const d = el("div", "empty", "Couldn’t load conversations."), b = el("button", "btn", "Retry"); b.onclick = () => loadList(); d.append(el("br"), b); l.append(d); return false; }
 }
+function drawFolderFilters() {
+  const root = $("#folderFilters");
+  if (!root) return;
+  root.replaceChildren();
+  const folders = new Map();
+  let unfiled = 0;
+  convs.forEach(c => {
+    const folder = String(c.folder || "").trim();
+    if (folder) folders.set(folder, (folders.get(folder) || 0) + 1);
+    else unfiled++;
+  });
+  const add = (key, label, count) => {
+    const b = el("button", "folder-filter" + (activeFolderFilter === key ? " on" : ""));
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(activeFolderFilter === key));
+    b.append(el("span", "", label), el("small", "", String(count)));
+    b.onclick = () => { activeFolderFilter = key; drawList(); };
+    root.append(b);
+  };
+  add("", "All chats", convs.length);
+  if (unfiled) add("__unfiled__", "Unfiled", unfiled);
+  [...folders.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([name,count]) => add("folder:" + name, name, count));
+}
 function drawList() {
   const l = $("#list"), q = $("#search").value.trim().toLowerCase(); l.replaceChildren();
-  let v = convs.filter(c => !q || (c.title || "New chat").toLowerCase().includes(q) || (hits && hits.has(c.id)));
+  drawFolderFilters();
+  let v = convs.filter(c => {
+    const folderMatch = !activeFolderFilter ||
+      (activeFolderFilter === "__unfiled__" ? !c.folder :
+        activeFolderFilter.startsWith("folder:") && c.folder === activeFolderFilter.slice(7));
+    const searchMatch = !q || (c.title || "New chat").toLowerCase().includes(q) || (hits && hits.has(c.id)) ||
+      (c.tags || []).some(tag => tag.toLowerCase().includes(q));
+    return folderMatch && searchMatch;
+  });
   v = [...v.filter(c => pins.includes(c.id)), ...v.filter(c => !pins.includes(c.id))];
-  if (!v.length) return void l.append(el("div", "empty", q ? "No conversations match." : "Your conversations will appear here."));
+  if (!v.length) return void l.append(el("div", "empty", q ? "No conversations match." : (activeFolderFilter ? "No chats in this folder." : "Your conversations will appear here.")));
   v.forEach(c => {
     const r = el("div", "ci" + (c.id === cid ? " on" : "")); r.setAttribute("role", "listitem");
-    const t = el("button", "t", (pins.includes(c.id) ? "📌 " : "") + (c.title || "New chat")); t.title = c.title || "New chat"; t.onclick = () => openConv(c.id);
-    const m = el("button", "ib"); m.setAttribute("aria-label", "Conversation actions"); m.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>';
-    m.onclick = e => { e.stopPropagation(); menu(m, c); }; r.oncontextmenu = e => { e.preventDefault(); menu(m, c); }; r.append(t, m); l.append(r);
+    const t = el("button", "t", (pins.includes(c.id) ? "📌 " : "") + (c.title || "New chat"));
+    t.title = c.title || "New chat"; t.onclick = () => openConv(c.id);
+    const m = el("button", "ib"); m.setAttribute("aria-label", "Conversation actions");
+    m.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>';
+    m.onclick = e => { e.stopPropagation(); menu(m, c); };
+    r.oncontextmenu = e => { e.preventDefault(); menu(m, c); };
+    r.append(t, m);
+    if (c.folder || (c.tags || []).length) {
+      const meta = el("div", "ci-meta");
+      if (c.folder) meta.append(el("span", "ci-folder", c.folder));
+      (c.tags || []).forEach(tag => meta.append(el("span", "ci-tag", "#" + tag)));
+      r.append(meta);
+    }
+    l.append(r);
   });
+}
+async function updateConversationOrganization(conversation, patch) {
+  try {
+    await Api.organizeConversation(conversation.id, patch);
+    Object.assign(conversation, patch);
+    drawList();
+    if (cid === conversation.id && patch.folder !== undefined) {
+      const title = $("#title");
+      title.textContent = (conversation.title || "Conversation") + (conversation.folder ? " · " + conversation.folder : "");
+    }
+    toast("Conversation organization saved");
+  } catch (error) {
+    toast("Could not save folder or tags (" + String(error?.message || error).slice(0, 80) + ")");
+  }
+}
+async function moveConversationToFolder(conversation) {
+  const value = await ask({
+    title: "Move conversation to folder",
+    text: "Enter a folder name. Use the same name to group chats; leave it blank to remove the folder.",
+    input: conversation.folder || "",
+    placeholder: "e.g. Study, Work, Projects",
+    ok: "Save folder"
+  });
+  if (value == null) return;
+  const folder = value.replace(/\s+/g, " ").trim().slice(0, 40);
+  if (/[\u0000-\u001f]/.test(folder)) return toast("Folder name contains invalid characters");
+  await updateConversationOrganization(conversation, { folder });
+}
+async function editConversationTags(conversation) {
+  const value = await ask({
+    title: "Edit conversation tags",
+    text: "Separate tags with commas. Use up to 8 tags, each 24 characters or fewer.",
+    input: (conversation.tags || []).join(", "),
+    placeholder: "e.g. urgent, school, python",
+    ok: "Save tags"
+  });
+  if (value == null) return;
+  const tags = [...new Map(value.split(",").map(tag => tag.trim().replace(/\s+/g, " ").slice(0, 24)).filter(Boolean).map(tag => [tag.toLowerCase(), tag])).values()].slice(0, 8);
+  await updateConversationOrganization(conversation, { tags });
 }
 let closeActiveMenu = null;
 function menu(anchor, c) {
@@ -2252,6 +2387,8 @@ function menu(anchor, c) {
     localStorage.setItem("mahicloud.pins", JSON.stringify(pins));
     drawList();
   });
+  item(c.folder ? "Move to another folder" : "Add to folder", () => moveConversationToFolder(c));
+  item("Edit tags (" + (c.tags || []).length + ")", () => editConversationTags(c));
   item("Rename", () => renameConv(c));
   item("Export Markdown", () => exportConv("md", c.id));
   item("Export Mahi Capsule", () => exportCapsule(c.id));
@@ -2486,6 +2623,7 @@ function setRec(on) {
   m.title = on ? "Stop voice input" : "Voice input · Dictate a message";
 }
 function toggleMic() {
+  if (voiceModeActive) return toast("Voice Mode is already handling the microphone · use Talk to stop it");
   if (rec) return rec.stop();
   if (!SR) return toast("Voice input isn’t supported in this browser");
   const r = new SR(); rec = r; r.lang = S.voiceLang || navigator.language || "en-US"; r.interimResults = true; r.continuous = true;
@@ -2496,6 +2634,152 @@ function toggleMic() {
   try { r.start(); setRec(true); } catch (_) { rec = null; toast("Could not start voice input"); }
 }
 function cancelVoice() { if (!rec) return; const r = rec; r.onresult = null; $("#in").value = preVoice; grow(); r.abort(); }
+
+/* hands-free voice conversation: browser speech recognition + speech synthesis */
+let voiceModeActive = false;
+let voiceModeRecognition = null;
+let voiceModeUtterance = null;
+let voiceModeRestartTimer = null;
+function updateVoiceModeButton() {
+  const button = $("#voiceMode");
+  if (!button) return;
+  button.classList.toggle("on", voiceModeActive);
+  button.setAttribute("aria-pressed", String(voiceModeActive));
+  button.setAttribute("aria-label", voiceModeActive ? "Stop voice conversation" : "Start voice conversation");
+  button.title = voiceModeActive ? "Voice conversation is active · click to stop" : "Hands-free voice conversation · listen and speak replies";
+  const label = button.querySelector("span");
+  if (label) label.textContent = voiceModeActive ? "Listening" : "Talk";
+}
+function scheduleVoiceModeListen(delay = 400) {
+  window.clearTimeout(voiceModeRestartTimer);
+  voiceModeRestartTimer = window.setTimeout(() => {
+    if (!voiceModeActive || voiceModeUtterance) return;
+    if (busy) return scheduleVoiceModeListen(400);
+    startVoiceModeListening();
+  }, delay);
+}
+function startVoiceModeListening() {
+  if (!voiceModeActive || busy || voiceModeRecognition || voiceModeUtterance) return;
+  if (!SR || !("speechSynthesis" in window)) return stopVoiceMode();
+  const recognition = new SR();
+  voiceModeRecognition = recognition;
+  recognition.lang = S.voiceLang || navigator.language || "en-US";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onresult = event => {
+    const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
+    if (!transcript || !voiceModeActive) return;
+    $("#in").value = transcript;
+    grow();
+    void send(transcript);
+  };
+  recognition.onerror = event => {
+    if (!voiceModeActive) return;
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      toast("Microphone access is blocked. Allow microphone access and start Voice Mode again.");
+      stopVoiceMode();
+    } else if (event.error !== "aborted" && event.error !== "no-speech") {
+      toast("Voice input stopped (" + event.error + ")");
+    }
+  };
+  recognition.onend = () => {
+    if (voiceModeRecognition === recognition) voiceModeRecognition = null;
+    if (voiceModeActive && !busy && !voiceModeUtterance) scheduleVoiceModeListen(350);
+  };
+  try { recognition.start(); }
+  catch (_) {
+    if (voiceModeRecognition === recognition) voiceModeRecognition = null;
+    toast("Could not start voice recognition in this browser");
+    stopVoiceMode();
+  }
+}
+function voiceReadableText(value) {
+  return clean(String(value || ""))
+    .replace(/```[\s\S]*?```/g, "Code block omitted from spoken response.")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "Image.")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function speakVoiceResponse(text) {
+  if (!voiceModeActive || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  voiceModeUtterance = null;
+  const readable = voiceReadableText(text);
+  if (!readable) return scheduleVoiceModeListen(350);
+  const chunks = [];
+  let remaining = readable;
+  while (remaining.length > 1100) {
+    let split = remaining.lastIndexOf(". ", 1100);
+    if (split < 400) split = remaining.lastIndexOf(" ", 1100);
+    if (split < 1) split = 1100;
+    chunks.push(remaining.slice(0, split + 1).trim());
+    remaining = remaining.slice(split + 1).trim();
+  }
+  if (remaining) chunks.push(remaining);
+  let index = 0;
+  const speakNext = () => {
+    if (!voiceModeActive) return;
+    if (index >= chunks.length) {
+      voiceModeUtterance = null;
+      scheduleVoiceModeListen(450);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(chunks[index++]);
+    utterance.lang = S.voiceLang || navigator.language || "en-US";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    voiceModeUtterance = utterance;
+    utterance.onend = () => {
+      if (voiceModeUtterance === utterance) voiceModeUtterance = null;
+      speakNext();
+    };
+    utterance.onerror = () => {
+      if (voiceModeUtterance === utterance) voiceModeUtterance = null;
+      if (voiceModeActive) scheduleVoiceModeListen(500);
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+  speakNext();
+}
+function stopVoiceMode() {
+  voiceModeActive = false;
+  window.clearTimeout(voiceModeRestartTimer);
+  const recognition = voiceModeRecognition;
+  voiceModeRecognition = null;
+  if (recognition) {
+    recognition.onresult = null; recognition.onend = null; recognition.onerror = null;
+    try { recognition.abort(); } catch (_) {}
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  voiceModeUtterance = null;
+  updateVoiceModeButton();
+}
+function toggleVoiceMode() {
+  if (voiceModeActive) { stopVoiceMode(); toast("Voice conversation stopped"); return; }
+  if (!SR || !("speechSynthesis" in window)) {
+    toast("Hands-free Voice Mode needs browser speech recognition and speech synthesis support");
+    return;
+  }
+  if (rec) {
+    const manualRecognition = rec;
+    rec = null;
+    manualRecognition.onresult = null;
+    manualRecognition.onend = null;
+    manualRecognition.onerror = null;
+    try { manualRecognition.abort(); } catch (_) {}
+    setRec(false);
+  }
+  voiceModeActive = true;
+  updateVoiceModeButton();
+  startVoiceModeListening();
+  toast("Voice Mode on · speak naturally; replies will be read aloud");
+}
+$("#voiceMode").onclick = toggleVoiceMode;
 /* leaving a draft: ask first so unsent text and files are never lost silently */
 function clearPendingFiles() {
   pendingFiles.forEach(p => { if (p.url) URL.revokeObjectURL(p.url); });
@@ -2591,6 +2875,8 @@ $("#in").addEventListener("paste", e => { const f = [...((e.clipboardData && e.c
 
 /* ===== 7b. Prompt library: browser-local reusable templates ===== */
 const PROMPTS_KEY = "mahicloud.prompts.v1";
+const PROMPT_MIGRATED_OWNER_KEY = "mahicloud.prompts.first-sync-owner.v1";
+let activePromptStorageKey = PROMPTS_KEY;
 const PROMPT_CATEGORIES = ["General", "Study", "Coding", "Research", "Writing", "Planning"];
 const BUILTIN_PROMPTS = [
   { id: "builtin-explain", title: "Explain a concept clearly", category: "Study", body: "Explain [topic] in plain language. Start with the core idea, use a practical analogy, then give one concrete example. Define unfamiliar terms and finish with a short recap." },
@@ -2614,19 +2900,144 @@ function normalizeSavedPrompt(item) {
     favorite: item.favorite === true,
     createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
     updatedAt: Number.isFinite(item.updatedAt) ? item.updatedAt : Date.now(),
-    lastUsedAt: Number.isFinite(item.lastUsedAt) ? item.lastUsedAt : 0
+    lastUsedAt: Number.isFinite(item.lastUsedAt) ? item.lastUsedAt : 0,
+    deletedAt: Number.isFinite(item.deletedAt) ? item.deletedAt : 0
   };
 }
-function loadSavedPrompts() {
+function loadSavedPrompts(storageKey = PROMPTS_KEY) {
   try {
-    const value = JSON.parse(localStorage.getItem(PROMPTS_KEY) || "[]");
-    return Array.isArray(value) ? value.map(normalizeSavedPrompt).filter(Boolean).slice(0, 100) : [];
+    const value = JSON.parse(localStorage.getItem(storageKey) || "[]");
+    return Array.isArray(value) ? value.map(normalizeSavedPrompt).filter(Boolean).slice(0, 400) : [];
   } catch (_) { return []; }
 }
 let customPrompts = loadSavedPrompts();
 let editingPromptId = null;
+function activatePromptScope() {
+  const user = Api.sess && Api.sess.user;
+  const eligible = !!(user && user.is_anonymous !== true && isGoogleIdentity(user));
+  const targetKey = eligible ? PROMPTS_KEY + ":" + user.id : PROMPTS_KEY;
+  if (targetKey === activePromptStorageKey) return;
+
+  persistSavedPrompts();
+  let next = loadSavedPrompts(targetKey);
+  if (eligible) {
+    let priorOwner = "";
+    let targetExists = false;
+    try {
+      priorOwner = localStorage.getItem(PROMPT_MIGRATED_OWNER_KEY) || "";
+      targetExists = localStorage.getItem(targetKey) !== null;
+    } catch (_) {}
+    // Migrate legacy browser-local prompts to the first Google-linked account once.
+    // Never copy the previous account's prompt cache into a different account.
+    if (!targetExists && !priorOwner) {
+      next = customPrompts.slice(0, 400);
+      try { localStorage.setItem(PROMPT_MIGRATED_OWNER_KEY, user.id); } catch (_) {}
+    }
+  }
+  customPrompts = next;
+  activePromptStorageKey = targetKey;
+  if ($("#ovPrompts")?.classList.contains("on")) renderPromptLibrary();
+}
+let promptSyncPromise = null;
+let promptSyncTimer = null;
+let promptSyncDirty = false;
+function promptSyncEligible() {
+  const user = Api.sess && Api.sess.user;
+  return !!(user && user.is_anonymous !== true && isGoogleIdentity(user));
+}
+function setPromptSyncStatus(message, available = false, working = false) {
+  const status = $("#promptSyncStatus");
+  const button = $("#promptSyncNow");
+  if (status) status.textContent = message;
+  if (button) { button.disabled = working || !available; button.textContent = working ? "Syncing…" : "Sync now"; }
+}
+function newPromptUuid() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+  const hex = [...bytes].map(value => value.toString(16).padStart(2, "0"));
+  return [hex.slice(0,4).join(""),hex.slice(4,6).join(""),hex.slice(6,8).join(""),hex.slice(8,10).join(""),hex.slice(10).join("")].join("-");
+}
+function schedulePromptSync() {
+  if (!promptSyncEligible()) { setPromptSyncStatus("Saved in this browser · Link Google to sync across devices"); return; }
+  promptSyncDirty = true;
+  window.clearTimeout(promptSyncTimer);
+  promptSyncTimer = window.setTimeout(() => { void syncPromptLibrary({ silent: true }); }, 900);
+}
+async function syncPromptLibrary({ silent = false } = {}) {
+  activatePromptScope();
+  if (!promptSyncEligible()) {
+    setPromptSyncStatus("Saved in this browser · Link Google to sync across devices");
+    return false;
+  }
+  if (promptSyncPromise) { promptSyncDirty = true; return promptSyncPromise; }
+  promptSyncDirty = false;
+  setPromptSyncStatus("Syncing securely with your Google account…", true, true);
+  promptSyncPromise = (async () => {
+    const userId = Api.sess.user.id;
+    const remote = await Api.rest("mahi_ai_prompts?select=id,title,body,category,favorite,created_at,updated_at,deleted_at&order=updated_at.desc&limit=400");
+    const merged = new Map(customPrompts.map(item => [item.id, item]));
+    (remote || []).forEach(row => {
+      const fromServer = normalizeSavedPrompt({
+        id: row.id, title: row.title, body: row.body, category: row.category,
+        favorite: row.favorite,
+        createdAt: Date.parse(row.created_at) || Date.now(),
+        updatedAt: Date.parse(row.updated_at) || Date.now(),
+        deletedAt: row.deleted_at ? (Date.parse(row.deleted_at) || Date.now()) : 0,
+        lastUsedAt: 0
+      });
+      if (!fromServer) return;
+      const local = merged.get(fromServer.id);
+      if (!local || fromServer.updatedAt > local.updatedAt) merged.set(fromServer.id, fromServer);
+    });
+    customPrompts = [...merged.values()].sort((a,b) => b.updatedAt-a.updatedAt);
+    const active = customPrompts.filter(item => !item.deletedAt);
+    if (active.length > 100) {
+      const keep = new Set(active.sort((a,b) => b.updatedAt-a.updatedAt).slice(0,100).map(item=>item.id));
+      customPrompts = customPrompts.filter(item => item.deletedAt || keep.has(item.id));
+    }
+    customPrompts = customPrompts.slice(0, 400);
+    persistSavedPrompts();
+    const rows = customPrompts.map(item => ({
+      user_id: userId,
+      id: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id) ? item.id : newPromptUuid(),
+      title: item.title,
+      body: item.body,
+      category: item.category,
+      favorite: item.favorite,
+      created_at: new Date(item.createdAt).toISOString(),
+      updated_at: new Date(item.updatedAt).toISOString(),
+      deleted_at: item.deletedAt ? new Date(item.deletedAt).toISOString() : null
+    }));
+    // Older local builds used non-UUID fallback IDs. Replace them locally before upsert.
+    const idMap = new Map();
+    customPrompts = customPrompts.map((item, index) => {
+      const id = rows[index].id;
+      if (id !== item.id) idMap.set(item.id, id);
+      return id === item.id ? item : { ...item, id };
+    });
+    if (rows.length) await Api.rest("mahi_ai_prompts?on_conflict=user_id,id", {
+      method: "POST",
+      body: JSON.stringify(rows),
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" }
+    });
+    persistSavedPrompts();
+    if ($("#ovPrompts").classList.contains("on")) renderPromptLibrary();
+    setPromptSyncStatus("Synced to your Google account · " + active.length + " custom prompts", true, false);
+    return true;
+  })().catch(error => {
+    setPromptSyncStatus("Sync unavailable · your local prompts are safe", true, false);
+    if (!silent) toast("Prompt sync failed: " + String(error?.message || error).slice(0, 120));
+    return false;
+  }).finally(() => {
+    promptSyncPromise = null;
+    if (promptSyncDirty) schedulePromptSync();
+  });
+  return promptSyncPromise;
+}
 function persistSavedPrompts() {
-  try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(customPrompts.slice(0, 100))); }
+  try { localStorage.setItem(activePromptStorageKey, JSON.stringify(customPrompts.slice(0, 400))); }
   catch (_) { toast("Could not save prompts in this browser. Check available site storage."); }
 }
 function openPromptEditor(prompt, initialBody) {
@@ -2644,7 +3055,7 @@ function renderPromptLibrary() {
   const list = $("#promptList");
   const items = [
     ...BUILTIN_PROMPTS.map(item => ({ ...item, builtIn: true })),
-    ...customPrompts.map(item => ({ ...item, builtIn: false }))
+    ...customPrompts.filter(item => !item.deletedAt).map(item => ({ ...item, builtIn: false }))
   ].filter(item => (!category || item.category === category) &&
     (!q || (item.title + " " + item.category + " " + item.body).toLowerCase().includes(q)))
     .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite) ||
@@ -2666,7 +3077,7 @@ function renderPromptLibrary() {
       const favorite = el("button", "prompt-fav", item.favorite ? "★" : "☆");
       favorite.type = "button"; favorite.setAttribute("aria-label", item.favorite ? "Remove favorite" : "Add favorite");
       favorite.setAttribute("aria-pressed", String(!!item.favorite));
-      favorite.onclick = () => { customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, favorite: !p.favorite, updatedAt: Date.now() } : p); persistSavedPrompts(); renderPromptLibrary(); };
+      favorite.onclick = () => { customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, favorite: !p.favorite, updatedAt: Date.now() } : p); persistSavedPrompts(); renderPromptLibrary(); schedulePromptSync(); };
       top.append(favorite);
     }
     card.append(top, el("div", "prompt-card-desc", item.body));
@@ -2684,10 +3095,13 @@ function renderPromptLibrary() {
   });
 }
 function openPromptLibrary() {
+  activatePromptScope();
   $("#promptEditor").hidden = true;
   $("#ovPrompts").classList.add("on");
+  setPromptSyncStatus(promptSyncEligible() ? "Google account sync is available" : "Saved in this browser · Link Google to sync across devices", promptSyncEligible());
   renderPromptLibrary();
   $("#promptSearch").focus();
+  void syncPromptLibrary({ silent: true });
 }
 function closePromptLibrary() {
   $("#ovPrompts").classList.remove("on");
@@ -2713,8 +3127,9 @@ async function useLibraryPrompt(item) {
 async function deleteLibraryPrompt(item) {
   const confirmed = await ask({ title: "Delete saved prompt?", text: "“" + item.title + "” will be removed from this browser.", ok: "Delete", danger: true });
   if (!confirmed) return;
-  customPrompts = customPrompts.filter(p => p.id !== item.id);
-  persistSavedPrompts(); renderPromptLibrary(); toast("Prompt deleted");
+  const now = Date.now();
+  customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, deletedAt: now, updatedAt: now } : p);
+  persistSavedPrompts(); renderPromptLibrary(); schedulePromptSync(); toast("Prompt deleted");
 }
 $("#openPrompts").onclick = openPromptLibrary;
 $("#savePrompt").onclick = () => {
@@ -2733,6 +3148,7 @@ $("#promptSaveCurrent").onclick = () => {
 $("#promptCancel").onclick = () => { editingPromptId = null; $("#promptEditor").hidden = true; };
 $("#promptSearch").addEventListener("input", renderPromptLibrary);
 $("#promptCategoryFilter").addEventListener("change", renderPromptLibrary);
+$("#promptSyncNow").onclick = () => { void syncPromptLibrary({ silent: false }); };
 $("#promptEditor").addEventListener("submit", event => {
   event.preventDefault();
   const title = $("#promptTitle").value.trim().slice(0, 80);
@@ -2741,13 +3157,14 @@ $("#promptEditor").addEventListener("submit", event => {
   if (!title || !body) return toast("Add a title and prompt text before saving");
   const now = Date.now();
   if (editingPromptId) {
-    customPrompts = customPrompts.map(p => p.id === editingPromptId ? { ...p, title, body, category, updatedAt: now } : p);
+    customPrompts = customPrompts.map(p => p.id === editingPromptId ? { ...p, title, body, category, updatedAt: now, deletedAt: 0 } : p);
   } else {
-    if (customPrompts.length >= 100) return toast("Prompt Library limit reached (100 custom prompts)");
-    const id = crypto.randomUUID ? crypto.randomUUID() : "prompt-" + now + "-" + Math.random().toString(36).slice(2, 8);
-    customPrompts.unshift({ id, title, body, category, favorite: false, createdAt: now, updatedAt: now, lastUsedAt: 0 });
+    if (customPrompts.filter(p => !p.deletedAt).length >= 100) return toast("Prompt Library limit reached (100 custom prompts)");
+    const id = newPromptUuid();
+    customPrompts.unshift({ id, title, body, category, favorite: false, createdAt: now, updatedAt: now, lastUsedAt: 0, deletedAt: 0 });
   }
   persistSavedPrompts();
+  schedulePromptSync();
   editingPromptId = null;
   $("#promptEditor").hidden = true;
   $("#promptSearch").value = "";
@@ -2799,7 +3216,7 @@ const SCHEMA = [
     { l: "Export current conversation", c: "btn", b: [["Markdown", () => exportConv("md")], ["JSON", () => exportConv("json")]] },
     { l: "Clear local preferences", d: "Resets settings and pins on this device only. Your server-side conversations are NOT deleted.", c: "btn", b: [["Clear", async () => { if (await ask({ title: "Clear local preferences?", text: "Only this browser’s settings and pins are removed. Conversations stored in your account stay.", ok: "Clear", danger: true })) { S = { ...DEF }; save(); pins = []; localStorage.removeItem("mahicloud.pins"); applySettings(); renderSettings(); toast("Local preferences cleared"); } }, 1]] },
     { l: "Delete conversations", d: "Use the ⋯ menu on a conversation in the sidebar to delete it from your account.", c: "info" }] },
-  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Prompt library", "Ctrl/⌘ Shift P"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
+  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Prompt library", "Ctrl/⌘ Shift P"], ["Voice conversation", "Talk button · Esc stops"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
   { id: "adv", t: "Advanced", i: [{ l: "Diagnostics", c: "diag" }, { l: "Reset all settings to defaults", c: "btn", b: [["Reset", () => { S = { ...DEF }; save(); applySettings(); renderSettings(); toast("Defaults restored"); }]] }] }
 ];
 let tab = "general";
@@ -2996,7 +3413,7 @@ addEventListener("keydown", e => {
       return;
     }
   }
-  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  if (e.key === "Escape") { if (ask$) return ask$(); if (voiceModeActive) return stopVoiceMode(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
   else if (mod && e.shiftKey && k === "p") { e.preventDefault(); openPromptLibrary(); }
   else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
   else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
