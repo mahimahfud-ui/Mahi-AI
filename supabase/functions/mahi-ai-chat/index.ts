@@ -3149,8 +3149,8 @@ async function streamChatResponse(
           const providersLeft = available.length - index;
           // Multimodal uploads (including voice-recording fallback) need extra time
           // for the provider to ingest an attachment before generating an answer.
-          const taskNeedsLongToolExecution = taskMode !== "auto" || task === "web_research" || task === "code_execution" || hasInlineAttachments;
-          // Explicit work modes receive the longer per-provider window; Auto keeps its faster default cascade.
+          const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution" || hasInlineAttachments;
+          // Explicit task modes use parallel provider attempts above; this bounded sequential path is for Auto mode.
           const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 11000 : 8500;
           const providerBudget = Math.max(5000, Math.min(maxAttemptMs, remaining - 6000));
           const provider = available[index];
