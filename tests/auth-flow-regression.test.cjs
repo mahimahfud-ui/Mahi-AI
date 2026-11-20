@@ -92,7 +92,8 @@ test("startup initialization errors are visible instead of leaving Connecting fo
   assert.match(html, /startup exceeded 30 seconds/);
   const boot = between("(async function boot()", "</script>");
   assert.match(boot, /try \{\s*setMahiBootStage\("initializing interface"/);
-  assert.ok(boot.includes("catch (error) {"));\n  assert.ok(boot.includes("markMahiStartupFailure(error)"));
+  assert.ok(boot.includes("catch (error) {"));
+  assert.ok(boot.includes("markMahiStartupFailure(error)"));
   assert.ok(boot.includes('setMahiBootStage("connecting to Supabase Auth"'));
   assert.ok(boot.includes('setMahiBootStage("loading conversations"'));
 });
