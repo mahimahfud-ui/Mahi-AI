@@ -632,8 +632,7 @@ function taskModeInstruction(mode: TaskMode): string {
     math: "MATH MODE: Solve carefully and verify the result. Show clear, ordered steps, define variables, preserve units and state assumptions. Recheck arithmetic, signs, formulas and boundary cases; use an available calculation or code tool for lengthy or error-prone calculations. Do not fabricate tool execution.",
     general: "GENERAL MODE: Give a complete, practical answer focused on the user's actual question. Adapt to the user's language and level, explain important caveats, and avoid unnecessary complexity."
   };
-  return mode === "auto" ? "" : "[MAHICLOUD SELECTED WORK MODE — " + mode.toUpperCase() + "]\
-" + guidance[mode];
+  return mode === "auto" ? "" : "[MAHICLOUD SELECTED WORK MODE — " + mode.toUpperCase() + "]\n" + guidance[mode];
 }
 
 function configuredSecret(names: string[]): boolean {
@@ -3549,9 +3548,7 @@ Deno.serve(async (req: Request) => {
   const adminInstructionContext = [
     buildMahiAIAdminInstructionContext(adminInstructionConfig),
     taskModeInstruction(requestedTaskMode)
-  ].filter(Boolean).join("\
-\
-");
+  ].filter(Boolean).join("\n\n");
   const adminInstructionAnswer = attachments.length === 0
     ? matchAdminInstructionLookupRule(adminInstructionConfig, displayPrompt)
     : null;
