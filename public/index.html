@@ -2735,19 +2735,117 @@ function normalizeSavedPrompt(item) {
     favorite: item.favorite === true,
     createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
     updatedAt: Number.isFinite(item.updatedAt) ? item.updatedAt : Date.now(),
-    lastUsedAt: Number.isFinite(item.lastUsedAt) ? item.lastUsedAt : 0
+    lastUsedAt: Number.isFinite(item.lastUsedAt) ? item.lastUsedAt : 0,
+    deletedAt: Number.isFinite(item.deletedAt) ? item.deletedAt : 0
   };
 }
 function loadSavedPrompts() {
   try {
     const value = JSON.parse(localStorage.getItem(PROMPTS_KEY) || "[]");
-    return Array.isArray(value) ? value.map(normalizeSavedPrompt).filter(Boolean).slice(0, 100) : [];
+    return Array.isArray(value) ? value.map(normalizeSavedPrompt).filter(Boolean).slice(0, 400) : [];
   } catch (_) { return []; }
 }
 let customPrompts = loadSavedPrompts();
 let editingPromptId = null;
+let promptSyncPromise = null;
+let promptSyncTimer = null;
+let promptSyncDirty = false;
+function promptSyncEligible() {
+  const user = Api.sess && Api.sess.user;
+  return !!(user && user.is_anonymous !== true && isGoogleIdentity(user));
+}
+function setPromptSyncStatus(message, available = false, working = false) {
+  const status = $("#promptSyncStatus");
+  const button = $("#promptSyncNow");
+  if (status) status.textContent = message;
+  if (button) { button.disabled = working || !available; button.textContent = working ? "Syncing…" : "Sync now"; }
+}
+function newPromptUuid() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  bytes[6] = (bytes[6] & 15) | 64; bytes[8] = (bytes[8] & 63) | 128;
+  const hex = [...bytes].map(value => value.toString(16).padStart(2, "0"));
+  return [hex.slice(0,4).join(""),hex.slice(4,6).join(""),hex.slice(6,8).join(""),hex.slice(8,10).join(""),hex.slice(10).join("")].join("-");
+}
+function schedulePromptSync() {
+  if (!promptSyncEligible()) { setPromptSyncStatus("Saved in this browser · Link Google to sync across devices"); return; }
+  promptSyncDirty = true;
+  window.clearTimeout(promptSyncTimer);
+  promptSyncTimer = window.setTimeout(() => { void syncPromptLibrary({ silent: true }); }, 900);
+}
+async function syncPromptLibrary({ silent = false } = {}) {
+  if (!promptSyncEligible()) {
+    setPromptSyncStatus("Saved in this browser · Link Google to sync across devices");
+    return false;
+  }
+  if (promptSyncPromise) { promptSyncDirty = true; return promptSyncPromise; }
+  promptSyncDirty = false;
+  setPromptSyncStatus("Syncing securely with your Google account…", true, true);
+  promptSyncPromise = (async () => {
+    const userId = Api.sess.user.id;
+    const remote = await Api.rest("mahi_ai_prompts?select=id,title,body,category,favorite,created_at,updated_at,deleted_at&order=updated_at.asc&limit=400");
+    const merged = new Map(customPrompts.map(item => [item.id, item]));
+    (remote || []).forEach(row => {
+      const fromServer = normalizeSavedPrompt({
+        id: row.id, title: row.title, body: row.body, category: row.category,
+        favorite: row.favorite,
+        createdAt: Date.parse(row.created_at) || Date.now(),
+        updatedAt: Date.parse(row.updated_at) || Date.now(),
+        deletedAt: row.deleted_at ? (Date.parse(row.deleted_at) || Date.now()) : 0,
+        lastUsedAt: 0
+      });
+      if (!fromServer) return;
+      const local = merged.get(fromServer.id);
+      if (!local || fromServer.updatedAt > local.updatedAt) merged.set(fromServer.id, fromServer);
+    });
+    customPrompts = [...merged.values()].sort((a,b) => b.updatedAt-a.updatedAt);
+    const active = customPrompts.filter(item => !item.deletedAt);
+    if (active.length > 100) {
+      const keep = new Set(active.sort((a,b) => b.updatedAt-a.updatedAt).slice(0,100).map(item=>item.id));
+      customPrompts = customPrompts.filter(item => item.deletedAt || keep.has(item.id));
+    }
+    customPrompts = customPrompts.slice(0, 400);
+    persistSavedPrompts();
+    const rows = customPrompts.map(item => ({
+      user_id: userId,
+      id: /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id) ? item.id : newPromptUuid(),
+      title: item.title,
+      body: item.body,
+      category: item.category,
+      favorite: item.favorite,
+      created_at: new Date(item.createdAt).toISOString(),
+      updated_at: new Date(item.updatedAt).toISOString(),
+      deleted_at: item.deletedAt ? new Date(item.deletedAt).toISOString() : null
+    }));
+    // Older local builds used non-UUID fallback IDs. Replace them locally before upsert.
+    const idMap = new Map();
+    customPrompts = customPrompts.map((item, index) => {
+      const id = rows[index].id;
+      if (id !== item.id) idMap.set(item.id, id);
+      return id === item.id ? item : { ...item, id };
+    });
+    if (rows.length) await Api.rest("mahi_ai_prompts?on_conflict=user_id,id", {
+      method: "POST",
+      body: JSON.stringify(rows),
+      headers: { Prefer: "resolution=merge-duplicates,return=minimal" }
+    });
+    persistSavedPrompts();
+    if ($("#ovPrompts").classList.contains("on")) renderPromptLibrary();
+    setPromptSyncStatus("Synced to your Google account · " + active.length + " custom prompts", true, false);
+    return true;
+  })().catch(error => {
+    setPromptSyncStatus("Sync unavailable · your local prompts are safe", true, false);
+    if (!silent) toast("Prompt sync failed: " + String(error?.message || error).slice(0, 120));
+    return false;
+  }).finally(() => {
+    promptSyncPromise = null;
+    if (promptSyncDirty) schedulePromptSync();
+  });
+  return promptSyncPromise;
+}
 function persistSavedPrompts() {
-  try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(customPrompts.slice(0, 100))); }
+  try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(customPrompts.slice(0, 400))); }
   catch (_) { toast("Could not save prompts in this browser. Check available site storage."); }
 }
 function openPromptEditor(prompt, initialBody) {
@@ -2765,7 +2863,7 @@ function renderPromptLibrary() {
   const list = $("#promptList");
   const items = [
     ...BUILTIN_PROMPTS.map(item => ({ ...item, builtIn: true })),
-    ...customPrompts.map(item => ({ ...item, builtIn: false }))
+    ...customPrompts.filter(item => !item.deletedAt).map(item => ({ ...item, builtIn: false }))
   ].filter(item => (!category || item.category === category) &&
     (!q || (item.title + " " + item.category + " " + item.body).toLowerCase().includes(q)))
     .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite) ||
@@ -2787,7 +2885,7 @@ function renderPromptLibrary() {
       const favorite = el("button", "prompt-fav", item.favorite ? "★" : "☆");
       favorite.type = "button"; favorite.setAttribute("aria-label", item.favorite ? "Remove favorite" : "Add favorite");
       favorite.setAttribute("aria-pressed", String(!!item.favorite));
-      favorite.onclick = () => { customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, favorite: !p.favorite, updatedAt: Date.now() } : p); persistSavedPrompts(); renderPromptLibrary(); };
+      favorite.onclick = () => { customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, favorite: !p.favorite, updatedAt: Date.now() } : p); persistSavedPrompts(); renderPromptLibrary(); schedulePromptSync(); };
       top.append(favorite);
     }
     card.append(top, el("div", "prompt-card-desc", item.body));
@@ -2807,8 +2905,10 @@ function renderPromptLibrary() {
 function openPromptLibrary() {
   $("#promptEditor").hidden = true;
   $("#ovPrompts").classList.add("on");
+  setPromptSyncStatus(promptSyncEligible() ? "Google account sync is available" : "Saved in this browser · Link Google to sync across devices", promptSyncEligible());
   renderPromptLibrary();
   $("#promptSearch").focus();
+  void syncPromptLibrary({ silent: true });
 }
 function closePromptLibrary() {
   $("#ovPrompts").classList.remove("on");
@@ -2834,8 +2934,9 @@ async function useLibraryPrompt(item) {
 async function deleteLibraryPrompt(item) {
   const confirmed = await ask({ title: "Delete saved prompt?", text: "“" + item.title + "” will be removed from this browser.", ok: "Delete", danger: true });
   if (!confirmed) return;
-  customPrompts = customPrompts.filter(p => p.id !== item.id);
-  persistSavedPrompts(); renderPromptLibrary(); toast("Prompt deleted");
+  const now = Date.now();
+  customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, deletedAt: now, updatedAt: now } : p);
+  persistSavedPrompts(); renderPromptLibrary(); schedulePromptSync(); toast("Prompt deleted");
 }
 $("#openPrompts").onclick = openPromptLibrary;
 $("#savePrompt").onclick = () => {
@@ -2854,6 +2955,7 @@ $("#promptSaveCurrent").onclick = () => {
 $("#promptCancel").onclick = () => { editingPromptId = null; $("#promptEditor").hidden = true; };
 $("#promptSearch").addEventListener("input", renderPromptLibrary);
 $("#promptCategoryFilter").addEventListener("change", renderPromptLibrary);
+$("#promptSyncNow").onclick = () => { void syncPromptLibrary({ silent: false }); };
 $("#promptEditor").addEventListener("submit", event => {
   event.preventDefault();
   const title = $("#promptTitle").value.trim().slice(0, 80);
@@ -2862,13 +2964,14 @@ $("#promptEditor").addEventListener("submit", event => {
   if (!title || !body) return toast("Add a title and prompt text before saving");
   const now = Date.now();
   if (editingPromptId) {
-    customPrompts = customPrompts.map(p => p.id === editingPromptId ? { ...p, title, body, category, updatedAt: now } : p);
+    customPrompts = customPrompts.map(p => p.id === editingPromptId ? { ...p, title, body, category, updatedAt: now, deletedAt: 0 } : p);
   } else {
-    if (customPrompts.length >= 100) return toast("Prompt Library limit reached (100 custom prompts)");
-    const id = crypto.randomUUID ? crypto.randomUUID() : "prompt-" + now + "-" + Math.random().toString(36).slice(2, 8);
-    customPrompts.unshift({ id, title, body, category, favorite: false, createdAt: now, updatedAt: now, lastUsedAt: 0 });
+    if (customPrompts.filter(p => !p.deletedAt).length >= 100) return toast("Prompt Library limit reached (100 custom prompts)");
+    const id = newPromptUuid();
+    customPrompts.unshift({ id, title, body, category, favorite: false, createdAt: now, updatedAt: now, lastUsedAt: 0, deletedAt: 0 });
   }
   persistSavedPrompts();
+  schedulePromptSync();
   editingPromptId = null;
   $("#promptEditor").hidden = true;
   $("#promptSearch").value = "";
