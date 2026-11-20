@@ -1173,6 +1173,33 @@ const CFG = Object.assign({
 }, window.MAHI_AI_CONFIG || {});
 const SESSION_KEY = "sb-" + new URL(CFG.supabaseUrl).hostname.split(".")[0] + "-auth-token"; // same key supabase-js uses
 const baseHeaders = { apikey: CFG.supabasePublishableKey, "Content-Type": "application/json" };
+function boundedFetch(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const upstreamSignal = options.signal;
+  const abortFromUpstream = () => controller.abort();
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) controller.abort();
+    else upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+  }
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
+    window.clearTimeout(timer);
+    if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromUpstream);
+  });
+}
+async function withTimeout(promise, timeoutMs, message) {
+  let timer;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+      })
+    ]);
+  } finally {
+    if (timer) window.clearTimeout(timer);
+  }
+}
 const GOOGLE_AUTH_PENDING_KEY = "mahicloud.google-auth-pending";
 let authRecoveryRequired = false;
 function markGoogleAuthPending(mode) {
@@ -1206,7 +1233,7 @@ const Api = {
   sess: null,
   async createGuestSession() {
     const now = Date.now() / 1000;
-    const response = await fetch(CFG.supabaseUrl + "/auth/v1/signup", {
+    const response = await boundedFetch(CFG.supabaseUrl + "/auth/v1/signup", {
       method: "POST",
       headers: baseHeaders,
       body: JSON.stringify({ data: {} })
@@ -1233,7 +1260,7 @@ const Api = {
     if (s && s.access_token && (s.expires_at || 0) > now + 60) return (this.sess = s);
     if (!s) return this.createGuestSession();
     if (!s.refresh_token) throw new Error("Your saved MahiCloud session is incomplete. Sign in again; it was not replaced with a new guest session.");
-    const response = await fetch(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", {
+    const response = await boundedFetch(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", {
       method: "POST",
       headers: baseHeaders,
       body: JSON.stringify({ refresh_token: s.refresh_token })
@@ -1247,7 +1274,7 @@ const Api = {
   },
   async rest(path, o = {}) {
     const s = await this.ensure();
-    const r = await fetch(CFG.supabaseUrl + "/rest/v1/" + path, { ...o, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token, ...(o.headers || {}) } });
+    const r = await boundedFetch(CFG.supabaseUrl + "/rest/v1/" + path, { ...o, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token, ...(o.headers || {}) } }, 15000);
     if (!r.ok) throw new Error("HTTP " + r.status);
     return r.status === 204 ? null : r.json().catch(() => null);
   },
@@ -1258,7 +1285,7 @@ const Api = {
   remove: id => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "DELETE", headers: { Prefer: "return=minimal" } }),
   async chat(body, signal) {
     const s = await this.ensure();
-    return fetch(CFG.supabaseUrl + "/functions/v1/mahi-ai-chat", { method: "POST", signal, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token }, body: JSON.stringify(body) });
+    return boundedFetch(CFG.supabaseUrl + "/functions/v1/mahi-ai-chat", { method: "POST", signal, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token }, body: JSON.stringify(body) }, 15000);
   }
 };
 
@@ -1275,7 +1302,7 @@ async function getSupabaseAuthClient() {
   if (supabaseAuthClient) return supabaseAuthClient;
   if (!supabaseAuthClientPromise) {
     supabaseAuthClientPromise = (async () => {
-      const module = await import(SUPABASE_JS_CDN);
+      const module = await withTimeout(import(SUPABASE_JS_CDN), 12000, "Secure sign-in library timed out. Check your connection and retry Google sign-in.");
       if (typeof module.createClient !== "function") throw new Error("The secure sign-in library could not be loaded.");
       const client = module.createClient(CFG.supabaseUrl, CFG.supabasePublishableKey, {
         auth: {
@@ -1292,7 +1319,7 @@ async function getSupabaseAuthClient() {
         else if (event === "SIGNED_OUT") Api.sess = null;
         if (typeof renderAccountUI === "function") queueMicrotask(renderAccountUI);
       });
-      const { data, error } = await client.auth.getSession();
+      const { data, error } = await withTimeout(client.auth.getSession(), 12000, "Supabase sign-in session check timed out. Retry Google sign-in.");
       if (error) throw error;
       if (data.session) Api.sess = data.session;
       supabaseAuthClient = client;
@@ -1306,7 +1333,7 @@ async function getSupabaseAuthClient() {
 }
 
 async function syncSupabaseAuthSession(client) {
-  const { data, error } = await client.auth.getSession();
+  const { data, error } = await withTimeout(client.auth.getSession(), 12000, "Supabase sign-in session check timed out. Retry the account action.");
   if (error) throw error;
   if (data.session) {
     Api.sess = data.session;
@@ -1314,10 +1341,10 @@ async function syncSupabaseAuthSession(client) {
   }
   const local = Api.sess;
   if (!local?.access_token || !local?.refresh_token) throw new Error("Your guest session is not available. Refresh the page and try again.");
-  const restored = await client.auth.setSession({
+  const restored = await withTimeout(client.auth.setSession({
     access_token: local.access_token,
     refresh_token: local.refresh_token
-  });
+  }), 12000, "Supabase could not restore your account session in time. Retry the account action.");
   if (restored.error) throw restored.error;
   Api.sess = restored.data.session;
   return restored.data.session;
@@ -2000,7 +2027,15 @@ function ask({ title, text, input, ok = "OK", danger }) {
 }
 async function loadList(quiet) {
   const l = $("#list"); if (!quiet) { l.replaceChildren(); for (let i = 0; i < 5; i++) l.append(el("div", "sk")); }
-  try { convs = await Api.conversations() || []; $("#who").textContent = "Guest workspace · synced"; drawList(); return true; }
+  try {
+    convs = await Api.conversations() || [];
+    const user = Api.sess && Api.sess.user;
+    const guest = !user || user.is_anonymous === true || (!user.email && !user.phone);
+    const name = user && (user.email || user.user_metadata?.full_name || user.user_metadata?.name);
+    $("#who").textContent = guest ? "Guest workspace · synced" : (name || "Account · synced");
+    drawList();
+    return true;
+  }
   catch (_) { $("#who").textContent = "Offline / not connected"; l.replaceChildren(); const d = el("div", "empty", "Couldn’t load conversations."), b = el("button", "btn", "Retry"); b.onclick = () => loadList(); d.append(el("br"), b); l.append(d); return false; }
 }
 function drawList() {
@@ -2583,14 +2618,9 @@ addEventListener("offline", () => toast("You’re offline"));
       showGoogleAuthRecovery();
       return;
     }
-  } else {
-    // Supabase JS processes normal PKCE callbacks before the app adapter reads its session.
-    try {
-      const auth = await getSupabaseAuthClient();
-      const result = await auth.auth.getSession();
-      if (result.data?.session) Api.sess = result.data.session;
-    } catch (_) { /* a first-time visitor can still start an anonymous guest session */ }
   }
+  // Normal chat startup uses the small Auth REST adapter above. The Supabase JS
+  // bundle is only needed for an actual Google OAuth callback or account action.
   try { await Api.ensure(); }
   catch (_) {
     let savedSessionPresent = false;
@@ -2604,8 +2634,6 @@ addEventListener("offline", () => toast("You’re offline"));
     $("#in").disabled = true;
     return;
   }
-  try { const auth = await getSupabaseAuthClient(); await syncSupabaseAuthSession(auth); }
-  catch (_) { /* Google sign-in will explain if the Auth SDK could not load */ }
   renderAccountUI();
   const ok = await loadList();
   if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
