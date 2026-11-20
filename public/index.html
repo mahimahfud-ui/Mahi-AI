@@ -1494,8 +1494,13 @@ async function getSupabaseAuthClient() {
         }
       });
       client.auth.onAuthStateChange((event, session) => {
-        if (session) Api.sess = session;
-        else if (event === "SIGNED_OUT") Api.sess = null;
+        if (session) {
+          Api.sess = session;
+          window.MahiWorkspace?.setUserId(session.user?.id || "");
+        } else if (event === "SIGNED_OUT") {
+          Api.sess = null;
+          window.MahiWorkspace?.setUserId("");
+        }
         if (typeof renderAccountUI === "function") queueMicrotask(renderAccountUI);
       });
       const { data, error } = await withTimeout(client.auth.getSession(), 12000, "Supabase sign-in session check timed out. Retry Google sign-in.");
@@ -3477,7 +3482,7 @@ addEventListener("offline", () => toast("You’re offline"));
   // Normal chat startup uses the small Auth REST adapter above. The Supabase JS
   // bundle is only needed for an actual Google OAuth callback or account action.
   setMahiBootStage("connecting to Supabase Auth", "Connecting to account service…");
-  try { await Api.ensure(); }
+  try { const session = await Api.ensure(); window.MahiWorkspace?.setUserId(session?.user?.id || ""); }
   catch (_) {
     let savedSessionPresent = false;
     try { savedSessionPresent = !!localStorage.getItem(SESSION_KEY); } catch (_) {}
