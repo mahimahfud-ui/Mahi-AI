@@ -619,6 +619,23 @@ function classifyTask(prompt: string): string {
   return "general";
 }
 
+type TaskMode = "auto" | "think" | "coding" | "study" | "research" | "writing" | "math" | "general";
+const ALLOWED_TASK_MODES = new Set<TaskMode>(["auto", "think", "coding", "study", "research", "writing", "math", "general"]);
+
+function taskModeInstruction(mode: TaskMode): string {
+  const guidance: Record<Exclude<TaskMode, "auto">, string> = {
+    think: "Use a high-diligence workflow. Independently assess the request, check logic, accuracy, completeness and relevant edge cases, then provide a clear final answer. Keep private reasoning private; share conclusions and a concise rationale, not hidden chain-of-thought.",
+    coding: "CODING MODE: Treat this as an engineering task. Understand the complete requirement before changing anything. Prefer correct, secure, maintainable, runnable solutions; account for edge cases, compatibility, accessibility and errors. Use the requested stack and existing project conventions. Do not invent test results or claim code was executed unless a tool actually ran it.",
+    study: "STUDY MODE: Act as an excellent patient tutor. Teach for understanding, not just answer delivery. Match the learner's language and apparent level, explain concepts in a logical sequence, define unfamiliar terms, use accurate examples, and show worked steps where useful. Add a short practice question or memory aid when it genuinely helps. Never fabricate facts or references.",
+    research: "RESEARCH MODE: Treat the request as evidence-led research. Use available search, URL and retrieval tools when useful; prioritize primary and authoritative sources, verify dates and distinguish event dates from publication dates. Cross-check important claims, cite actual retrieved sources, and clearly mark uncertainty or unavailable evidence. Never invent citations or claim a source was checked when it was not.",
+    writing: "WRITING MODE: Produce polished, usable writing for the requested purpose and audience. Follow the requested language, tone, length and format; preserve the user's meaning and voice. Improve clarity, structure, flow and precision without adding unsupported facts. When the user asks for a draft, provide the draft directly.",
+    math: "MATH MODE: Solve carefully and verify the result. Show clear, ordered steps, define variables, preserve units and state assumptions. Recheck arithmetic, signs, formulas and boundary cases; use an available calculation or code tool for lengthy or error-prone calculations. Do not fabricate tool execution.",
+    general: "GENERAL MODE: Give a complete, practical answer focused on the user's actual question. Adapt to the user's language and level, explain important caveats, and avoid unnecessary complexity."
+  };
+  return mode === "auto" ? "" : "[MAHICLOUD SELECTED WORK MODE — " + mode.toUpperCase() + "]\
+" + guidance[mode];
+}
+
 function configuredSecret(names: string[]): boolean {
   const value = envFirst(names);
   return !!value && value.trim() !== "এপিয়াই" && !/^YOUR_.+_KEY$/i.test(value.trim());
@@ -871,6 +888,8 @@ function providerOrder(task: string, hasInlineAttachments = false, hasInlineImag
     if (!hasInlineImages) preferred = ["gemini", "groq", "openrouter", "cloudflare", "shannon", "deepseek", "nvidia", "mistral", "venice", "anthropic", "openai"];
   } else if (task === "coding") {
     preferred = ["groq", "gemini", "openrouter", "openai", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic"];
+  } else if (task === "study") {
+    preferred = ["gemini", "openrouter", "deepseek", "anthropic", "openai", "groq", "nvidia", "cloudflare", "mistral", "shannon", "venice"];
   } else if (task === "web_research" || task === "code_execution") {
     preferred = ["gemini", "openrouter", "groq", "venice", "shannon", "deepseek", "nvidia", "cloudflare", "mistral", "anthropic", "openai"];
   } else if (task === "reasoning") {
@@ -3023,7 +3042,7 @@ async function streamChatResponse(
   requestId: string, requestStartedAt: number, inputChars: number, persistConversation = true,
   editFromCreatedAt = "", editFromContent = "", branchHistory: ChatMessage[] = [],
   customInstructions = "", responseStyle = "default", adminInstructionContext = "", thinkMode = false,
-  adminInstructionAnswer = "", selectedModel = ""
+  adminInstructionAnswer = "", selectedModel = "", taskMode: TaskMode = "auto"
 ): Promise<Response> {
   if (task === "image_generation") {
     return streamImageGenerationResponse(
@@ -3036,7 +3055,7 @@ async function streamChatResponse(
   const hasInlineImages = attachments.some((item) => item.inline && item.base64 && item.mimeType.startsWith("image/"));
   const routingConfig = await getCachedMahiAIAdminConfig();
   const fixedProvider = selectedModel ? PUBLIC_MODEL_PROVIDERS[selectedModel] : "";
-  const orderedProviders = providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode);
+  const orderedProviders = providerOrder(task, hasInlineAttachments, hasInlineImages, displayUserText, thinkMode || taskMode !== "auto");
   const configuredProviders = applyProviderPrefs(orderedProviders, routingConfig);
   const selectedProviderEnabled = !!fixedProvider && routingConfig.providers?.[fixedProvider]?.enabled !== false;
   // Keep a user-selected alias first, but retain the same task-aware fallback cascade
@@ -3083,7 +3102,7 @@ async function streamChatResponse(
       let bestDraft: { provider: string; text: string } | null = null;
       let liveStreamText = "";
       const startedAt = Date.now();
-      const totalProviderBudgetMs = (task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 180000 : 120000;
+      const totalProviderBudgetMs = (taskMode !== "auto" || task === "web_research" || task === "code_execution" || hasInlineAttachments) ? 180000 : 120000;
       const originalPrompt = displayUserText.split("\n\nAttached files:")[0];
       const providerMessages = messages.map((message) => ({ ...message }));
       const styleInstructions: Record<string, string> = {
@@ -3130,8 +3149,8 @@ async function streamChatResponse(
           const providersLeft = available.length - index;
           // Multimodal uploads (including voice-recording fallback) need extra time
           // for the provider to ingest an attachment before generating an answer.
-          const taskNeedsLongToolExecution = task === "web_research" || task === "code_execution" || hasInlineAttachments;
-          // Keep tool-heavy and multimodal work patient, but move on quickly from normal chat/coding routes.
+          const taskNeedsLongToolExecution = taskMode !== "auto" || task === "web_research" || task === "code_execution" || hasInlineAttachments;
+          // Explicit work modes receive the longer per-provider window; Auto keeps its faster default cascade.
           const maxAttemptMs = taskNeedsLongToolExecution ? 24000 : index === 0 ? 11000 : 8500;
           const providerBudget = Math.max(5000, Math.min(maxAttemptMs, remaining - 6000));
           const provider = available[index];
@@ -3140,7 +3159,8 @@ async function streamChatResponse(
           sseEvent(controller, encoder, {
             type: "status",
             message: index === 0
-              ? task === "web_research" ? "Checking live web sources and linked pages…"
+              ? taskMode !== "auto" ? "Applying " + taskMode + " mode across the available AI providers…"
+                : task === "web_research" ? "Checking live web sources and linked pages…"
                 : task === "code_execution" ? "Checking the calculation with a computation tool…"
                 : "Finding a model that can complete your request…"
               : "The previous model did not pass the check or did not finish. Trying another model…"
@@ -3431,7 +3451,10 @@ Deno.serve(async (req: Request) => {
   const temporaryChat = input?.temporary_chat === true;
   const selectedModel = typeof input?.selected_model === "string" && Object.prototype.hasOwnProperty.call(PUBLIC_MODEL_PROVIDERS, input.selected_model)
     ? input.selected_model : "";
-  const thinkMode = !selectedModel && input?.think_mode === true;
+  const requestedTaskMode: TaskMode = !selectedModel && typeof input?.task_mode === "string" && ALLOWED_TASK_MODES.has(input.task_mode as TaskMode)
+    ? input.task_mode as TaskMode
+    : (!selectedModel && input?.think_mode === true ? "think" : "auto");
+  const thinkMode = !selectedModel && requestedTaskMode === "think";
   const branchContext = input?.branch_context === true;
   const customInstructions = typeof input?.custom_instructions === "string"
     ? input.custom_instructions.replace(/[\x00-\x1F\x7F]/g, "").trim().slice(0, 3000)
@@ -3509,13 +3532,26 @@ Deno.serve(async (req: Request) => {
   const displayUserText = (displayPrompt + attachmentLabels).slice(0, 40000);
   const contextualMessages = applyAttachmentContext(messages, attachments);
   const hasCodeAttachment = attachments.some((item) => isCodeAttachment(item.name));
-  const task = isImageGenerationTask(displayPrompt) ? "image_generation"
+  const detectedTask = isImageGenerationTask(displayPrompt) ? "image_generation"
     : hasCodeAttachment ? "coding"
     : shouldUseWebSearch(displayPrompt) || shouldUseUrlContext(displayPrompt) ? "web_research"
     : shouldUseCodeExecution(displayPrompt) ? "code_execution"
     : classifyTask(displayPrompt);
+  const explicitTaskMap: Partial<Record<TaskMode, string>> = {
+    coding: "coding", study: "study", research: "web_research",
+    writing: "creative", math: "reasoning", general: "general"
+  };
+  const task = detectedTask === "image_generation" ? detectedTask
+    : (requestedTaskMode !== "auto" && requestedTaskMode !== "think" && explicitTaskMap[requestedTaskMode])
+      ? explicitTaskMap[requestedTaskMode]!
+      : detectedTask;
   const adminInstructionConfig = await getCachedMahiAIAdminConfig();
-  const adminInstructionContext = buildMahiAIAdminInstructionContext(adminInstructionConfig);
+  const adminInstructionContext = [
+    buildMahiAIAdminInstructionContext(adminInstructionConfig),
+    taskModeInstruction(requestedTaskMode)
+  ].filter(Boolean).join("\
+\
+");
   const adminInstructionAnswer = attachments.length === 0
     ? matchAdminInstructionLookupRule(adminInstructionConfig, displayPrompt)
     : null;
@@ -3708,6 +3744,6 @@ Deno.serve(async (req: Request) => {
     user.id, messagesForProvider, task, conversationId, usageId, attachments, displayUserText,
     responseCors, requestId, requestStartedAt, inputChars, !temporaryChat, editFromCreatedAt, editFromContent,
     branchContext ? messages.slice(0, -1) : [], customInstructions, responseStyle, adminInstructionContext, thinkMode,
-    adminInstructionAnswer || "", selectedModel
+    adminInstructionAnswer || "", selectedModel, requestedTaskMode
   );
 });
