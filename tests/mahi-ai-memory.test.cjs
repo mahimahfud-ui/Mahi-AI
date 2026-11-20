@@ -10,7 +10,7 @@ const migration = fs.readFileSync(
   require.resolve("../supabase/migrations/20261024081817_mahi_ai_memory_system.sql"),
   "utf8"
 );
-const structuredMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141500_mahicloud_persistent_workspace_memory_tasks.sql"), "utf8");
+const structuredMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141108_mahicloud_persistent_workspace_memory_tasks.sql"), "utf8");
 const readme = fs.readFileSync(require.resolve("../README.md"), "utf8");
 
 test("memory tables are private and scoped to one authenticated user", () => {
