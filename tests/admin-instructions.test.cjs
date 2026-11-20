@@ -26,7 +26,7 @@ test("compiled Admin Control instructions are inserted into the system prompt", 
 
 test("normal provider and Think-mode routes receive the configured instruction context", () => {
   assert.match(source, /startProviderStream\(provider, providerMessages, task, attachments, providerBudget, adminInstructionContext\)/);
-  assert.match(source, /generateThinkModeAnswer\(available, providerMessages, task, attachments, adminInstructionContext/);
+  assert.match(source, /generateTaskModeAnswer\(taskMode, available, providerMessages, task, attachments, adminInstructionContext/);
 });
 
 test("the backend imports the instruction compiler and deterministic lookup matcher", () => {
