@@ -4,11 +4,11 @@ const fs = require("node:fs");
 
 const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
 const organizationMigration = fs.readFileSync(
-  require.resolve("../supabase/migrations/20261120134000_mahicloud_organization_prompt_sync.sql"),
+  require.resolve("../supabase/migrations/20261120134212_mahicloud_organization_prompt_sync.sql"),
   "utf8"
 );
 const promptSecurityMigration = fs.readFileSync(
-  require.resolve("../supabase/migrations/20261120134500_restrict_prompt_sync_to_permanent_users.sql"),
+  require.resolve("../supabase/migrations/20261120134247_restrict_prompt_sync_to_permanent_users.sql"),
   "utf8"
 );
 
