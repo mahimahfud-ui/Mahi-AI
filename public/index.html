@@ -1081,6 +1081,54 @@ body{min-width:0}
  #codePreview .pv-code{border-right:0}
 }
 @media(prefers-reduced-motion:reduce){#codePreview.on{animation:none}}
+
+
+/* ===== Reusable prompt library ===== */
+#openPrompts{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
+#openPrompts .kbd{font-size:.65rem;color:var(--tx3);white-space:nowrap}
+#savePrompt{color:var(--tx3)}
+#savePrompt:hover{color:var(--ac)}
+#ovPrompts .prompt-dialog{width:min(900px,100%);height:min(760px,calc(100% - 12px));display:flex;flex-direction:column;overflow:hidden;padding:0}
+.prompt-head{display:flex;align-items:flex-start;gap:14px;padding:20px 22px 14px;border-bottom:1px solid var(--bd)}
+.prompt-head>div{flex:1;min-width:0}
+.prompt-head h3{font-size:1.1rem;font-weight:650;letter-spacing:-.02em}
+.prompt-head p{font-size:.82rem;color:var(--tx2);margin-top:3px}
+.prompt-tools{display:grid;grid-template-columns:minmax(0,1fr) 155px auto auto;gap:8px;padding:13px 18px;border-bottom:1px solid var(--bd)}
+.prompt-tools input,.prompt-tools select,.prompt-editor input,.prompt-editor select,.prompt-editor textarea{min-width:0;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);outline:0}
+.prompt-tools input:focus,.prompt-tools select:focus,.prompt-editor input:focus,.prompt-editor select:focus,.prompt-editor textarea:focus{border-color:var(--ac)}
+.prompt-editor{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:9px;padding:14px 18px;border-bottom:1px solid var(--bd);background:var(--s2)}
+.prompt-editor[hidden]{display:none!important}
+.prompt-editor input,.prompt-editor textarea{width:100%}
+.prompt-editor textarea{grid-column:1/-1;min-height:112px;max-height:220px;resize:vertical}
+.prompt-editor-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
+.prompt-list{flex:1;min-height:0;overflow:auto;padding:14px 18px 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:10px}
+.prompt-card{min-width:0;border:1px solid var(--bd);border-radius:14px;background:var(--bg);padding:13px;display:flex;flex-direction:column;gap:9px;transition:border-color .18s,transform .18s}
+.prompt-card:hover{border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));transform:translateY(-1px)}
+.prompt-card-top{display:flex;align-items:flex-start;gap:8px}
+.prompt-card-top>div{flex:1;min-width:0}
+.prompt-card-title{font-size:.9rem;font-weight:620;overflow-wrap:anywhere}
+.prompt-card-meta{font-size:.68rem;color:var(--tx3);margin-top:2px}
+.prompt-card-desc{font-size:.8rem;line-height:1.45;color:var(--tx2);white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;min-height:4.6em}
+.prompt-card-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:auto}
+.prompt-card-actions .btn{padding:6px 9px;font-size:.76rem}
+.prompt-card-actions .prompt-spacer{flex:1}
+.prompt-fav{color:var(--tx3);font-size:1rem;padding:2px 5px;border-radius:7px}
+.prompt-fav[aria-pressed=true]{color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.prompt-empty{grid-column:1/-1;text-align:center;padding:42px 16px;color:var(--tx3);font-size:.88rem}
+@media(max-width:700px){
+ #openPrompts .kbd{display:none}
+ #ovPrompts{padding:8px}
+ #ovPrompts .prompt-dialog{height:calc(100% - 8px);border-radius:16px}
+ .prompt-head{padding:15px 14px 11px}
+ .prompt-tools{grid-template-columns:minmax(0,1fr) auto auto;padding:10px 12px}
+ .prompt-tools input{grid-column:1/-1}
+ .prompt-tools select{grid-column:1}
+ .prompt-editor{grid-template-columns:minmax(0,1fr);padding:11px 12px}
+ .prompt-editor textarea,.prompt-editor-actions{grid-column:1}
+ .prompt-list{grid-template-columns:minmax(0,1fr);padding:11px 12px 16px}
+}
+@media(prefers-reduced-motion:reduce){.prompt-card{transition:none}}
+
 </style>
 </head>
 <body>
@@ -1089,6 +1137,7 @@ body{min-width:0}
     <div class="brand"><span class="mark"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud face logo" loading="eager" decoding="async"></span>MahiCloud</div>
     <div class="sidetop">
       <button class="btn pri" id="newChat"><span style="display:inline-flex;gap:8px;align-items:center"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New chat</span></button>
+      <button class="btn" id="openPrompts" type="button"><span>Prompt library</span><kbd class="kbd">Ctrl ⇧ P</kbd></button>
       <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
     </div>
     <div id="list" role="list"></div>
@@ -1125,6 +1174,7 @@ body{min-width:0}
         <div class="tools">
           <div class="tl">
             <button type="button" class="ib tool labeled-tool" id="attach" aria-label="Attach files" title="Attach files · PDF, images, text and code"><svg viewBox="0 0 24 24"><path d="M21 11.5 12.3 20.2a5.5 5.5 0 0 1-7.8-7.8L13.7 3.2a3.7 3.7 0 0 1 5.2 5.2l-8.8 8.8a1.8 1.8 0 0 1-2.6-2.6L15 7.2"/></svg><span class="tool-label">Attach</span></button>
+            <button type="button" class="ib tool" id="savePrompt" aria-label="Save composer text as a prompt" title="Save current text to your Prompt Library"><svg viewBox="0 0 24 24"><path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v14l-7.5-4-7.5 4V6A1.5 1.5 0 0 1 6 4.5z"/><path d="M9 4.5v5h6v-5"/></svg></button>
             <button type="button" class="tb think task-mode-trigger" id="tMode" aria-haspopup="menu" aria-expanded="false" aria-controls="taskModeMenu" aria-pressed="false" title="Choose how MahiCloud should work on your request"><svg viewBox="0 0 24 24"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg><span id="tModeLabel">Auto</span><svg class="mode-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
             <button type="button" class="ib tool labeled-tool" id="mic" aria-label="Voice input" aria-pressed="false" title="Voice input · Dictate a message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="tool-label">Voice</span></button>
             <span class="rec" id="rec" hidden aria-live="polite"><i></i><i></i><i></i><i></i><i></i><span>Listening…</span><button type="button" class="tb" id="recCancel">Cancel</button></span>
@@ -1165,6 +1215,30 @@ body{min-width:0}
   <p class="account-note" id="accountNote">Link Google to this guest workspace to preserve its existing chat history and memory.</p>
   <div class="row-e account-footer"><button type="button" class="btn dng" id="accountSignOut" hidden>Sign out</button><button type="button" class="btn" id="accountClose">Close</button></div>
 </div></div>
+
+<div class="ov" id="ovPrompts">
+  <section class="dlg prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptHeading">
+    <header class="prompt-head">
+      <div><h3 id="promptHeading">Prompt Library</h3><p>Reusable instructions stored only in this browser.</p></div>
+      <button type="button" class="ib" id="promptClose" aria-label="Close Prompt Library">✕</button>
+    </header>
+    <div class="prompt-tools">
+      <input id="promptSearch" type="search" placeholder="Search prompts" aria-label="Search prompts">
+      <select id="promptCategoryFilter" aria-label="Filter by category">
+        <option value="">All categories</option><option>General</option><option>Study</option><option>Coding</option><option>Research</option><option>Writing</option><option>Planning</option>
+      </select>
+      <button class="btn" type="button" id="promptNew">New prompt</button>
+      <button class="btn pri" type="button" id="promptSaveCurrent">Save current</button>
+    </div>
+    <form class="prompt-editor" id="promptEditor" hidden>
+      <input id="promptTitle" maxlength="80" placeholder="Prompt title" aria-label="Prompt title" required>
+      <select id="promptCategory" aria-label="Prompt category"><option>General</option><option>Study</option><option>Coding</option><option>Research</option><option>Writing</option><option>Planning</option></select>
+      <textarea id="promptBody" maxlength="8000" placeholder="Write a reusable prompt…" aria-label="Prompt text" required></textarea>
+      <div class="prompt-editor-actions"><button class="btn" type="button" id="promptCancel">Cancel</button><button class="btn pri" type="submit" id="promptSave">Save prompt</button></div>
+    </form>
+    <div class="prompt-list" id="promptList" role="list" aria-live="polite"></div>
+  </section>
+</div>
 <div id="toasts" aria-live="polite"></div>
 
 <script>
@@ -2076,7 +2150,7 @@ async function send(text, edit) {
   if (edit) { msgs = msgs.slice(0, edit.index); renderAll(); }
   view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), taskMode }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
   const ai = addMsg({ role: "assistant", content: "" }, msgs.length, true);
-  $("#in").value = ""; grow(); setBusy(true); ctl = new AbortController(); let full = "", done = false;
+  clearDraft(); $("#in").value = ""; grow(); setBusy(true); ctl = new AbortController(); let full = "", done = false;
   try {
     refs = files.length ? await uploadFiles(files.map(p => p.file), ctl.signal) : [];
     const res = await Api.chat({
@@ -2225,11 +2299,30 @@ async function deleteConv(c) {
   try { await Api.remove(c.id); if (c.id === cid) newChat(); await loadList(true); toast("Deleted"); } catch (_) { toast("Could not delete"); }
 }
 async function openConv(id) {
-  if (busy) return; const my = ++gen;
-  try { const rows = await Api.messages(id); if (my !== gen) return; cid = id; pend = null; msgs = rows.map(r => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at })); S.temp = false; applySettings(); view(true); renderAll(); bottom(true); $("#title").textContent = (convs.find(c => c.id === id) || {}).title || "Conversation"; drawList(); hideErr(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
-  catch (_) { showErr("Could not load that conversation.", () => openConv(id)); }
+  if (busy) return;
+  persistDraft();
+  const my = ++gen;
+  try {
+    const rows = await Api.messages(id);
+    if (my !== gen) return;
+    cid = id; pend = null;
+    msgs = rows.map(r => ({ id: r.id, role: r.role, content: r.content, created_at: r.created_at }));
+    S.temp = false; applySettings(); view(true); renderAll(); bottom(true);
+    $("#title").textContent = (convs.find(c => c.id === id) || {}).title || "Conversation";
+    $("#in").value = ""; restoreDraft(); grow();
+    drawList(); hideErr();
+    if (document.documentElement.dataset.device !== "desktop") toggleSide(false);
+  } catch (_) { showErr("Could not load that conversation.", () => openConv(id)); }
 }
-function newChat() { if (busy) return; gen++; cid = null; msgs = []; pend = null; $("#title").textContent = "New chat"; view(false); greet(); hideErr(); $("#in").value = ""; grow(); drawList(); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); $("#in").focus(); }
+function newChat() {
+  if (busy) return;
+  persistDraft();
+  gen++; cid = null; msgs = []; pend = null;
+  $("#title").textContent = "New chat"; view(false); greet(); hideErr();
+  $("#in").value = ""; restoreDraft(); grow(); drawList();
+  if (document.documentElement.dataset.device !== "desktop") toggleSide(false);
+  $("#in").focus();
+}
 async function exportCapsule(id) {
   try {
     const rows = !id || id === cid ? msgs : await Api.messages(id);
@@ -2314,8 +2407,44 @@ function exportConv(fmt, id) {
 let st; $("#search").addEventListener("input", () => { hits = null; drawList(); clearTimeout(st); const q = $("#search").value.trim(); if (q.length < 2) return; st = setTimeout(async () => { try { const d = await Api.searchMessages(q); hits = new Set((d || []).map(r => r.conversation_id)); drawList(); } catch (_) {} }, 350); });
 
 /* ===== 7. Composer ===== */
+const DRAFT_PREFIX = "mahicloud.draft.v1:";
+const DRAFT_MAX_AGE = 24 * 60 * 60 * 1000;
+function draftStorageKey(contextId = cid) { return DRAFT_PREFIX + (contextId || "new"); }
+function clearDraft(contextId = cid) {
+  try { sessionStorage.removeItem(draftStorageKey(contextId)); } catch (_) {}
+}
+function persistDraft() {
+  if (S.temp) return;
+  try {
+    const text = $("#in").value.slice(0, 12000);
+    const key = draftStorageKey();
+    if (!text.trim()) { sessionStorage.removeItem(key); return; }
+    sessionStorage.setItem(key, JSON.stringify({ text, updatedAt: Date.now() }));
+  } catch (_) {}
+}
+function restoreDraft({ notify = false } = {}) {
+  if (S.temp) return false;
+  try {
+    const key = draftStorageKey();
+    const raw = sessionStorage.getItem(key);
+    if (!raw) return false;
+    const saved = JSON.parse(raw);
+    const age = Date.now() - Number(saved?.updatedAt || 0);
+    if (!saved || typeof saved.text !== "string" || !saved.text.trim() || !Number.isFinite(age) || age < 0 || age > DRAFT_MAX_AGE) {
+      sessionStorage.removeItem(key);
+      return false;
+    }
+    $("#in").value = saved.text.slice(0, 12000);
+    if (notify) toast("Unsent draft restored · attachments need to be reattached");
+    return true;
+  } catch (_) { return false; }
+}
 const canSend = () => !!($("#in").value.trim() || pendingFiles.length);
-function grow() { const t = $("#in"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px"; if (!busy) $("#send").disabled = !canSend(); }
+function grow() {
+  const t = $("#in"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 200) + "px";
+  if (!busy) $("#send").disabled = !canSend();
+  persistDraft();
+}
 function renderChips() {
   const c = $("#chips"); c.replaceChildren(); c.hidden = !pendingFiles.length;
   pendingFiles.forEach((p, i) => {
@@ -2375,7 +2504,7 @@ function clearPendingFiles() {
 function guardLeave(go) {
   if (!canSend()) return go();
   ask({ title: "Discard unsent message?", text: "Your draft and attached files will be cleared.", ok: "Discard", danger: true }).then(y => {
-    if (!y) return; $("#in").value = ""; clearPendingFiles(); grow(); go();
+    if (!y) return; clearDraft(); $("#in").value = ""; clearPendingFiles(); grow(); go();
   });
 }
 function toggleTemp() {
@@ -2460,6 +2589,176 @@ addEventListener("dragover", e => { if (e.dataTransfer && e.dataTransfer.types.i
 addEventListener("drop", e => { if (e.dataTransfer && e.dataTransfer.types.includes("Files") && !cbox.contains(e.target)) e.preventDefault(); });
 $("#in").addEventListener("paste", e => { const f = [...((e.clipboardData && e.clipboardData.files) || [])]; if (f.length) { e.preventDefault(); addFiles(f); } });
 
+/* ===== 7b. Prompt library: browser-local reusable templates ===== */
+const PROMPTS_KEY = "mahicloud.prompts.v1";
+const PROMPT_CATEGORIES = ["General", "Study", "Coding", "Research", "Writing", "Planning"];
+const BUILTIN_PROMPTS = [
+  { id: "builtin-explain", title: "Explain a concept clearly", category: "Study", body: "Explain [topic] in plain language. Start with the core idea, use a practical analogy, then give one concrete example. Define unfamiliar terms and finish with a short recap." },
+  { id: "builtin-study", title: "Teach me step by step", category: "Study", body: "Teach me [topic] from my current level. Break it into small steps, explain why each step matters, show worked examples, then give me 3 practice questions. Wait for my answers before revealing the solutions." },
+  { id: "builtin-debug", title: "Debug this code", category: "Coding", body: "Act as a senior software engineer. Diagnose the following issue: [describe issue]. Identify the most likely root cause, show the smallest safe fix, explain why it works, and include relevant tests. Do not invent files or APIs." },
+  { id: "builtin-review", title: "Review a code change", category: "Coding", body: "Review this change as a production code reviewer. Prioritize correctness, security, data loss, performance, accessibility, and maintainability. Report only actionable findings with file/line references, severity, impact, and a concrete fix. If no issue is found, say so." },
+  { id: "builtin-research", title: "Research with evidence", category: "Research", body: "Research [question] using current, primary or authoritative sources. Separate verified facts from interpretation, compare conflicting evidence, include dates and direct source links, and state what could not be verified. Do not fabricate citations." },
+  { id: "builtin-compare", title: "Compare options objectively", category: "Planning", body: "Compare [option A], [option B], and [option C] for [goal]. Define the decision criteria, compare cost, reliability, limitations, setup effort, and long-term risks, then recommend one option with explicit assumptions." },
+  { id: "builtin-rewrite", title: "Rewrite and polish", category: "Writing", body: "Rewrite the text below for [audience] and [purpose]. Preserve its meaning and important details, remove repetition, improve clarity and flow, and keep the tone [tone]. Return the finished version only.\n\n[Paste text]" },
+  { id: "builtin-plan", title: "Turn a goal into an execution plan", category: "Planning", body: "Turn this goal into a practical execution plan: [goal]. Break it into ordered phases with specific tasks, dependencies, acceptance criteria, likely blockers, and a definition of done. Prioritize the highest-impact next action." }
+];
+function normalizeSavedPrompt(item) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+  const id = typeof item.id === "string" ? item.id.slice(0, 100) : "";
+  const title = typeof item.title === "string" ? item.title.trim().slice(0, 80) : "";
+  const body = typeof item.body === "string" ? item.body.trim().slice(0, 8000) : "";
+  const category = PROMPT_CATEGORIES.includes(item.category) ? item.category : "General";
+  if (!id || !title || !body) return null;
+  return {
+    id, title, body, category,
+    favorite: item.favorite === true,
+    createdAt: Number.isFinite(item.createdAt) ? item.createdAt : Date.now(),
+    updatedAt: Number.isFinite(item.updatedAt) ? item.updatedAt : Date.now(),
+    lastUsedAt: Number.isFinite(item.lastUsedAt) ? item.lastUsedAt : 0
+  };
+}
+function loadSavedPrompts() {
+  try {
+    const value = JSON.parse(localStorage.getItem(PROMPTS_KEY) || "[]");
+    return Array.isArray(value) ? value.map(normalizeSavedPrompt).filter(Boolean).slice(0, 100) : [];
+  } catch (_) { return []; }
+}
+let customPrompts = loadSavedPrompts();
+let editingPromptId = null;
+function persistSavedPrompts() {
+  try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(customPrompts.slice(0, 100))); }
+  catch (_) { toast("Could not save prompts in this browser. Check available site storage."); }
+}
+function openPromptEditor(prompt, initialBody) {
+  editingPromptId = prompt && !prompt.builtIn ? prompt.id : null;
+  $("#promptTitle").value = prompt ? prompt.title : "";
+  $("#promptCategory").value = prompt ? prompt.category : "General";
+  $("#promptBody").value = prompt ? prompt.body : String(initialBody || "").slice(0, 8000);
+  $("#promptEditor").hidden = false;
+  $("#promptSave").textContent = editingPromptId ? "Save changes" : "Save prompt";
+  $("#promptTitle").focus();
+}
+function renderPromptLibrary() {
+  const q = $("#promptSearch").value.trim().toLowerCase();
+  const category = $("#promptCategoryFilter").value;
+  const list = $("#promptList");
+  const items = [
+    ...BUILTIN_PROMPTS.map(item => ({ ...item, builtIn: true })),
+    ...customPrompts.map(item => ({ ...item, builtIn: false }))
+  ].filter(item => (!category || item.category === category) &&
+    (!q || (item.title + " " + item.category + " " + item.body).toLowerCase().includes(q)))
+    .sort((a, b) => Number(!!b.favorite) - Number(!!a.favorite) ||
+      (b.lastUsedAt || 0) - (a.lastUsedAt || 0) ||
+      Number(a.builtIn) - Number(b.builtIn) || a.title.localeCompare(b.title));
+  list.replaceChildren();
+  if (!items.length) {
+    list.append(el("div", "prompt-empty", q ? "No prompts match your search." : "No saved prompts in this category. Create one or choose another category."));
+    return;
+  }
+  items.forEach(item => {
+    const card = el("article", "prompt-card");
+    card.setAttribute("role", "listitem");
+    const top = el("div", "prompt-card-top");
+    const titleBox = el("div");
+    titleBox.append(el("div", "prompt-card-title", item.title), el("div", "prompt-card-meta", (item.builtIn ? "Starter prompt" : "Your prompt") + " · " + item.category));
+    top.append(titleBox);
+    if (!item.builtIn) {
+      const favorite = el("button", "prompt-fav", item.favorite ? "★" : "☆");
+      favorite.type = "button"; favorite.setAttribute("aria-label", item.favorite ? "Remove favorite" : "Add favorite");
+      favorite.setAttribute("aria-pressed", String(!!item.favorite));
+      favorite.onclick = () => { customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, favorite: !p.favorite, updatedAt: Date.now() } : p); persistSavedPrompts(); renderPromptLibrary(); };
+      top.append(favorite);
+    }
+    card.append(top, el("div", "prompt-card-desc", item.body));
+    const actions = el("div", "prompt-card-actions");
+    const use = el("button", "btn pri", "Use prompt"); use.type = "button"; use.onclick = () => useLibraryPrompt(item);
+    const copyButton = el("button", "btn", "Copy"); copyButton.type = "button"; copyButton.onclick = () => copy(item.body);
+    actions.append(use, copyButton);
+    if (!item.builtIn) {
+      const spacer = el("span", "prompt-spacer"); actions.append(spacer);
+      const edit = el("button", "btn", "Edit"); edit.type = "button"; edit.onclick = () => openPromptEditor(item);
+      const remove = el("button", "btn dng", "Delete"); remove.type = "button"; remove.onclick = () => deleteLibraryPrompt(item);
+      actions.append(edit, remove);
+    }
+    card.append(actions); list.append(card);
+  });
+}
+function openPromptLibrary() {
+  $("#promptEditor").hidden = true;
+  $("#ovPrompts").classList.add("on");
+  renderPromptLibrary();
+  $("#promptSearch").focus();
+}
+function closePromptLibrary() {
+  $("#ovPrompts").classList.remove("on");
+  $("#promptEditor").hidden = true;
+  $("#in").focus();
+}
+async function useLibraryPrompt(item) {
+  const current = $("#in").value.trim();
+  if (current && current !== item.body && !await ask({
+    title: "Replace the current draft?",
+    text: "Using this prompt will replace the text currently in your composer.",
+    ok: "Replace draft"
+  })) return;
+  $("#in").value = item.body;
+  if (!item.builtIn) {
+    customPrompts = customPrompts.map(p => p.id === item.id ? { ...p, lastUsedAt: Date.now() } : p);
+    persistSavedPrompts();
+  }
+  closePromptLibrary();
+  grow();
+  toast("Prompt added to composer · review it before sending");
+}
+async function deleteLibraryPrompt(item) {
+  const confirmed = await ask({ title: "Delete saved prompt?", text: "“" + item.title + "” will be removed from this browser.", ok: "Delete", danger: true });
+  if (!confirmed) return;
+  customPrompts = customPrompts.filter(p => p.id !== item.id);
+  persistSavedPrompts(); renderPromptLibrary(); toast("Prompt deleted");
+}
+$("#openPrompts").onclick = openPromptLibrary;
+$("#savePrompt").onclick = () => {
+  const current = $("#in").value.trim();
+  if (!current) return toast("Write a prompt in the composer first");
+  openPromptEditor(null, current);
+  $("#ovPrompts").classList.add("on");
+};
+$("#promptClose").onclick = closePromptLibrary;
+$("#promptNew").onclick = () => openPromptEditor(null, "");
+$("#promptSaveCurrent").onclick = () => {
+  const current = $("#in").value.trim();
+  if (!current) return toast("Write a prompt in the composer first");
+  openPromptEditor(null, current);
+};
+$("#promptCancel").onclick = () => { editingPromptId = null; $("#promptEditor").hidden = true; };
+$("#promptSearch").addEventListener("input", renderPromptLibrary);
+$("#promptCategoryFilter").addEventListener("change", renderPromptLibrary);
+$("#promptEditor").addEventListener("submit", event => {
+  event.preventDefault();
+  const title = $("#promptTitle").value.trim().slice(0, 80);
+  const body = $("#promptBody").value.trim().slice(0, 8000);
+  const category = PROMPT_CATEGORIES.includes($("#promptCategory").value) ? $("#promptCategory").value : "General";
+  if (!title || !body) return toast("Add a title and prompt text before saving");
+  const now = Date.now();
+  if (editingPromptId) {
+    customPrompts = customPrompts.map(p => p.id === editingPromptId ? { ...p, title, body, category, updatedAt: now } : p);
+  } else {
+    if (customPrompts.length >= 100) return toast("Prompt Library limit reached (100 custom prompts)");
+    const id = crypto.randomUUID ? crypto.randomUUID() : "prompt-" + now + "-" + Math.random().toString(36).slice(2, 8);
+    customPrompts.unshift({ id, title, body, category, favorite: false, createdAt: now, updatedAt: now, lastUsedAt: 0 });
+  }
+  persistSavedPrompts();
+  editingPromptId = null;
+  $("#promptEditor").hidden = true;
+  $("#promptSearch").value = "";
+  $("#promptCategoryFilter").value = "";
+  renderPromptLibrary();
+  toast("Prompt saved in this browser");
+});
+$("#ovPrompts").addEventListener("pointerdown", event => {
+  if (event.target.id === "ovPrompts") closePromptLibrary();
+});
+
 /* ===== 8. Settings center ===== */
 const opt = a => a.map(x => Array.isArray(x) ? x : [x, x]);
 const SCHEMA = [
@@ -2500,7 +2799,7 @@ const SCHEMA = [
     { l: "Export current conversation", c: "btn", b: [["Markdown", () => exportConv("md")], ["JSON", () => exportConv("json")]] },
     { l: "Clear local preferences", d: "Resets settings and pins on this device only. Your server-side conversations are NOT deleted.", c: "btn", b: [["Clear", async () => { if (await ask({ title: "Clear local preferences?", text: "Only this browser’s settings and pins are removed. Conversations stored in your account stay.", ok: "Clear", danger: true })) { S = { ...DEF }; save(); pins = []; localStorage.removeItem("mahicloud.pins"); applySettings(); renderSettings(); toast("Local preferences cleared"); } }, 1]] },
     { l: "Delete conversations", d: "Use the ⋯ menu on a conversation in the sidebar to delete it from your account.", c: "info" }] },
-  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
+  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Prompt library", "Ctrl/⌘ Shift P"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
   { id: "adv", t: "Advanced", i: [{ l: "Diagnostics", c: "diag" }, { l: "Reset all settings to defaults", c: "btn", b: [["Reset", () => { S = { ...DEF }; save(); applySettings(); renderSettings(); toast("Defaults restored"); }]] }] }
 ];
 let tab = "general";
@@ -2697,7 +2996,8 @@ addEventListener("keydown", e => {
       return;
     }
   }
-  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  else if (mod && e.shiftKey && k === "p") { e.preventDefault(); openPromptLibrary(); }
   else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
   else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
   else if (mod && k === "b") { e.preventDefault(); toggleSide(); }
@@ -2752,7 +3052,8 @@ addEventListener("offline", () => toast("You’re offline"));
   renderAccountUI();
   setMahiBootStage("loading conversations", "Loading conversations…");
   const ok = await loadList();
-  if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
+  if (ok && S.startup === "last" && convs.length) await openConv(convs[0].id);
+  else restoreDraft({ notify: true });
   finishMahiBoot();
   } catch (error) {
     markMahiStartupFailure(error);

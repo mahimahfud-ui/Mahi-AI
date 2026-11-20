@@ -26,6 +26,48 @@ test("code preview controls bind only after their markup has been parsed", () =>
   assert.doesNotMatch(wiring, /\$\("#(?:pvClose|codePreview|pvRefresh|pvTabs)"\)\.addEventListener/);
 });
 
+test("Prompt Library ships searchable starters and supports bounded browser-local custom prompts", () => {
+  const prompts = between("const PROMPTS_KEY", "/* ===== 8. Settings center");
+  assert.match(html, /id="openPrompts"/);
+  assert.match(html, /id="ovPrompts"/);
+  assert.match(html, /id="promptSearch"/);
+  assert.match(html, /id="promptCategoryFilter"/);
+  assert.match(html, /id="promptEditor"/);
+  assert.match(html, /id="savePrompt"/);
+  assert.match(prompts, /const PROMPTS_KEY = "mahicloud\.prompts\.v1"/);
+  assert.match(prompts, /const BUILTIN_PROMPTS = \[/);
+  assert.match(prompts, /function normalizeSavedPrompt\(/);
+  assert.match(prompts, /customPrompts\.length >= 100/);
+  assert.match(prompts, /localStorage\.setItem\(PROMPTS_KEY/);
+  assert.match(prompts, /function renderPromptLibrary\(/);
+  assert.match(prompts, /function useLibraryPrompt\(/);
+  assert.match(prompts, /function deleteLibraryPrompt\(/);
+  assert.match(prompts, /item\.favorite/);
+  assert.match(prompts, /promptBody.*8000/);
+  assert.doesNotMatch(prompts, /innerHTML\s*=/, "prompt content must be rendered as text, not HTML");
+  assert.match(html, /mod && e\.shiftKey && k === "p"/);
+});
+
+test("unsent drafts are restored per conversation for 24 hours without saving temporary chats or attachments", () => {
+  const drafts = between("const DRAFT_PREFIX", "const canSend =");
+  assert.match(drafts, /mahicloud\.draft\.v1:/);
+  assert.match(drafts, /24 \* 60 \* 60 \* 1000/);
+  assert.match(drafts, /sessionStorage\.setItem/);
+  assert.match(drafts, /sessionStorage\.getItem/);
+  assert.match(drafts, /if \(S\.temp\) return/);
+  assert.match(drafts, /saved\.text\.slice\(0, 12000\)/);
+  assert.doesNotMatch(drafts, /pendingFiles|FileReader|dataURL/i);
+  const navigation = between("async function openConv(id)", "async function exportCapsule");
+  assert.match(navigation, /persistDraft\(\)/);
+  assert.match(navigation, /restoreDraft\(\)/);
+  assert.match(navigation, /function newChat\(\)[\s\S]*restoreDraft\(\)/);
+  const send = between("async function send(text, edit)", "const friendly =");
+  assert.match(send, /clearDraft\(\); \$\("#in"\)\.value = ""/);
+  assert.match(send, /\$\("#in"\)\.value = text;[\s\S]*grow\(\)/);
+  assert.match(html, /await openConv\(convs\[0\]\.id\)/);
+  assert.match(html, /restoreDraft\(\{ notify: true \}\)/);
+});
+
 test("a missing session creates a guest, but an expired saved session is never silently replaced", () => {
   const api = between("const Api = {", "/* ===== Google account linking");
   assert.match(api, /async createGuestSession\(\)/);
