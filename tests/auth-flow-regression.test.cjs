@@ -38,7 +38,7 @@ test("Prompt Library ships searchable starters and supports bounded browser-loca
   assert.match(prompts, /const BUILTIN_PROMPTS = \[/);
   assert.match(prompts, /function normalizeSavedPrompt\(/);
   assert.match(prompts, /customPrompts\.filter\(p => !p\.deletedAt\)\.length >= 100/);
-  assert.match(prompts, /localStorage\.setItem\(PROMPTS_KEY/);
+  assert.match(prompts, /localStorage\.setItem\(activePromptStorageKey/);
   assert.match(prompts, /function renderPromptLibrary\(/);
   assert.match(prompts, /function useLibraryPrompt\(/);
   assert.match(prompts, /function deleteLibraryPrompt\(/);
