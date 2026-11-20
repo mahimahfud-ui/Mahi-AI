@@ -1083,6 +1083,25 @@ body{min-width:0}
 @media(prefers-reduced-motion:reduce){#codePreview.on{animation:none}}
 
 
+/* ===== Conversation folders and tags ===== */
+.folder-filters{display:flex;gap:6px;overflow-x:auto;padding:2px 12px 9px;scrollbar-width:none}
+.folder-filters::-webkit-scrollbar{display:none}
+.folder-filter{flex:none;display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--bd);border-radius:999px;background:var(--s1);color:var(--tx2);font-size:.72rem;white-space:nowrap}
+.folder-filter:hover{border-color:var(--ac);color:var(--tx)}
+.folder-filter.on{background:color-mix(in srgb,var(--ac) 13%,var(--s1));border-color:color-mix(in srgb,var(--ac) 40%,var(--bd));color:var(--ac)}
+.folder-filter small{font-size:.65rem;opacity:.7}
+.ci{flex-wrap:wrap}
+.ci .t{min-width:0}
+.ci-meta{display:flex;align-items:center;gap:4px;flex-basis:100%;padding:0 0 7px 10px;overflow:hidden;flex-wrap:wrap}
+.ci-folder,.ci-tag{font-size:.63rem;line-height:1.5;padding:1px 6px;border-radius:6px;background:var(--s2);color:var(--tx3);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ci-folder{color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--s2))}
+#list .ci .t{flex:1}
+.voice-mode{height:32px;padding:0 9px;gap:6px;border:1px solid var(--bd);border-radius:10px;color:var(--tx2);font-size:.78rem;white-space:nowrap}
+.voice-mode svg{width:15px;height:15px}
+.voice-mode.on{color:var(--ac);border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));background:color-mix(in srgb,var(--ac) 12%,var(--s1))}
+@media(max-width:700px){.folder-filters{padding-left:10px;padding-right:10px}.voice-mode{padding:0 8px;font-size:.73rem}}
+@media(prefers-reduced-motion:reduce){.folder-filter{transition:none}}
+
 /* ===== Reusable prompt library ===== */
 #openPrompts{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
 #openPrompts .kbd{font-size:.65rem;color:var(--tx3);white-space:nowrap}
@@ -1140,6 +1159,7 @@ body{min-width:0}
       <button class="btn" id="openPrompts" type="button"><span>Prompt library</span><kbd class="kbd">Ctrl ⇧ P</kbd></button>
       <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
     </div>
+    <nav id="folderFilters" class="folder-filters" aria-label="Chat folders"></nav>
     <div id="list" role="list"></div>
     <div class="sidebot"><span class="who" id="who">Connecting…</span>
       <button class="ib" id="openAccount" aria-label="Google account and sign-in" title="Google account and sign-in"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
@@ -1177,6 +1197,7 @@ body{min-width:0}
             <button type="button" class="ib tool" id="savePrompt" aria-label="Save composer text as a prompt" title="Save current text to your Prompt Library"><svg viewBox="0 0 24 24"><path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v14l-7.5-4-7.5 4V6A1.5 1.5 0 0 1 6 4.5z"/><path d="M9 4.5v5h6v-5"/></svg></button>
             <button type="button" class="tb think task-mode-trigger" id="tMode" aria-haspopup="menu" aria-expanded="false" aria-controls="taskModeMenu" aria-pressed="false" title="Choose how MahiCloud should work on your request"><svg viewBox="0 0 24 24"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg><span id="tModeLabel">Auto</span><svg class="mode-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
             <button type="button" class="ib tool labeled-tool" id="mic" aria-label="Voice input" aria-pressed="false" title="Voice input · Dictate a message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="tool-label">Voice</span></button>
+            <button type="button" class="tb voice-mode" id="voiceMode" aria-label="Start voice conversation" aria-pressed="false" title="Hands-free voice conversation · listen and speak replies"><svg viewBox="0 0 24 24"><path d="M12 3a3 3 0 0 0-3 3v5a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 18v3M8 21h8"/></svg><span>Talk</span></button>
             <span class="rec" id="rec" hidden aria-live="polite"><i></i><i></i><i></i><i></i><i></i><span>Listening…</span><button type="button" class="tb" id="recCancel">Cancel</button></span>
           </div>
           <div class="tr">
@@ -1219,7 +1240,7 @@ body{min-width:0}
 <div class="ov" id="ovPrompts">
   <section class="dlg prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptHeading">
     <header class="prompt-head">
-      <div><h3 id="promptHeading">Prompt Library</h3><p>Reusable instructions stored only in this browser.</p></div>
+      <div><h3 id="promptHeading">Prompt Library</h3><p id="promptSyncStatus">Saved in this browser · Sign in with Google to sync across devices</p></div>
       <button type="button" class="ib" id="promptClose" aria-label="Close Prompt Library">✕</button>
     </header>
     <div class="prompt-tools">
@@ -1227,6 +1248,7 @@ body{min-width:0}
       <select id="promptCategoryFilter" aria-label="Filter by category">
         <option value="">All categories</option><option>General</option><option>Study</option><option>Coding</option><option>Research</option><option>Writing</option><option>Planning</option>
       </select>
+      <button class="btn" type="button" id="promptSyncNow">Sync now</button>
       <button class="btn" type="button" id="promptNew">New prompt</button>
       <button class="btn pri" type="button" id="promptSaveCurrent">Save current</button>
     </div>
