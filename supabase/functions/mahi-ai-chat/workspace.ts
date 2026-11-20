@@ -300,6 +300,28 @@ export function createWorkspaceService(
         if (Array.isArray(events) && events.length) await rows("mahi_ai_task_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(events.map((event: any) => ({ task_id: taskId, branch_id: made[0].id, user_id: userId, event_type: event.event_type, payload: event.payload }))) });
         return json(200, { branch: made[0] }, headers);
       }
+      if (actionName === "task_branch_update") {
+        const taskId = String(input.task_id || "");
+        const branchId = String(input.branch_id || "");
+        const nextStatus = String(input.status || "");
+        if (!WORKSPACE_UUID.test(taskId) || !WORKSPACE_UUID.test(branchId) ||
+            !["active", "paused", "archived"].includes(nextStatus)) {
+          return json(400, { error: "Choose a valid task branch status." }, headers);
+        }
+        const found = await rows("mahi_ai_task_branches?select=id,revision,status&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(branchId) + "&limit=1");
+        if (!Array.isArray(found) || !found.length) return json(404, { error: "Task branch not found." }, headers);
+        if (nextStatus === "archived" && found[0].status !== "archived") {
+          const active = await rows("mahi_ai_task_branches?select=id&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&status=neq.archived&limit=2");
+          if (!Array.isArray(active) || active.length <= 1) {
+            return json(400, { error: "Keep at least one unarchived branch in each task." }, headers);
+          }
+        }
+        const updated = await rows("mahi_ai_task_branches?user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(branchId) + "&select=id,task_id,name,parent_branch_id,state,summary,status,revision,updated_at", {
+          method: "PATCH", headers: { Prefer: "return=representation" },
+          body: JSON.stringify({ status: nextStatus, revision: Number(found[0].revision || 1) + 1, updated_at: new Date().toISOString() })
+        });
+        return json(200, { branch: Array.isArray(updated) ? updated[0] : null }, headers);
+      }
       if (actionName === "task_checkpoint") {
         const taskId = String(input.task_id || ""), branchId = String(input.branch_id || "");
         const state = input.state && typeof input.state === "object" && !Array.isArray(input.state) ? input.state : null;
