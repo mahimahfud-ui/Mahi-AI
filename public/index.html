@@ -1269,7 +1269,7 @@ function runAnswerLab(mode, answer) {
 }
 function saveAnswerInsight(answer) {
   if (busy) return toast("Wait for the current response to finish");
-  const compact = String(answer || "").replace(/\s+/g, " ").trim().slice(0, 660);
+  const compact = String(answer || "").replace(/\s+/g, " ").trim().slice(0, 560);
   if (!compact) return toast("There is no insight to save");
   send("Remember that this user-selected insight from a previous MahiCloud answer may be useful in future conversations. It has not been independently verified unless the text explicitly says so: " + compact);
 }
