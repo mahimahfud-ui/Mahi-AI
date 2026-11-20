@@ -1717,7 +1717,12 @@ function previewDocument(language, source) {
   const lang = language.toLowerCase().replace(/^language-/, "");
   const escapeClosing = (value, tag) => value.replace(new RegExp("<" + "/" + tag, "gi"), "<\\/" + tag);
   const shell = body => '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: blob: https:; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; font-src data: https:; connect-src \'none\'; form-action \'none\'; base-uri \'none\';"><style>html,body{min-height:100%;margin:0}body{font:15px system-ui,sans-serif;padding:16px;box-sizing:border-box}</style></head><body>' + body + '</body></html>';
-  if (["html","htm","xhtml"].includes(lang) || /^\s*(<!doctype|<html[\s>])/i.test(source)) return source;
+  if (["html","htm","xhtml"].includes(lang) || /^\s*(<!doctype|<html[\s>])/i.test(source)) {
+    const policy = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: blob: https:; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; font-src data: https:; connect-src \'none\'; form-action \'none\'; base-uri \'none\';">';
+    if (/<head[\s>]/i.test(source)) return source.replace(/<head([^>]*)>/i, match => match + policy);
+    if (/<html[\s>]/i.test(source)) return source.replace(/<html([^>]*)>/i, match => match + '<head>' + policy + '</head>');
+    return shell(source);
+  }
   if (lang === "css") {
     return shell('<style>' + escapeClosing(source, "style") + '</style><main><h2>CSS live preview</h2><p>Your stylesheet is applied to this preview page.</p><button>Example button</button><article>Sample content</article></main>');
   }
