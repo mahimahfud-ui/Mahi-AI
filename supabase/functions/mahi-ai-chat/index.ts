@@ -1,6 +1,6 @@
 import { isImageGenerationTask } from "./image-intent.ts";
 import { buildMahiAIAdminInstructionContext, matchAdminInstructionLookupRule } from "./admin-instructions.ts";
-import { createWorkspaceService, formatStructuredWorkspaceContext, parseWorkspaceFileIntent, type WorkspaceFileIntent } from "./workspace.ts";
+import { createWorkspaceService, formatStructuredWorkspaceContext, parseWorkspaceFileIntent, WORKSPACE_UUID, type WorkspaceFileIntent } from "./workspace.ts";
 
 const corsHeaders: Record<string, string> = {
   "Access-Control-Allow-Headers": "authorization, apikey, x-client-info, content-type",
@@ -3726,18 +3726,19 @@ Deno.serve(async (req: Request) => {
         await updateUsage(usageId, { success: false, error_code: "invalid_workspace_task_selection" });
         return json(400, { error: "Select both a saved task and one of its branches." }, responseCors);
       }
-      const [workspaceFiles, taskContext] = await Promise.all([
+      const [workspaceFilesResult, taskContext] = await Promise.all([
         workspaceService.loadWorkspaceKnowledge(user.id, displayPrompt).catch((error) => {
           logStructured("warn", "workspace_knowledge_unavailable", {
             request_id: requestId,
             error_name: error instanceof Error ? error.name : "UnknownError"
           });
-          return [];
+          return [] as any[];
         }),
         workspaceTaskId && workspaceBranchId
           ? workspaceService.loadTaskContext(user.id, workspaceTaskId, workspaceBranchId)
           : Promise.resolve(null)
       ]);
+      const workspaceFiles: any[] = Array.isArray(workspaceFilesResult) ? workspaceFilesResult : [];
       if (workspaceTaskId && workspaceBranchId && !taskContext) {
         await updateUsage(usageId, { success: false, error_code: "workspace_task_not_found" });
         return json(404, { error: "That saved task or branch is unavailable. Refresh Workspace and select an active branch." }, responseCors);
