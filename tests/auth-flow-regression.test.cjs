@@ -11,6 +11,21 @@ function between(start, end) {
   return html.slice(a, b);
 }
 
+test("code preview controls bind only after their markup has been parsed", () => {
+  const previewMarkup = html.indexOf('<div id="codePreview"');
+  const scriptEnd = html.indexOf("</script>");
+  assert.ok(previewMarkup > scriptEnd, "the preview markup currently follows the application script");
+
+  const wiring = between("function wireCodePreviewEvents()", "/* ===== 9. Wiring");
+  assert.match(wiring, /document\.addEventListener\("DOMContentLoaded", wireCodePreviewEvents, \{ once: true \}\)/);
+  assert.match(wiring, /else \{\s*wireCodePreviewEvents\(\);\s*\}/);
+  assert.match(wiring, /closeButton\?\.addEventListener\("click", closeCodePreview\)/);
+  assert.match(wiring, /modal\?\.addEventListener\("click"/);
+  assert.match(wiring, /refreshButton\?\.addEventListener\("click"/);
+  assert.match(wiring, /tabs\?\.addEventListener\("click"/);
+  assert.doesNotMatch(wiring, /\$\("#(?:pvClose|codePreview|pvRefresh|pvTabs)"\)\.addEventListener/);
+});
+
 test("a missing session creates a guest, but an expired saved session is never silently replaced", () => {
   const api = between("const Api = {", "/* ===== Google account linking");
   assert.match(api, /async createGuestSession\(\)/);
