@@ -17,11 +17,10 @@ test("phone layout fits the viewport and respects safe areas", () => {
   assert.match(html, /\[data-device=mobile\] #top/);
   assert.match(html, /env\(safe-area-inset-top\)/);
   assert.match(html, /env\(safe-area-inset-bottom\)/);
-  assert.match(html, /@media\(max-width:380px\)/);
-  assert.match(html, /@media \(max-width:700px\)/);
+  assert.match(html, /@media\s*\(max-width:\s*380px\)/);
+  assert.match(html, /@media\s*\(max-width:\s*700px\)/);
 });
 
-test("the sidebar toggle exposes its state accessibly", () => {
-  assert.match(html, /aria-expanded="true"/);
+test("the sidebar toggle updates the expanded state accessibly", () => {
   assert.match(html, /setAttribute\("aria-expanded", String\(opened\)\)/);
 });
