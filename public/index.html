@@ -786,6 +786,104 @@ html,body,#app,#side,main,#top,#composer,.box,.ib,.btn,.tb,.card,.ci,
   scroll-behavior:auto!important;
 }
 
+
+
+/* ===== Mobile-first viewport, frame and keyboard fit ===== */
+html,body{width:100%;max-width:100%;overscroll-behavior:none;-webkit-text-size-adjust:100%}
+body{min-width:0}
+#app{position:fixed;left:0;right:0;top:var(--vv-offset-top,0px);bottom:auto;width:100%;height:var(--app-h,100dvh);min-height:0;max-height:var(--app-h,100dvh);overflow:hidden}
+#scrim{top:var(--vv-offset-top,0px);bottom:auto;height:var(--app-h,100dvh)}
+[data-device=mobile] body{height:var(--app-h,100dvh);min-height:0;overflow:hidden}
+[data-device=mobile] #app{inset-inline:0;top:var(--vv-offset-top,0px);width:100%;height:var(--app-h,100dvh);max-height:var(--app-h,100dvh)}
+[data-device=mobile] #side{top:var(--vv-offset-top,0px);height:var(--app-h,100dvh);max-height:var(--app-h,100dvh);width:min(86vw,360px);padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+[data-device=mobile] #side #list{flex:1 1 0;min-height:0;overflow:auto}
+[data-device=mobile] main{display:flex;flex:1 1 0;width:0;min-width:0;min-height:0;height:100%;overflow:hidden}
+[data-device=mobile] #top{flex:0 0 auto;width:100%;min-width:0;min-height:50px;padding:4px 7px;padding-top:max(4px,env(safe-area-inset-top));gap:4px}
+[data-device=mobile] #toggle,[data-device=mobile] #newTop{width:40px;height:40px;min-width:40px;min-height:40px;flex:none}
+[data-device=mobile] #top h1{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.88rem}
+[data-device=mobile] #tTemp{width:36px;min-width:36px;height:38px;min-height:38px;flex:none;justify-content:center;padding:0 7px}
+[data-device=mobile] #tTemp span{display:none!important}
+[data-device=mobile] #scroll{flex:1 1 0;width:100%;min-width:0;min-height:0;max-height:100%;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+[data-device=mobile] #welcome{width:100%;min-height:100%;height:auto;padding:clamp(14px,4vh,28px) 14px 22px;justify-content:center}
+[data-device=mobile] #welcome .mark{width:46px;height:46px;margin-bottom:12px}
+[data-device=mobile] #welcome h2{font-size:clamp(1.45rem,6vw,2rem)}
+[data-device=mobile] #welcome p{margin:6px 0 18px;font-size:.9rem}
+[data-device=mobile] .cards{width:100%;max-width:520px;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+[data-device=mobile] .cards .card{min-width:0;min-height:68px;padding:11px 12px;border-radius:13px}
+[data-device=mobile] .cards .card b{font-size:.84rem}
+[data-device=mobile] .cards .card span{display:block;font-size:.74rem;line-height:1.35;overflow-wrap:anywhere}
+[data-device=mobile] .col{width:100%;max-width:var(--mw);min-width:0;padding-inline:12px}
+[data-device=mobile] #msgs{width:100%;min-width:0}
+[data-device=mobile] .msg{min-width:0;padding-block:12px}
+[data-device=mobile] .msg.user .bub{max-width:94%;overflow-wrap:anywhere;word-break:break-word;padding:10px 12px}
+[data-device=mobile] .prose{max-width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+[data-device=mobile] .prose pre,[data-device=mobile] .code pre{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+[data-device=mobile] .prose table{display:block;width:100%;max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;border-collapse:collapse}
+[data-device=mobile] .prose img,[data-device=mobile] .prose video,[data-device=mobile] .prose canvas{max-width:100%;height:auto}
+[data-device=mobile] .prose iframe{display:block;width:100%;max-width:100%;aspect-ratio:16/9;border:0}
+[data-device=mobile] .prose pre code{white-space:pre}
+[data-device=mobile] #err{flex:0 0 auto;width:calc(100% - 16px);max-width:none;margin:0 8px 5px;min-width:0}
+[data-device=mobile] #composer{flex:0 0 auto;width:100%;min-width:0;padding:6px 8px calc(7px + env(safe-area-inset-bottom));}
+[data-device=mobile] .upload-status{width:100%;max-width:none;margin:0 0 5px;padding-inline:8px}
+[data-device=mobile] .box{width:100%;max-width:none;min-width:0;margin:0;padding:7px;border-radius:17px;gap:5px;align-items:flex-end}
+[data-device=mobile] #in{width:100%;min-width:0;min-height:40px;max-height:min(150px,calc(var(--app-h,100dvh)*.24));font-size:16px;line-height:1.42;padding:7px 4px;overflow-y:auto}
+[data-device=mobile] .tools{display:flex;width:100%;min-width:0;gap:4px;align-items:center}
+[data-device=mobile] .tl{flex:1 1 0;min-width:0;max-width:100%;gap:3px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+[data-device=mobile] .tl>*{flex:none}
+[data-device=mobile] .tl::-webkit-scrollbar{display:none}
+[data-device=mobile] .tl .ib.tool{width:38px;height:38px;min-width:38px;min-height:38px;flex:none}
+[data-device=mobile] .labeled-tool .tool-label{display:none!important}
+[data-device=mobile] .tb.think{height:38px;min-height:38px;padding-inline:9px;gap:5px;flex:none}
+[data-device=mobile] .tr{display:flex;flex:none;gap:4px;align-items:center;margin-left:0}
+[data-device=mobile] #send{width:40px;height:40px;min-width:40px;min-height:40px;flex:none}
+[data-device=mobile] #chips{display:flex;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden}
+[data-device=mobile] .chip{max-width:min(230px,calc(100vw - 76px));flex:none}
+[data-device=mobile] #toasts{bottom:calc(64px + env(safe-area-inset-bottom));max-width:calc(100% - 24px)}
+[data-device=mobile] #jumpLatest{bottom:8px}
+[data-device=mobile] .ov{top:var(--vv-offset-top,0px);bottom:auto;height:var(--app-h,100dvh);max-height:var(--app-h,100dvh);overflow:auto}
+[data-device=mobile] #ovSet,#ovAsk{padding:0}
+[data-device=mobile] #set{height:var(--app-h,100dvh);max-height:var(--app-h,100dvh);min-height:0;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+[data-device=mobile] #snav{min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+[data-device=mobile] #spanel{min-height:0;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+[data-device=mobile] .sm{width:100%;max-width:100%;max-height:calc(var(--app-h,100dvh) - env(safe-area-inset-top));overflow-y:auto;overscroll-behavior:contain;padding-bottom:calc(16px + env(safe-area-inset-bottom))}
+[data-device=mobile] input,[data-device=mobile] select,[data-device=mobile] textarea{font-size:16px}
+[data-device=mobile][data-keyboard=open] #composer{padding-top:3px;padding-bottom:max(4px,env(safe-area-inset-bottom))}
+[data-device=mobile][data-keyboard=open] #in{max-height:min(104px,calc(var(--app-h,100dvh)*.2));}
+[data-device=mobile][data-keyboard=open] .box{padding:5px 6px;border-radius:15px;gap:3px}
+[data-device=mobile][data-keyboard=open] .tl .ib.tool{width:36px;height:36px;min-width:36px;min-height:36px}
+[data-device=mobile][data-keyboard=open] .tb.think{height:36px;min-height:36px}
+[data-device=mobile][data-keyboard=open] #send{width:38px;height:38px;min-width:38px;min-height:38px}
+[data-device=mobile][data-keyboard=open] #err{margin-bottom:3px;padding-block:6px}
+[data-device=mobile][data-keyboard=open] #toasts{bottom:calc(54px + env(safe-area-inset-bottom))}
+@media (max-width:380px){
+  [data-device=mobile] .cards{grid-template-columns:1fr}
+  [data-device=mobile] #top{gap:2px;padding-inline:5px}
+  [data-device=mobile] #toggle,[data-device=mobile] #newTop{width:38px;height:38px;min-width:38px;min-height:38px}
+  [data-device=mobile] #tTemp{width:34px;min-width:34px}
+  [data-device=mobile] .col{padding-inline:10px}
+  [data-device=mobile] .box{padding-inline:5px}
+  [data-device=mobile] .tl .ib.tool{width:35px;height:35px;min-width:35px;min-height:35px}
+  [data-device=mobile] .tb.think{padding-inline:7px;font-size:.76rem}
+}
+@media (max-height:560px) and (pointer:coarse){
+  [data-device=mobile] #welcome{justify-content:flex-start;padding-top:10px;padding-bottom:12px}
+  [data-device=mobile] #welcome .mark{width:38px;height:38px;margin-bottom:7px}
+  [data-device=mobile] #welcome p{margin-bottom:10px}
+  [data-device=mobile] .cards{gap:6px}
+  [data-device=mobile] .cards .card{min-height:58px;padding:8px 10px}
+  [data-device=mobile] #in{max-height:88px}
+}
+@media (orientation:landscape) and (pointer:coarse){
+  [data-device=mobile] #welcome{justify-content:flex-start;padding-block:8px}
+  [data-device=mobile] #welcome .mark{width:34px;height:34px;margin-bottom:5px}
+  [data-device=mobile] #welcome p{margin:3px 0 8px}
+  [data-device=mobile] .cards{grid-template-columns:repeat(2,minmax(0,1fr));max-width:680px}
+  [data-device=mobile] .cards .card{min-height:54px;padding:7px 10px}
+}
+@media (prefers-reduced-motion:reduce){
+  [data-device=mobile] #side{transition:none}
+}
+
 </style>
 </head>
 <body>
@@ -953,49 +1051,138 @@ const set = (k, v) => { S[k] = v; save(); applySettings(); };
 matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => S.theme === "system" && applySettings());
 
 /* ===== 4. Adaptive device shell ===== */
-function detectDevice() {
-  const w = innerWidth, h = innerHeight, coarse = matchMedia("(pointer:coarse)").matches;
-  const d = w < 700 || (coarse && h < 500 && w < 950) ? "mobile" : w < 1100 ? "tablet" : "desktop";
-  const r = document.documentElement;
-  if (r.dataset.device !== d) { r.dataset.device = d; $("#app").classList.remove("open", "collapsed"); if ($("#ovSet").classList.contains("on")) renderSettings(); }
-  r.dataset.input = coarse || navigator.maxTouchPoints > 0 && !matchMedia("(hover:hover)").matches ? "touch" : "mouse";
-  const vv = window.visualViewport;
-  r.style.setProperty("--app-h", (vv ? vv.height : h) + "px");
-  r.style.setProperty("--vv-offset-top", (vv && d !== "desktop" ? vv.offsetTop : 0) + "px");
+function getOrientationKey() {
+  const type = window.screen && window.screen.orientation && window.screen.orientation.type;
+  if (type) return type.split("-")[0];
+  const sw = window.screen && window.screen.width || innerWidth;
+  const sh = window.screen && window.screen.height || innerHeight;
+  return sw >= sh ? "landscape" : "portrait";
 }
+function isEditableViewportTarget(node) {
+  if (!node) return false;
+  if (node === $("#in") || node === $("#sq") || node.tagName === "TEXTAREA") return true;
+  return node.tagName === "INPUT" && !["button", "checkbox", "color", "file", "range", "submit"].includes(node.type);
+}
+let stableViewportHeight = Math.max(
+  innerHeight,
+  document.documentElement.clientHeight,
+  window.visualViewport ? window.visualViewport.height : 0
+);
+let lastOrientationKey = getOrientationKey();
 let keyboardWasOpen = false, keyboardScrollSnapshot = 0, keyboardWasNearBottom = false, deviceSyncFrame = 0;
+
+function detectDevice(visibleHeight) {
+  const w = document.documentElement.clientWidth || innerWidth;
+  const coarse = matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints > 0;
+  const referenceHeight = Math.max(stableViewportHeight, innerHeight, document.documentElement.clientHeight);
+  const shortSide = Math.min(w, referenceHeight);
+  // A phone remains in the mobile layout when rotated to landscape, even if its width exceeds 700px.
+  const d = w < 700 || (coarse && shortSide < 700) ? "mobile" : w < 1100 ? "tablet" : "desktop";
+  const r = document.documentElement;
+  if (r.dataset.device !== d) {
+    r.dataset.device = d;
+    $("#app").classList.remove("open", "collapsed");
+    if ($("#ovSet").classList.contains("on")) renderSettings();
+  }
+  r.dataset.input = coarse ? "touch" : "mouse";
+  const vv = window.visualViewport;
+  const height = Math.max(1, Math.round(visibleHeight || (vv ? vv.height : innerHeight)));
+  r.style.setProperty("--app-h", height + "px");
+  r.style.setProperty("--vv-offset-top", vv && d !== "desktop" ? Math.max(0, Math.round(vv.offsetTop)) + "px" : "0px");
+  const app = $("#app");
+  const sidebarOpen = d === "desktop" ? !app.classList.contains("collapsed") : app.classList.contains("open");
+  $("#toggle").setAttribute("aria-expanded", String(sidebarOpen));
+}
+
 function scheduleDeviceViewportSync() {
   if (deviceSyncFrame) return;
   deviceSyncFrame = requestAnimationFrame(() => {
     deviceSyncFrame = 0;
     const vv = window.visualViewport;
     const active = document.activeElement;
-    const editorFocused = !!(active && (
-      active === $("#in") || active === $("#sq") ||
-      active.tagName === "TEXTAREA" ||
-      (active.tagName === "INPUT" && !["button", "checkbox", "color", "file", "range", "submit"].includes(active.type))
-    ));
+    const editorFocused = isEditableViewportTarget(active);
     const touchDevice = matchMedia("(pointer:coarse)").matches || navigator.maxTouchPoints > 0;
-    const keyboardOpen = !!(vv && touchDevice && editorFocused && window.innerHeight - vv.height > 120);
+    const currentOrientation = getOrientationKey();
+
+    if (currentOrientation !== lastOrientationKey) {
+      lastOrientationKey = currentOrientation;
+      stableViewportHeight = Math.max(
+        innerHeight,
+        document.documentElement.clientHeight,
+        vv ? vv.height : 0
+      );
+      keyboardWasOpen = false;
+    }
+
+    const visibleHeight = Math.max(1, vv ? vv.height : innerHeight);
+    const referenceHeight = Math.max(stableViewportHeight, innerHeight, document.documentElement.clientHeight);
+    const heightDrop = Math.max(0, referenceHeight - visibleHeight);
+    const keyboardThreshold = Math.max(100, referenceHeight * 0.16);
+    // Keep the keyboard state during its closing animation after the focused field blurs.
+    const keyboardOpen = !!(
+      touchDevice &&
+      heightDrop > keyboardThreshold &&
+      (editorFocused || (keyboardWasOpen && heightDrop > keyboardThreshold * 0.55))
+    );
+
     if (keyboardOpen && !keyboardWasOpen) {
       const sc = $("#scroll");
       keyboardScrollSnapshot = sc.scrollTop;
       keyboardWasNearBottom = sc.scrollHeight - sc.scrollTop - sc.clientHeight < 160;
     }
-    detectDevice();
-    if (!keyboardOpen && keyboardWasOpen) {
+
+    detectDevice(visibleHeight);
+    document.documentElement.dataset.keyboard = keyboardOpen ? "open" : "closed";
+    document.documentElement.style.setProperty(
+      "--keyboard-height",
+      (keyboardOpen ? heightDrop : 0) + "px"
+    );
+
+    if (keyboardOpen && keyboardWasNearBottom && S.autoScroll) {
       requestAnimationFrame(() => {
         const sc = $("#scroll");
-        if (keyboardWasNearBottom && S.autoScroll) sc.scrollTop = sc.scrollHeight;
-        else sc.scrollTop = Math.min(keyboardScrollSnapshot, Math.max(0, sc.scrollHeight - sc.clientHeight));
+        sc.scrollTop = sc.scrollHeight;
       });
     }
+
+    if (!keyboardOpen && keyboardWasOpen) {
+      stableViewportHeight = Math.max(
+        innerHeight,
+        document.documentElement.clientHeight,
+        vv ? vv.height : 0
+      );
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        const sc = $("#scroll");
+        if (keyboardWasNearBottom && S.autoScroll) {
+          sc.scrollTop = sc.scrollHeight;
+        } else {
+          sc.scrollTop = Math.min(
+            keyboardScrollSnapshot,
+            Math.max(0, sc.scrollHeight - sc.clientHeight)
+          );
+        }
+      }));
+    } else if (!keyboardOpen && !editorFocused) {
+      // Refresh the full-height baseline only while the software keyboard is closed.
+      stableViewportHeight = Math.max(
+        innerHeight,
+        document.documentElement.clientHeight,
+        vv ? vv.height : 0
+      );
+    }
+
     keyboardWasOpen = keyboardOpen;
   });
 }
-["resize", "orientationchange"].forEach(e => addEventListener(e, scheduleDeviceViewportSync, { passive: true }));
+
+["resize", "orientationchange"].forEach(eventName =>
+  addEventListener(eventName, scheduleDeviceViewportSync, { passive: true })
+);
 document.addEventListener("focusin", scheduleDeviceViewportSync, { passive: true });
 document.addEventListener("focusout", scheduleDeviceViewportSync, { passive: true });
+if (window.screen && window.screen.orientation && window.screen.orientation.addEventListener) {
+  window.screen.orientation.addEventListener("change", scheduleDeviceViewportSync, { passive: true });
+}
 if (window.visualViewport) {
   visualViewport.addEventListener("resize", scheduleDeviceViewportSync, { passive: true });
   visualViewport.addEventListener("scroll", scheduleDeviceViewportSync, { passive: true });
