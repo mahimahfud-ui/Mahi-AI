@@ -30,10 +30,10 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
 
-      - name: Install Supabase CLI
+      - name: Install pinned Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.2.0
 
       - name: Deploy mahi-ai-chat
         env:
@@ -45,4 +45,4 @@ jobs:
             echo "::error title=Missing Supabase deploy secret::Add the repository Actions secret SUPABASE_ACCESS_TOKEN before deploying."
             exit 1
           fi
-          supabase functions deploy mahi-ai-chat --project-ref husydmiujigyonlxbuuj
+          supabase functions deploy mahi-ai-chat --project-ref husydmiujigyonlxbuuj --yes
