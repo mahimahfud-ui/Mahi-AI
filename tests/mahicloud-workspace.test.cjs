@@ -7,8 +7,8 @@ const ui = fs.readFileSync(require.resolve("../public/workspace.js"), "utf8");
 const css = fs.readFileSync(require.resolve("../public/workspace.css"), "utf8");
 const edge = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat/index.ts"), "utf8");
 const workspace = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat/workspace.ts"), "utf8");
-const migration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141500_mahicloud_persistent_workspace_memory_tasks.sql"), "utf8");
-const controlMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141600_add_workspace_ai_index_control.sql"), "utf8");
+const migration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141108_mahicloud_persistent_workspace_memory_tasks.sql"), "utf8");
+const controlMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141320_add_workspace_ai_index_control.sql"), "utf8");
 
 test("MahiCloud exposes a persistent workspace from the sidebar and loads the editor assets", () => {
   assert.match(html, /id="openWorkspace"/);
