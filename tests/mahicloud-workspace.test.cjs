@@ -64,7 +64,7 @@ test("task continuity supports branches, checkpoints, event history and selected
   assert.match(edge, /workspaceService\.saveChatEvent/);
   assert.match(ui, /workspace_task_id: selected\.task_id/);
   assert.match(ui, /workspace_branch_id: selected\.branch_id/);
-  assert.match(html, /workspace_branch_id/);
+  assert.match(html, /MahiWorkspace\?\.getActiveTask/);
 });
 
 test("task and branch quotas can be managed by archiving without trapping the user", () => {
