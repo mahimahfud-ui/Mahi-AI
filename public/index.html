@@ -1044,6 +1044,40 @@ body{min-width:0}
 .task-mode-option.selected .task-mode-check{color:var(--ac);background:color-mix(in srgb,var(--ac) 13%,transparent)}
 @media(max-width:700px){.tb.task-mode-trigger{min-width:76px;padding-inline:9px;gap:5px}.tb.task-mode-trigger svg:first-child{width:15px;height:15px}}
 @media(prefers-reduced-motion:reduce){#taskModeMenu,.task-mode-option,.tb.task-mode-trigger .mode-chevron{animation:none!important;transition:none!important}}
+
+/* ===== Inline sandboxed code preview ===== */
+.code-h .code-tools{display:flex;align-items:center;gap:5px}
+.code-h button[data-run]{display:inline-flex;align-items:center;gap:5px;color:var(--ac);font:600 .75rem var(--font);padding:4px 9px;border-radius:7px;background:color-mix(in srgb,var(--ac) 10%,transparent)}
+.code-h button[data-run]:hover{background:color-mix(in srgb,var(--ac) 20%,transparent)}
+.code-h button[data-run] svg{width:14px;height:14px}
+#codePreview{position:fixed;inset:0;z-index:95;background:var(--bg);display:none;flex-direction:column}
+#codePreview.on{display:flex;animation:fi .18s}
+#codePreview .pv-head{height:54px;flex:none;display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--bd);background:var(--s1)}
+#codePreview .pv-title{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#codePreview .pv-status{font-size:.75rem;color:var(--tx3)}
+#codePreview .pv-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(260px, .85fr) minmax(0,1.15fr)}
+#codePreview .pv-code,#codePreview .pv-render{min-width:0;min-height:0;display:flex;flex-direction:column}
+#codePreview .pv-code{border-right:1px solid var(--bd);background:var(--s1)}
+#codePreview .pv-label{height:40px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 14px;border-bottom:1px solid var(--bd);font-size:.75rem;color:var(--tx2);letter-spacing:.04em;text-transform:uppercase}
+#codePreview .pv-source{flex:1;min-height:0;overflow:auto;padding:16px;font:.82rem/1.65 var(--mono);white-space:pre;tab-size:2;color:var(--tx)}
+#codePreview .pv-frame-wrap{flex:1;min-height:0;background:#fff}
+#codePreview iframe{display:block;width:100%;height:100%;border:0;background:#fff}
+#codePreview .pv-tabs{display:none;gap:6px}
+#codePreview .pv-tabs button{padding:6px 11px;border-radius:8px;font-size:.8rem;color:var(--tx2)}
+#codePreview .pv-tabs button.on{background:var(--s3);color:var(--tx)}
+#codePreview[data-mobile-view=code] .pv-code{display:flex}
+#codePreview[data-mobile-view=code] .pv-render{display:none}
+#codePreview[data-mobile-view=preview] .pv-code{display:none}
+#codePreview[data-mobile-view=preview] .pv-render{display:flex}
+@media(max-width:760px){
+ #codePreview .pv-head{padding:7px 9px;gap:6px}
+ #codePreview .pv-status{display:none}
+ #codePreview .pv-tabs{display:flex}
+ #codePreview .pv-body{display:flex}
+ #codePreview .pv-code,#codePreview .pv-render{width:100%;border:0}
+ #codePreview .pv-code{border-right:0}
+}
+@media(prefers-reduced-motion:reduce){#codePreview.on{animation:none}}
 </style>
 </head>
 <body>
@@ -1388,7 +1422,7 @@ async function copy(text) { try { await navigator.clipboard.writeText(text); toa
 /* safe markdown: everything is escaped first, only whitelisted tags are produced */
 function md(src) {
   const blocks = [];
-  src = String(src).replace(/```([\w+-]*)\n([\s\S]*?)(```|$)/g, (m, l, c) => { blocks.push('<div class="code"><div class="code-h"><span>' + esc(l || "code") + '</span><button type="button" data-copy>Copy</button></div><pre><code>' + esc(c.replace(/\n$/, "")) + "</code></pre></div>"); return "\n\u0000" + (blocks.length - 1) + "\u0000\n"; });
+  src = String(src).replace(/```([\w+-]*)\n([\s\S]*?)(```|$)/g, (m, l, c) => { const lang = String(l || "code").toLowerCase(); blocks.push('<div class="code" data-code-lang="' + esc(lang) + '"><div class="code-h"><span>' + esc(lang) + '</span><div class="code-tools"><button type="button" data-run aria-label="Run code in preview" title="Run in MahiCloud preview"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 12 7-12 7z"/></svg>Run</button><button type="button" data-copy>Copy</button></div></div><pre><code>' + esc(c.replace(/\n$/, "")) + "</code></pre></div>"); return "\n\u0000" + (blocks.length - 1) + "\u0000\n"; });
   const inl = s => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>")
     .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
   let out = "", list = null, para = [];
@@ -1673,7 +1707,53 @@ function decorate(n, m, i) {
   n.append(a); if (m.created_at || m.local) n.append(el("div", "ts", fmtTime(m.created_at || m.local)));
 }
 function renderAll() { MAIN.replaceChildren(); msgs.forEach((m, i) => addMsg(m, i)); }
-MAIN.addEventListener("click", e => { const b = e.target.closest("[data-copy]"); if (b) { copy(b.closest(".code").querySelector("code").textContent); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1200); } });
+MAIN.addEventListener("click", e => {
+  const run = e.target.closest("[data-run]");
+  if (run) { const box = run.closest(".code"); if (box) openCodePreview(box); return; }
+  const b = e.target.closest("[data-copy]");
+  if (b) { copy(b.closest(".code").querySelector("code").textContent); b.textContent = "Copied"; setTimeout(() => b.textContent = "Copy", 1200); }
+});
+function previewDocument(language, source) {
+  const lang = language.toLowerCase().replace(/^language-/, "");
+  const escScript = value => value.replace(/<\\/script/gi, "<\\\\/script");
+  const shell = body => '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'; img-src data: blob: https:; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; font-src data: https:; connect-src \'none\'; form-action \'none\'; base-uri \'none\';"><style>html,body{min-height:100%;margin:0}body{font:15px system-ui,sans-serif;padding:16px;box-sizing:border-box}</style></head><body>' + body + '</body></html>';
+  if (["html","htm","xhtml"].includes(lang) || /^\\s*(<!doctype|<html[\\s>])/i.test(source)) return source;
+  if (["css","scss","less"].includes(lang)) {
+    if (lang !== "css") return null;
+    return shell('<style>' + source.replace(/<\\/style/gi, "<\\\\/style") + '</style><main><h2>CSS live preview</h2><p>Your stylesheet is applied to this preview page.</p><button>Example button</button><article>Sample content</article></main>');
+  }
+  if (["js","javascript","mjs"].includes(lang)) {
+    return shell('<main id="app"><h2>JavaScript preview</h2><p>Output and console messages appear below.</p><div id="output"></div><pre id="console" style="white-space:pre-wrap;background:#111;color:#d7f7df;padding:12px;border-radius:8px;min-height:48px"></pre></main><script>const out=document.getElementById("output"),log=document.getElementById("console");["log","info","warn","error"].forEach(k=>{const old=console[k];console[k]=(...a)=>{log.textContent+=(k.toUpperCase()+": "+a.map(x=>{try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(_){return String(x)}}).join(" ")+"\\n");old.apply(console,a)}});try{\\n' + escScript(source) + '\\n}catch(e){log.textContent+="ERROR: "+e.message}</script>');
+  }
+  return null;
+}
+function openCodePreview(box) {
+  const code = box.querySelector("pre code");
+  if (!code) return;
+  const language = box.dataset.codeLang || "code";
+  const source = code.textContent || "";
+  const doc = previewDocument(language, source);
+  const supported = !!doc;
+  const modal = $("#codePreview");
+  modal.dataset.mobileView = "preview";
+  $("#pvCode").textContent = source;
+  $("#pvTitle").textContent = language.toUpperCase() + " preview";
+  $("#pvStatus").textContent = supported ? "Sandboxed preview · network access blocked" : "Preview unavailable for this language";
+  $("#pvTabs").querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.pvTab === "preview"));
+  $("#pvSource").hidden = !supported;
+  $("#pvUnsupported").hidden = supported;
+  $("#pvUnsupported").textContent = "MahiCloud can copy this code, but browser preview is not available for " + language.toUpperCase() + ". Native live preview currently supports HTML, CSS and JavaScript.";
+  if (supported) $("#pvFrame").srcdoc = doc;
+  else $("#pvFrame").srcdoc = '<!doctype html><html><body style="font:14px system-ui;padding:24px;color:#333"><h3>Preview not supported</h3><p>This language needs its own runtime or build tool.</p></body></html>';
+  modal.classList.add("on");
+  $("#pvClose").focus();
+}
+function closeCodePreview() { const modal = $("#codePreview"); if (!modal) return; modal.classList.remove("on"); $("#pvFrame").srcdoc = "about:blank"; }
+$("#pvClose").addEventListener("click", closeCodePreview);
+$("#codePreview").addEventListener("click", e => { if (e.target.id === "codePreview") closeCodePreview(); });
+$("#pvRefresh").addEventListener("click", () => { const frame = $("#pvFrame"); const doc = frame.srcdoc; frame.srcdoc = doc; });
+$("#pvTabs").addEventListener("click", e => { const b = e.target.closest("[data-pv-tab]"); if (!b) return; $("#codePreview").dataset.mobileView = b.dataset.pvTab; $("#pvTabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#codePreview").classList.contains("on")) closeCodePreview(); });
 
 function setBusy(v) {
   busy = v; const s = $("#send"); s.type = v ? "button" : "submit";
@@ -2377,5 +2457,10 @@ addEventListener("offline", () => toast("You’re offline"));
   if (ok && S.startup === "last" && convs.length) openConv(convs[0].id);
 })();
 </script>
+
+<div id="codePreview" aria-label="Code preview" role="dialog" aria-modal="true" aria-labelledby="pvTitle" data-mobile-view="preview">
+  <div class="pv-head"><div class="pv-title" id="pvTitle">Code preview</div><div class="pv-status" id="pvStatus"></div><div class="pv-tabs" id="pvTabs"><button type="button" data-pv-tab="code">Code</button><button type="button" class="on" data-pv-tab="preview">Preview</button></div><button class="ib" id="pvRefresh" type="button" aria-label="Refresh preview" title="Refresh preview">↻</button><button class="ib" id="pvClose" type="button" aria-label="Close preview" title="Close preview">✕</button></div>
+  <div class="pv-body"><section class="pv-code" id="pvSource"><div class="pv-label">Source code</div><pre class="pv-source" id="pvCode"></pre></section><section class="pv-render"><div class="pv-label">Live browser preview <span id="pvUnsupported" hidden></span></div><div class="pv-frame-wrap"><iframe id="pvFrame" title="Sandboxed code preview" sandbox="allow-scripts" referrerpolicy="no-referrer" src="about:blank"></iframe></div></section></div>
+</div>
 </body>
 </html>
