@@ -1,4 +1,3 @@
-import type { UserMemoryContext } from "./workspace-types.ts";
 
 export type RestFn = (path: string, init?: RequestInit) => Promise<Response>;
 export type JsonFn = (status: number, body: Record<string, unknown>, headers: Record<string, string>) => Response;
@@ -37,16 +36,16 @@ export function workspaceMimeType(path: string): string {
 }
 
 export function workspaceLooksSensitive(path: string, content: string): boolean {
-  if (/(^|\\/)\\.env(?:\\.|$)|(^|\\/)(?:id_rsa|id_ed25519|credentials?|secrets?)(?:\\.|$)/i.test(path)) return true;
-  return /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|sb_secret_[A-Za-z0-9_-]{12,}|service[_ -]?role[_ -]?key\\s*[:=]|(?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token)\\s*[:=]\\s*["']?[A-Za-z0-9._-]{16,}/i.test(content);
+  if (/(^|\/)\.env(?:\.|$)|(^|\/)(?:id_rsa|id_ed25519|credentials?|secrets?)(?:\.|$)/i.test(path)) return true;
+  return /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|sb_secret_[A-Za-z0-9_-]{12,}|service[_ -]?role[_ -]?key\s*[:=]|(?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token)\s*[:=]\s*["']?[A-Za-z0-9._-]{16,}/i.test(content);
 }
 
 export function parseWorkspaceFileIntent(prompt: string): WorkspaceFileIntent | null {
-  const command = prompt.trim().match(/^(?:please\\s+)?(create|write|save|update|edit|replace|delete|remove)\\b/i);
+  const command = prompt.trim().match(/^(?:please\s+)?(create|write|save|update|edit|replace|delete|remove)\b/i);
   if (!command) return null;
-  const phrase = prompt.match(/\\bworkspace\\s+file\\s+(?:(?:named|called)\\s+)?(?:[`"'“”]([^`"'“”]{1,240})[`"'“”]|([^\\s`"'“”]{1,240}))/i);
+  const phrase = prompt.match(/\bworkspace\s+file\s+(?:(?:named|called)\s+)?([^\s]{1,240})/i);
   if (!phrase) return null;
-  const rawPath = (phrase[1] || phrase[2] || "").replace(/[.,;:!?]+$/, "");
+  const rawPath = (phrase[1] || "").replace(/^["']|["']$/g, "").replace(/[.,;:!?]+$/, "");
   const path = normalizeWorkspacePath(rawPath);
   return { action: /^(?:delete|remove)$/i.test(command[1]) ? "delete" : "write", path };
 }
@@ -121,7 +120,7 @@ export function createWorkspaceService(
 
   function tags(value: unknown): string[] {
     if (!Array.isArray(value)) return [];
-    const normalized = value.map((item) => String(item).replace(/[\u0000-\u001f]/g, "").trim().replace(/\\s+/g, " ").slice(0, 32)).filter(Boolean);
+    const normalized = value.map((item) => String(item).replace(/[\u0000-\u001f]/g, "").trim().replace(/\s+/g, " ").slice(0, 32)).filter(Boolean);
     return [...new Map(normalized.map((tag) => [tag.toLowerCase(), tag])).values()].slice(0, 12);
   }
 
