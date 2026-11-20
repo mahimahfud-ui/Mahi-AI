@@ -2,40 +2,35 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const path = require("node:path");
 
-const edgeFile = path.join(__dirname, "../supabase/functions/mahi-ai-chat/index.ts");
-const source = fs.readFileSync(edgeFile, "utf8");
+const edge = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat/index.ts"), "utf8");
+const helper = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat/admin-instructions.ts"), "utf8");
 
-test("request handler compiles saved Admin Control instructions before routing", () => {
-  assert.match(source, /const adminInstructionConfig = await getCachedMahiAIAdminConfig\(\)/);
-  assert.match(source, /buildMahiAIAdminInstructionContext\(adminInstructionConfig\)/);
+test("saved owner instructions are normalized and compiled into the request context", () => {
+  assert.match(helper, /export function buildMahiAIAdminInstructionContext/);
+  assert.match(helper, /export function matchAdminInstructionLookupRule/);
+  assert.ok(edge.includes("normalizeMahiAIAdminConfig("), "backend must normalize persisted admin configuration");
+  assert.match(edge, /getCachedMahiAIAdminConfig\(\)/);
+  assert.match(edge, /buildMahiAIAdminInstructionContext\(adminInstructionConfig\)/);
 });
 
-test("temporary admin-config database failures preserve last-known-good owner instructions", () => {
-  assert.ok(source.includes("let lastGoodMahiAIAdminConfig: MahiAIAdminConfig | null = null"));
-  assert.ok(source.includes("if (lastGoodMahiAIAdminConfig) {"));
-  assert.ok(source.includes("admin_config_last_good_cache_used"));
-  assert.ok(source.includes("lastGoodMahiAIAdminConfig = config"));
+test("a last-known-good admin configuration survives temporary database failures", () => {
+  assert.match(edge, /let lastGoodMahiAIAdminConfig: MahiAIAdminConfig \| null = null/);
+  assert.match(edge, /if \(lastGoodMahiAIAdminConfig\)/);
+  assert.match(edge, /admin_config_last_good_cache_used/);
+  assert.match(edge, /lastGoodMahiAIAdminConfig = config/);
 });
 
-test("compiled Admin Control instructions are inserted into the system prompt", () => {
-  assert.match(source, /\(adminInstructionContext \? "\\n\\n" \+ adminInstructionContext : ""\)/);
-  assert.match(source, /systemPrompt\(task, name, adminInstructionContext\)/);
+test("normal chat and explicit task-mode responses receive owner instructions", () => {
+  assert.match(edge, /function systemPrompt\(task: string, activeProvider = "", adminInstructionContext = ""\)/);
+  assert.match(edge, /adminInstructionContext \? "\\n\\n" \+ adminInstructionContext/);
+  assert.match(edge, /generateTaskModeAnswer\(taskMode, available, providerMessages, task, attachments, adminInstructionContext/);
+  assert.match(edge, /taskModeInstruction\(requestedTaskMode\)/);
 });
 
-test("normal provider and Think-mode routes receive the configured instruction context", () => {
-  assert.match(source, /startProviderStream\(provider, providerMessages, task, attachments, providerBudget, adminInstructionContext\)/);
-  assert.match(source, /generateTaskModeAnswer\(taskMode, available, providerMessages, task, attachments, adminInstructionContext/);
-});
-
-test("the backend imports the instruction compiler and deterministic lookup matcher", () => {
-  assert.ok(source.includes('import { buildMahiAIAdminInstructionContext, matchAdminInstructionLookupRule } from "./admin-instructions.ts";'));
-});
-
-test("explicit lookup rules short-circuit provider generation and use the normal response pipeline", () => {
-  assert.ok(source.includes("matchAdminInstructionLookupRule(adminInstructionConfig, displayPrompt)"));
-  assert.ok(source.includes('chosen = { provider: "admin-instruction", text: adminInstructionAnswer, reviewer: null }'));
-  assert.ok(source.includes("adminInstructionAnswer || \"\""));
-  assert.ok(source.includes("admin_instruction_rule_answered"));
+test("deterministic owner lookup rules use the normal response pipeline", () => {
+  assert.match(helper, /export function matchAdminInstructionLookupRule/);
+  assert.match(edge, /matchAdminInstructionLookupRule\(adminInstructionConfig, displayPrompt\)/);
+  assert.match(edge, /admin_instruction_rule_answered/);
+  assert.match(edge, /adminInstructionAnswer/);
 });

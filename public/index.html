@@ -928,7 +928,7 @@ body{min-width:0}
 .account-action{width:100%;min-height:42px}
 .account-note{margin:0!important;padding:0 2px;color:var(--tx2);font-size:.78rem;line-height:1.5}
 .account-footer{width:100%;justify-content:space-between;align-items:center;margin-top:2px}
-#accountSignOut[hidden],#googleLink[hidden],#googleExisting[hidden]{display:none}
+#accountSignOut[hidden],#googleLink[hidden],#googleExisting[hidden],#continueAsGuest[hidden]{display:none}
 @media(max-width:700px){
   #ovAccount{padding:12px}
   .account-dlg{width:min(440px,100%);padding:19px}
@@ -1158,6 +1158,7 @@ body{min-width:0}
   <div class="account-identity"><span id="accountIdentity">Checking account…</span><span id="accountBadge" class="account-badge">Guest</span></div>
   <button type="button" class="btn pri account-action" id="googleLink">Continue with Google</button>
   <button type="button" class="btn account-action" id="googleExisting">Sign in to an existing Google account</button>
+  <button type="button" class="btn account-action" id="continueAsGuest" hidden>Continue as guest</button>
   <p class="account-note" id="accountNote">Link Google to this guest workspace to preserve its existing chat history and memory.</p>
   <div class="row-e account-footer"><button type="button" class="btn dng" id="accountSignOut" hidden>Sign out</button><button type="button" class="btn" id="accountClose">Close</button></div>
 </div></div>
@@ -1172,18 +1173,74 @@ const CFG = Object.assign({
 }, window.MAHI_AI_CONFIG || {});
 const SESSION_KEY = "sb-" + new URL(CFG.supabaseUrl).hostname.split(".")[0] + "-auth-token"; // same key supabase-js uses
 const baseHeaders = { apikey: CFG.supabasePublishableKey, "Content-Type": "application/json" };
+const GOOGLE_AUTH_PENDING_KEY = "mahicloud.google-auth-pending";
+let authRecoveryRequired = false;
+function markGoogleAuthPending(mode) {
+  try {
+    sessionStorage.setItem(GOOGLE_AUTH_PENDING_KEY, JSON.stringify({ mode, startedAt: Date.now() }));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+function clearGoogleAuthPending() {
+  try { sessionStorage.removeItem(GOOGLE_AUTH_PENDING_KEY); } catch (_) {}
+}
+function readGoogleAuthPending() {
+  try {
+    const raw = sessionStorage.getItem(GOOGLE_AUTH_PENDING_KEY);
+    if (!raw) return null;
+    const state = JSON.parse(raw);
+    const age = Date.now() - Number(state?.startedAt || 0);
+    if (!state || !["link", "signin"].includes(state.mode) || !Number.isFinite(age) || age < 0 || age > 15 * 60 * 1000) {
+      clearGoogleAuthPending();
+      return null;
+    }
+    return state;
+  } catch (_) {
+    clearGoogleAuthPending();
+    return null;
+  }
+}
 const Api = {
   sess: null,
+  async createGuestSession() {
+    const now = Date.now() / 1000;
+    const response = await fetch(CFG.supabaseUrl + "/auth/v1/signup", {
+      method: "POST",
+      headers: baseHeaders,
+      body: JSON.stringify({ data: {} })
+    });
+    if (!response.ok) throw new Error("Could not start a guest session. Enable anonymous sign-ins in Supabase and try again.");
+    const session = await response.json();
+    if (!session?.access_token || !session?.user?.id) throw new Error("Supabase did not return a valid guest session.");
+    session.expires_at = session.expires_at || Math.floor(now) + (session.expires_in || 3600);
+    try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (_) {}
+    return (this.sess = session);
+  },
   async ensure() {
+    if (authRecoveryRequired) throw new Error("Google sign-in did not complete. Choose a sign-in option or explicitly continue as a guest.");
     let s = this.sess;
-    if (!s) { try { s = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (_) { s = null; } }
+    if (!s) {
+      let raw = "";
+      try { raw = localStorage.getItem(SESSION_KEY) || ""; } catch (_) {}
+      if (raw) {
+        try { s = JSON.parse(raw); }
+        catch (_) { throw new Error("Your saved MahiCloud session is unreadable. Sign in again before starting a new guest workspace."); }
+      }
+    }
     const now = Date.now() / 1000;
     if (s && s.access_token && (s.expires_at || 0) > now + 60) return (this.sess = s);
-    let r;
-    if (s && s.refresh_token) r = await fetch(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", { method: "POST", headers: baseHeaders, body: JSON.stringify({ refresh_token: s.refresh_token }) });
-    if (!r || !r.ok) r = await fetch(CFG.supabaseUrl + "/auth/v1/signup", { method: "POST", headers: baseHeaders, body: JSON.stringify({ data: {} }) }); // anonymous guest session
-    if (!r.ok) throw new Error("auth");
-    s = await r.json();
+    if (!s) return this.createGuestSession();
+    if (!s.refresh_token) throw new Error("Your saved MahiCloud session is incomplete. Sign in again; it was not replaced with a new guest session.");
+    const response = await fetch(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", {
+      method: "POST",
+      headers: baseHeaders,
+      body: JSON.stringify({ refresh_token: s.refresh_token })
+    });
+    if (!response.ok) throw new Error("Your saved MahiCloud session could not be refreshed. Sign in with Google again; it was not replaced with a new guest session.");
+    s = await response.json();
+    if (!s?.access_token || !s?.user?.id) throw new Error("Supabase returned an invalid refreshed session.");
     s.expires_at = s.expires_at || Math.floor(now) + (s.expires_in || 3600);
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (_) {}
     return (this.sess = s);
@@ -1284,6 +1341,15 @@ function googleAuthError(error) {
   if (/popup|blocked/i.test(message)) return "The browser blocked the Google sign-in window. Allow redirects/pop-ups for this site and try again.";
   return message.slice(0, 260) || "Google sign-in could not be started. Please try again.";
 }
+function showGoogleAuthRecovery() {
+  clearGoogleAuthPending();
+  authRecoveryRequired = true;
+  if ($("#who")) $("#who").textContent = "Sign-in not completed";
+  renderAccountUI();
+  $("#continueAsGuest").hidden = false;
+  $("#ovAccount").classList.add("on");
+  showErr("Google sign-in did not complete. No account was created or linked. Retry Google sign-in, or explicitly continue as a guest.");
+}
 
 function currentAuthUser() {
   return Api.sess && Api.sess.user && typeof Api.sess.user === "object" ? Api.sess.user : null;
@@ -1327,7 +1393,14 @@ function renderAccountUI() {
     : (linked
         ? "Google is connected. Sign in with this same Google account on another device to access this account's conversations."
         : "This account is permanent, but Google is not linked yet. Link Google to make sign-in easier across devices.");
-  if ($("#who")) $("#who").textContent = guest ? "Guest workspace" : (email || name);
+  if ($("#who")) $("#who").textContent = authRecoveryRequired ? "Sign-in not completed" : (guest ? "Guest workspace" : (email || name));
+  const guestFallback = $("#continueAsGuest");
+  if (guestFallback) guestFallback.hidden = !authRecoveryRequired;
+  if (authRecoveryRequired) {
+    $("#accountHeading").textContent = "Google sign-in not completed";
+    $("#accountSubheading").textContent = "No account was created or linked.";
+    $("#accountNote").textContent = "Your previous workspace was not silently replaced. Retry Google sign-in, or explicitly return to guest mode.";
+  }
 }
 
 function accountRedirectUrl() {
@@ -1337,6 +1410,8 @@ async function startGoogleIdentityLink() {
   const button = $("#googleLink");
   button.disabled = true;
   button.textContent = "Connecting…";
+  const previousRecoveryRequired = authRecoveryRequired;
+  authRecoveryRequired = false;
   try {
     await Api.ensure();
     const client = await getSupabaseAuthClient();
@@ -1352,8 +1427,11 @@ async function startGoogleIdentityLink() {
     });
     if (error) throw error;
     if (!data?.url) throw new Error("Supabase did not return a Google authorization URL.");
+    if (!markGoogleAuthPending("link")) throw new Error("This browser could not preserve the secure sign-in state. Enable session storage and try again.");
     window.location.assign(data.url);
   } catch (error) {
+    clearGoogleAuthPending();
+    authRecoveryRequired = previousRecoveryRequired;
     toast(googleAuthError(error));
     button.disabled = false;
     renderAccountUI();
@@ -1381,8 +1459,10 @@ async function startGoogleExistingAccountSignIn() {
     });
     if (error) throw error;
     if (!data?.url) throw new Error("Supabase did not return a Google authorization URL.");
+    if (!markGoogleAuthPending("signin")) throw new Error("This browser could not preserve the secure sign-in state. Enable session storage and try again.");
     window.location.assign(data.url);
   } catch (error) {
+    clearGoogleAuthPending();
     toast(googleAuthError(error));
     button.disabled = false;
     renderAccountUI();
@@ -2415,6 +2495,44 @@ $("#ovAccount").addEventListener("pointerdown", e => {
 });
 $("#googleLink").onclick = startGoogleIdentityLink;
 $("#googleExisting").onclick = startGoogleExistingAccountSignIn;
+$("#continueAsGuest").onclick = async () => {
+  const button = $("#continueAsGuest");
+  button.disabled = true;
+  authRecoveryRequired = false;
+  try {
+    let session;
+    try {
+      session = await Api.ensure();
+    } catch (error) {
+      const recoverable = /saved MahiCloud session could not be refreshed|saved MahiCloud session is incomplete|saved MahiCloud session is unreadable/i.test(String(error?.message || error));
+      if (!recoverable) throw error;
+      const confirmed = await ask({
+        title: "Start a new guest workspace?",
+        text: "The saved session could not be restored. A new guest workspace gets a new user ID; previous guest conversations and attachments remain tied to the old session and will not appear here.",
+        ok: "Start new guest workspace",
+        danger: true
+      });
+      if (!confirmed) throw error;
+      Api.sess = null;
+      try { localStorage.removeItem(SESSION_KEY); } catch (_) {}
+      session = await Api.createGuestSession();
+    }
+    if (!session?.user?.id || !session?.access_token) throw new Error("The guest session could not be verified.");
+    clearGoogleAuthPending();
+    button.hidden = true;
+    $("#ovAccount").classList.remove("on");
+    renderAccountUI();
+    hideErr();
+    const loaded = await loadList();
+    if (loaded && S.startup === "last" && convs.length) openConv(convs[0].id);
+  } catch (error) {
+    authRecoveryRequired = true;
+    renderAccountUI();
+    toast(googleAuthError(error));
+  } finally {
+    button.disabled = false;
+  }
+};
 $("#accountSignOut").onclick = signOutGoogleAccount;
 $("#sq").addEventListener("input", renderSettings); $("#sback").onclick = () => { mobileSettingsDetail = false; $("#sq").value = ""; renderSettings(); $("#snav").scrollTop = 0; }; $("#sx").onclick = closeSettings; $("#openSet").onclick = openSettings;
 $("#ovSet").addEventListener("pointerdown", e => { if (e.target.id === "ovSet") closeSettings(); });
@@ -2450,10 +2568,42 @@ addEventListener("offline", () => toast("You’re offline"));
 (async function boot() {
   applySettings(); detectDevice(); greet(); setBusy(false); view(false);
   if (!CFG.supabaseUrl || !CFG.supabasePublishableKey) { $("#who").textContent = "Configuration missing"; showErr("MahiCloud is missing its public Supabase configuration (window.MAHI_AI_CONFIG)."); $("#in").disabled = true; return; }
-  // Supabase JS processes the PKCE callback first, then the existing app adapter reads the saved session.
-  try { const auth = await getSupabaseAuthClient(); const result = await auth.auth.getSession(); if (result.data?.session) Api.sess = result.data.session; }
-  catch (_) { /* guest chat remains available if the optional OAuth SDK CDN is unreachable */ }
-  try { await Api.ensure(); } catch (_) { $("#who").textContent = "Setup required"; showErr("Could not start a guest session. Enable anonymous sign-ins in Supabase and check allowed origins.", () => location.reload()); return; }
+  const pendingGoogleFlow = readGoogleAuthPending();
+  if (pendingGoogleFlow) {
+    try {
+      const auth = await getSupabaseAuthClient();
+      const { data, error } = await auth.auth.getSession();
+      if (error) throw error;
+      const session = data.session;
+      if (!session?.user || !isGoogleIdentity(session.user)) throw new Error("Google identity was not returned after the redirect.");
+      Api.sess = session;
+      clearGoogleAuthPending();
+      authRecoveryRequired = false;
+    } catch (_) {
+      showGoogleAuthRecovery();
+      return;
+    }
+  } else {
+    // Supabase JS processes normal PKCE callbacks before the app adapter reads its session.
+    try {
+      const auth = await getSupabaseAuthClient();
+      const result = await auth.auth.getSession();
+      if (result.data?.session) Api.sess = result.data.session;
+    } catch (_) { /* a first-time visitor can still start an anonymous guest session */ }
+  }
+  try { await Api.ensure(); }
+  catch (_) {
+    let savedSessionPresent = false;
+    try { savedSessionPresent = !!localStorage.getItem(SESSION_KEY); } catch (_) {}
+    if (pendingGoogleFlow || savedSessionPresent) {
+      showGoogleAuthRecovery();
+    } else {
+      $("#who").textContent = "Setup required";
+      showErr("Could not start a guest session. Enable anonymous sign-ins in Supabase and check the site's allowed origins.");
+    }
+    $("#in").disabled = true;
+    return;
+  }
   try { const auth = await getSupabaseAuthClient(); await syncSupabaseAuthSession(auth); }
   catch (_) { /* Google sign-in will explain if the Auth SDK could not load */ }
   renderAccountUI();
