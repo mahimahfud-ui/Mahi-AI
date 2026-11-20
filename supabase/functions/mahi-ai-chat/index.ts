@@ -3466,7 +3466,16 @@ Deno.serve(async (req: Request) => {
     return json(400, { error: "Invalid request." }, responseCors);
   }
   if (input && typeof input.admin_action === "string") return await handleMahiAIAdminAction(input.admin_action, input, user, req, responseCors);
-  if (input && typeof input.workspace_action === "string") return await workspaceService.action(input.workspace_action, input, user.id, responseCors);
+  if (input && typeof input.workspace_action === "string") {
+    const workspaceAccess = await getCachedMahiAIAdminConfig();
+    if (workspaceAccess.blockedUsers?.includes(user.id)) {
+      return json(403, { error: "Your access to MahiCloud has been disabled by the owner." }, responseCors);
+    }
+    if (workspaceAccess.maintenance?.enabled) {
+      return json(503, { error: workspaceAccess.maintenance.message || "MahiCloud is under maintenance. Please try again soon." }, responseCors);
+    }
+    return await workspaceService.action(input.workspace_action, input, user.id, responseCors);
+  }
 
   const temporaryChat = input?.temporary_chat === true;
   const selectedModel = typeof input?.selected_model === "string" && Object.prototype.hasOwnProperty.call(PUBLIC_MODEL_PROVIDERS, input.selected_model)
