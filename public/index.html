@@ -2173,6 +2173,14 @@ async function send(text, edit) {
   hideErr(); const prev = msgs.slice(), prevCid = cid; lastText = text; edit = edit || pend; pend = null;
   const files = edit ? [] : pendingFiles.slice(), taskMode = TASK_MODES.some(mode => mode.id === S.taskMode) ? S.taskMode : "auto"; let refs = [];
   if (rec) { const r = rec; r.onresult = null; r.abort(); rec = null; setRec(false); }
+  if (voiceModeRecognition) {
+    const activeRecognition = voiceModeRecognition;
+    voiceModeRecognition = null;
+    activeRecognition.onresult = null;
+    activeRecognition.onend = null;
+    activeRecognition.onerror = null;
+    try { activeRecognition.abort(); } catch (_) {}
+  }
   pendingFiles = []; renderChips();
   if (edit) { msgs = msgs.slice(0, edit.index); renderAll(); }
   view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), taskMode }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
