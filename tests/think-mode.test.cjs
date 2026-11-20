@@ -24,6 +24,7 @@ test("backend validates task modes and preserves compatibility with legacy Think
   assert.match(edge, /input\?\.think_mode === true/);
   assert.match(edge, /taskModeInstruction\(requestedTaskMode\)/);
   assert.match(edge, /const explicitTaskMap/);
+  assert.match(edge, /requestedTaskMode === "math" && shouldUseCodeExecution\(displayPrompt\)/);
 });
 
 test("every explicitly selected mode sends work to all available providers in parallel and synthesizes results", () => {
