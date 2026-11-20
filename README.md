@@ -11,8 +11,10 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 - **Answer Lab:** inspect any assistant answer with current-source claim verification, red-team challenge, decision maps with assumption sensitivity, execution plans, and adaptive teach-back. Save selected insights through the existing per-user memory controls.
 - **Mahi Capsules:** export a conversation as a portable `.mahi-capsule` file and resume it on another device as a new project context. Imports are schema/size validated and require confirmation; exports require a privacy confirmation because they contain conversation text.
 - Temporary chats stay out of saved conversation history and long-term memory; they remain only in the open browser session until you leave or start another chat.
-- Prompt Library: searchable built-in starter prompts plus up to 100 custom prompts with categories, favorites, editing, deletion, copy, and one-click insertion. Custom prompts are stored locally in the current browser, not synced to the account.
+- Prompt Library: searchable built-in starter prompts plus up to 100 active custom prompts with categories, favorites, editing, deletion, copy, and one-click insertion. Custom prompts sync across devices after Google sign-in; guest prompts stay local. Sync uses a per-user RLS-protected table and soft-delete timestamps so deletions propagate safely.
 - Draft recovery: unsent composer text is saved per conversation in the current browser tab for up to 24 hours and restored when revisiting that chat. Temporary chats and attachments are not persisted; reattach files after restoring a text draft.
+- Chat folders and tags: group conversations by a user-named folder, filter the sidebar by folder, and add up to 8 tags per conversation. Folder/tag metadata is stored with the conversation and follows the signed-in account across devices.
+- Voice Conversation Mode: hands-free browser speech recognition sends the spoken turn and reads the assistant reply aloud, then listens again. It requires microphone permission plus browser SpeechRecognition and SpeechSynthesis support; press Talk again or Esc to stop.
 
 ## Google sign-in and account persistence
 
