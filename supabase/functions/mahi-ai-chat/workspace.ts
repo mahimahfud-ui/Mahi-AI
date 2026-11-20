@@ -186,8 +186,8 @@ export function createWorkspaceService(
         const [files, memories, tasks, branches, settings] = await Promise.all([
           rows("mahi_ai_workspace_files?select=id,path,mime_type,index_for_ai,revision,created_at,updated_at&user_id=" + eq(userId) + "&deleted_at=is.null&order=updated_at.desc&limit=200"),
           rows("mahi_ai_memory_entries?select=id,memory_key,category,title,content,data,tags,confidence,source_kind,is_archived,revision,created_at,updated_at&user_id=" + eq(userId) + "&deleted_at=is.null&order=updated_at.desc&limit=200"),
-          rows("mahi_ai_tasks?select=id,title,objective,status,created_at,updated_at&user_id=" + eq(userId) + "&order=updated_at.desc&limit=100"),
-          rows("mahi_ai_task_branches?select=id,task_id,name,parent_branch_id,state,summary,status,revision,created_at,updated_at&user_id=" + eq(userId) + "&order=created_at.asc&limit=300"),
+          rows("mahi_ai_tasks?select=id,title,objective,status,created_at,updated_at&user_id=" + eq(userId) + "&order=updated_at.desc&limit=25"),
+          rows("mahi_ai_task_branches?select=id,task_id,name,parent_branch_id,state,summary,status,revision,created_at,updated_at&user_id=" + eq(userId) + "&order=created_at.asc&limit=125"),
           rows("mahi_ai_user_memory_settings?select=enabled&user_id=" + eq(userId) + "&limit=1")
         ]);
         return json(200, { files: files || [], memories: memories || [], tasks: tasks || [], branches: branches || [], memory_enabled: Array.isArray(settings) && settings.length ? settings[0].enabled !== false : true }, headers);
@@ -260,6 +260,8 @@ export function createWorkspaceService(
         const title = typeof input.title === "string" ? input.title.trim().slice(0, 160) : "";
         const objective = typeof input.objective === "string" ? input.objective.trim().slice(0, 6000) : "";
         if (!title) return json(400, { error: "Task title is required." }, headers);
+        const existingTasks = await rows("mahi_ai_tasks?select=id&user_id=" + eq(userId) + "&status=neq.archived&limit=26");
+        if (!Array.isArray(existingTasks) || existingTasks.length >= 25) throw new Error("Task limit reached (25 active tasks). Archive completed tasks before creating another.");
         const made = await rows("mahi_ai_tasks?select=id,title,objective,status,created_at,updated_at", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ user_id: userId, title, objective, status: "active" }) });
         if (!Array.isArray(made) || !made.length) throw new Error("Task could not be created.");
         const task = made[0];
@@ -290,9 +292,11 @@ export function createWorkspaceService(
         if (!UUID.test(taskId) || !UUID.test(parentId) || !name) return json(400, { error: "Task, source branch and branch name are required." }, headers);
         const parent = await rows("mahi_ai_task_branches?select=id,task_id,state,summary&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&id=" + eq(parentId) + "&limit=1");
         if (!Array.isArray(parent) || !parent.length) return json(404, { error: "Source task branch not found." }, headers);
+        const branchCount = await rows("mahi_ai_task_branches?select=id&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&status=neq.archived&limit=6");
+        if (!Array.isArray(branchCount) || branchCount.length >= 5) throw new Error("Branch limit reached (5 branches per task). Archive an unused branch before creating another.");
         const made = await rows("mahi_ai_task_branches?select=id,task_id,name,parent_branch_id,state,summary,status,revision,created_at,updated_at", { method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ task_id: taskId, user_id: userId, name, parent_branch_id: parentId, state: parent[0].state || {}, summary: parent[0].summary || "", status: "active" }) });
         if (!Array.isArray(made) || !made.length) throw new Error("Branch could not be created.");
-        const events = await rows("mahi_ai_task_events?select=event_type,payload&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&branch_id=" + eq(parentId) + "&order=created_at.asc&limit=100");
+        const events = await rows("mahi_ai_task_events?select=event_type,payload&user_id=" + eq(userId) + "&task_id=" + eq(taskId) + "&branch_id=" + eq(parentId) + "&order=created_at.asc&limit=30");
         if (Array.isArray(events) && events.length) await rows("mahi_ai_task_events", { method: "POST", headers: { Prefer: "return=minimal" }, body: JSON.stringify(events.map((event: any) => ({ task_id: taskId, branch_id: made[0].id, user_id: userId, event_type: event.event_type, payload: event.payload }))) });
         return json(200, { branch: made[0] }, headers);
       }
@@ -362,7 +366,7 @@ export function createWorkspaceService(
     if (!UUID.test(taskId) || !UUID.test(branchId)) return;
     const response = await rest("mahi_ai_task_events", {
       method: "POST", headers: { Prefer: "return=minimal" },
-      body: JSON.stringify({ task_id: taskId, branch_id: branchId, user_id: userId, event_type: "chat_turn", payload: { user_prompt: userPrompt.slice(0, 8000), assistant_response: assistantResponse.slice(0, 12000), conversation_id: conversationId || null } })
+      body: JSON.stringify({ task_id: taskId, branch_id: branchId, user_id: userId, event_type: "chat_turn", payload: { user_prompt: userPrompt.slice(0, 3000), assistant_response: assistantResponse.slice(0, 6000), conversation_id: conversationId || null } })
     });
     if (!response.ok) throw new Error("Task turn could not be checkpointed.");
     await rest("mahi_ai_tasks?id=" + eq(taskId) + "&user_id=" + eq(userId), { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ updated_at: new Date().toISOString() }) });
