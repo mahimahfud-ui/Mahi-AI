@@ -12,6 +12,7 @@ const controlMigration = fs.readFileSync(require.resolve("../supabase/migrations
 const retentionMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143023_workspace_history_retention_limits.sql"), "utf8");
 const permissionsMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143247_workspace_least_privilege_grants.sql"), "utf8");
 const apiOnlyMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143607_workspace_api_only_mutations.sql"), "utf8");
+const relevanceMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143800_require_relevance_for_workspace_context.sql"), "utf8");
 
 test("MahiCloud exposes a persistent workspace from the sidebar and loads the editor assets", () => {
   assert.match(html, /id="openWorkspace"/);
@@ -86,6 +87,13 @@ test("workspace history retention and database grants are explicitly bounded", (
   assert.match(permissionsMigration, /FROM PUBLIC, anon, authenticated/);
   assert.match(apiOnlyMigration, /REVOKE ALL ON TABLE[\s\S]*FROM authenticated/);
   assert.match(apiOnlyMigration, /GRANT SELECT ON TABLE[\s\S]*TO authenticated/);
+});
+
+test("AI workspace context never falls back to unrelated recent files", () => {
+  assert.match(relevanceMigration, /WHERE relevance > 0/);
+  assert.doesNotMatch(relevanceMigration, /OR NOT EXISTS/);
+  assert.match(edge, /AI access is disabled for/);
+  assert.match(edge, /I did not read or overwrite it/);
 });
 
 test("workspace AI file writes require explicit instructions and preserve account ownership", () => {
