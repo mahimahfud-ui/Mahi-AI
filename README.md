@@ -11,6 +11,30 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 - **Answer Lab:** inspect any assistant answer with current-source claim verification, red-team challenge, decision maps with assumption sensitivity, execution plans, and adaptive teach-back. Save selected insights through the existing per-user memory controls.
 - **Mahi Capsules:** export a conversation as a portable `.mahi-capsule` file and resume it on another device as a new project context. Imports are schema/size validated and require confirmation; exports require a privacy confirmation because they contain conversation text.
 - Temporary chats stay out of saved conversation history and long-term memory; they remain only in the open browser session until you leave or start another chat.
+
+## Google sign-in and account persistence
+
+MahiCloud starts new visitors in a private Supabase anonymous workspace. The **Continue with Google** action in the sidebar Account dialog converts that workspace into a permanent Google-linked account using Supabase Auth identity linking. This preserves the existing Supabase user ID, so the existing RLS-owned conversations, messages, attachments, and memory remain associated with the same account. Returning on another device with the same Google account restores the same cloud history.
+
+### One-time Google provider setup
+
+1. In [Google Cloud Auth Clients](https://console.cloud.google.com/auth/clients), create an OAuth Client ID with application type **Web application**.
+2. Add this Authorized JavaScript origin: `https://mahi-ai-kdm2.onrender.com`.
+3. Add this Authorized redirect URI in Google Cloud:
+   `https://husydmiujigyonlxbuuj.supabase.co/auth/v1/callback`
+4. In [Supabase Google Provider settings](https://supabase.com/dashboard/project/husydmiujigyonlxbuuj/auth/providers?provider=Google), enable Google and paste the Google Client ID and Client Secret. Save them in Supabase only; never put the Client Secret in GitHub or browser code.
+5. In Supabase Authentication security settings, enable **manual identity linking**. Supabase requires this for converting an anonymous user to a permanent OAuth-linked user.
+6. In [Supabase URL Configuration](https://supabase.com/dashboard/project/husydmiujigyonlxbuuj/auth/url-configuration), keep the Site URL as `https://mahi-ai-kdm2.onrender.com` and add `https://mahi-ai-kdm2.onrender.com/**` to the Redirect URLs allow list. For local development, also add `http://localhost:3000/**` and `http://127.0.0.1:3000/**` only while needed.
+
+The Supabase Google callback URL is the Google OAuth redirect URI. The MahiCloud Render URL is the post-auth redirect destination. These are two different URLs and both must be configured in their respective consoles.
+
+### Sign-in behavior and history safety
+
+- **Continue with Google** is the recommended action for a guest workspace. It links Google to the current Supabase user, preserving the same user ID and therefore the user's existing conversations and memory.
+- **Sign in to an existing Google account** switches to an already-created Google account. A separate guest workspace is not silently merged into that account. Export conversations as Mahi Capsules before switching, then import the project context after signing in where needed.
+- Signing out does not delete server-side conversations. Sign in again with the same Google account to restore them.
+- Google provider credentials and manual identity linking must be configured in Supabase before the OAuth flow can complete.
+
 - Existing capabilities remain available: responsive dark UI, multilingual chats, authenticated history, attachments, voice input/read-aloud, web research and source links, image generation where explicitly enabled, code execution/live previews, public API discovery, and per-user memory controls.
 
 ## Architecture
