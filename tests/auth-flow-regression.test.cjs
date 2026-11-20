@@ -82,7 +82,7 @@ test("malformed saved preferences cannot abort MahiCloud startup", () => {
   assert.ok(settings.includes('saved && typeof saved === "object" && !Array.isArray(saved)'));
   assert.match(settings, /value !== null && typeof value === typeof fallback/);
   assert.ok(settings.includes("if (!/^#[0-9a-f]{6}$/i.test(S.accent)) S.accent = DEF.accent;"));
-  assert.match(settings, /Number.isFinite(S.fontSize)/);
+  assert.ok(settings.includes("Number.isFinite(S.fontSize)"));
 });
 
 test("startup initialization errors are visible instead of leaving Connecting forever", () => {
