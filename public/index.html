@@ -1149,6 +1149,7 @@ body{min-width:0}
 @media(prefers-reduced-motion:reduce){.prompt-card{transition:none}}
 
 </style>
+<link rel="stylesheet" href="/workspace.css?v=20261120">
 </head>
 <body>
 <div id="app">
@@ -1157,6 +1158,7 @@ body{min-width:0}
     <div class="sidetop">
       <button class="btn pri" id="newChat"><span style="display:inline-flex;gap:8px;align-items:center"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New chat</span></button>
       <button class="btn" id="openPrompts" type="button"><span>Prompt library</span><kbd class="kbd">Ctrl ⇧ P</kbd></button>
+      <button class="btn" id="openWorkspace" type="button"><span>Workspace</span><small class="ws-side-caption">Files · Memory · Tasks</small></button>
       <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
     </div>
     <nav id="folderFilters" class="folder-filters" aria-label="Chat folders"></nav>
@@ -1263,6 +1265,7 @@ body{min-width:0}
 </div>
 <div id="toasts" aria-live="polite"></div>
 
+<script src="/workspace.js?v=20261120"></script>
 <script>
 "use strict";
 // Surface startup failures instead of leaving the sidebar stuck on "Connecting…".
@@ -1449,6 +1452,16 @@ const Api = {
   searchMessages: q => Api.rest("mahi_ai_messages?select=conversation_id&content=ilike." + encodeURIComponent("*" + q.replace(/[*,()]/g, " ") + "*") + "&limit=300"),
   rename: (id, title) => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "PATCH", body: JSON.stringify({ title }), headers: { Prefer: "return=minimal" } }),
   remove: id => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "DELETE", headers: { Prefer: "return=minimal" } }),
+  async workspaceAction(action, payload = {}) {
+    const s = await this.ensure();
+    const { response, data } = await boundedFetchJson(CFG.supabaseUrl + "/functions/v1/mahi-ai-chat", {
+      method: "POST",
+      headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token },
+      body: JSON.stringify({ workspace_action: action, ...payload })
+    }, 30000);
+    if (!response.ok) throw new Error(data?.error || "Workspace request failed (" + response.status + ").");
+    return data || {};
+  },
   async chat(body, signal) {
     const s = await this.ensure();
     return boundedFetch(CFG.supabaseUrl + "/functions/v1/mahi-ai-chat", { method: "POST", signal, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token }, body: JSON.stringify(body) }, 15000);
@@ -2199,6 +2212,7 @@ async function send(text, edit) {
   try {
     refs = files.length ? await uploadFiles(files.map(p => p.file), ctl.signal) : [];
     const res = await Api.chat({
+      ...(!S.temp ? (window.MahiWorkspace?.getActiveTask?.() || {}) : {}),
       conversation_id: S.temp ? null : cid, temporary_chat: S.temp, task_mode: taskMode, think_mode: taskMode === "think", selected_model: "", branch_context: false,
       custom_instructions: S.instructions, response_style: S.style,
       ...(edit ? { edit_from_created_at: edit.created_at, edit_from_content: edit.content } : {}),
@@ -3409,6 +3423,7 @@ $("#ovSet").addEventListener("pointerdown", e => { if (e.target.id === "ovSet") 
 
 /* ===== 9. Wiring: navigation, shortcuts, boot ===== */
 $("#toggle").onclick = () => toggleSide(); $("#scrim").onclick = () => toggleSide(false); $("#newChat").onclick = () => guardLeave(newChat); $("#newTop").onclick = () => guardLeave(newChat);
+window.MahiWorkspace?.init({ api: Api, toast, ask, getUserId: async () => (await Api.ensure()).user?.id });
 addEventListener("keydown", e => {
   const mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase(), typing = /input|textarea|select/i.test(document.activeElement.tagName);
   if (e.key === "Tab") {
@@ -3423,7 +3438,7 @@ addEventListener("keydown", e => {
       return;
     }
   }
-  if (e.key === "Escape") { if (ask$) return ask$(); if (voiceModeActive) return stopVoiceMode(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  if (e.key === "Escape") { if (ask$) return ask$(); if (document.querySelector("#ovWorkspace.on")) return window.MahiWorkspace?.close(); if (voiceModeActive) return stopVoiceMode(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
   else if (mod && e.shiftKey && k === "p") { e.preventDefault(); openPromptLibrary(); }
   else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
   else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
