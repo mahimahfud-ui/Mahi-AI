@@ -2208,6 +2208,7 @@ async function send(text, edit) {
     full = full.trim(); if (!full) throw new Error("No response was returned.");
     files.forEach(p => p.url && URL.revokeObjectURL(p.url));
     msgs.push({ role: "assistant", content: full, local: Date.now() }); paint(ai, full, false); ai.dataset.i = msgs.length - 1; decorate(ai, msgs[msgs.length - 1], msgs.length - 1); bottom();
+    if (voiceModeActive) speakVoiceResponse(full);
     if (refs.length) {
       const cleaned = await removeUploaded(refs);
       if (!cleaned) toast(S.temp ? "Temporary reply received, but an uploaded file could not be removed from storage." : "Reply received, but an uploaded file could not be removed from storage.");
@@ -2220,7 +2221,11 @@ async function send(text, edit) {
     if (refs.length) { const cleaned = await removeUploaded(refs); if (!cleaned) toast("An uploaded file could not be removed from storage."); }
     grow();
     if (e.name === "AbortError") toast("Generation stopped"); else showErr(friendly(e), () => send(text, edit));
-  } finally { uploadProgress(null); ctl = null; setBusy(false); if (document.documentElement.dataset.input === "mouse") $("#in").focus(); }
+  } finally {
+    uploadProgress(null); ctl = null; setBusy(false);
+    if (document.documentElement.dataset.input === "mouse" && !voiceModeActive) $("#in").focus();
+    if (voiceModeActive && !voiceModeUtterance) scheduleVoiceModeListen(500);
+  }
 }
 const friendly = e => /failed to fetch|network|load failed/i.test(e.message) ? "Could not reach MahiCloud. Check your connection (or the site's allowed origins) and retry." : e.message;
 async function syncMeta() { try { if (!cid) return; const rows = await Api.messages(cid), off = Math.max(0, rows.length - msgs.length); msgs.forEach((m, i) => { const r = rows[off + i]; if (r && r.role === m.role && r.content === m.content) { m.id = r.id; m.created_at = r.created_at; } }); [...MAIN.children].forEach(n => { const i = +n.dataset.i; if (msgs[i]) decorate(n, msgs[i], i); }); } catch (_) {} }
@@ -2617,6 +2622,143 @@ function toggleMic() {
   try { r.start(); setRec(true); } catch (_) { rec = null; toast("Could not start voice input"); }
 }
 function cancelVoice() { if (!rec) return; const r = rec; r.onresult = null; $("#in").value = preVoice; grow(); r.abort(); }
+
+/* hands-free voice conversation: browser speech recognition + speech synthesis */
+let voiceModeActive = false;
+let voiceModeRecognition = null;
+let voiceModeUtterance = null;
+let voiceModeRestartTimer = null;
+function updateVoiceModeButton() {
+  const button = $("#voiceMode");
+  if (!button) return;
+  button.classList.toggle("on", voiceModeActive);
+  button.setAttribute("aria-pressed", String(voiceModeActive));
+  button.setAttribute("aria-label", voiceModeActive ? "Stop voice conversation" : "Start voice conversation");
+  button.title = voiceModeActive ? "Voice conversation is active · click to stop" : "Hands-free voice conversation · listen and speak replies";
+  const label = button.querySelector("span");
+  if (label) label.textContent = voiceModeActive ? "Listening" : "Talk";
+}
+function scheduleVoiceModeListen(delay = 400) {
+  window.clearTimeout(voiceModeRestartTimer);
+  voiceModeRestartTimer = window.setTimeout(() => {
+    if (!voiceModeActive || voiceModeUtterance) return;
+    if (busy) return scheduleVoiceModeListen(400);
+    startVoiceModeListening();
+  }, delay);
+}
+function startVoiceModeListening() {
+  if (!voiceModeActive || busy || voiceModeRecognition || voiceModeUtterance) return;
+  if (!SR || !("speechSynthesis" in window)) return stopVoiceMode();
+  const recognition = new SR();
+  voiceModeRecognition = recognition;
+  recognition.lang = S.voiceLang || navigator.language || "en-US";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+  recognition.onresult = event => {
+    const transcript = String(event.results?.[0]?.[0]?.transcript || "").trim();
+    if (!transcript || !voiceModeActive) return;
+    $("#in").value = transcript;
+    grow();
+    void send(transcript);
+  };
+  recognition.onerror = event => {
+    if (!voiceModeActive) return;
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      toast("Microphone access is blocked. Allow microphone access and start Voice Mode again.");
+      stopVoiceMode();
+    } else if (event.error !== "aborted" && event.error !== "no-speech") {
+      toast("Voice input stopped (" + event.error + ")");
+    }
+  };
+  recognition.onend = () => {
+    if (voiceModeRecognition === recognition) voiceModeRecognition = null;
+    if (voiceModeActive && !busy && !voiceModeUtterance) scheduleVoiceModeListen(350);
+  };
+  try { recognition.start(); }
+  catch (_) {
+    if (voiceModeRecognition === recognition) voiceModeRecognition = null;
+    toast("Could not start voice recognition in this browser");
+    stopVoiceMode();
+  }
+}
+function voiceReadableText(value) {
+  return clean(String(value || ""))
+    .replace(/```[\s\S]*?```/g, "Code block omitted from spoken response.")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "Image.")
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g, "$1")
+    .replace(/https?:\/\/\S+/g, "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/^\s*[-*+]\s+/gm, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+function speakVoiceResponse(text) {
+  if (!voiceModeActive || !("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+  voiceModeUtterance = null;
+  const readable = voiceReadableText(text);
+  if (!readable) return scheduleVoiceModeListen(350);
+  const chunks = [];
+  let remaining = readable;
+  while (remaining.length > 1100) {
+    let split = remaining.lastIndexOf(". ", 1100);
+    if (split < 400) split = remaining.lastIndexOf(" ", 1100);
+    if (split < 1) split = 1100;
+    chunks.push(remaining.slice(0, split + 1).trim());
+    remaining = remaining.slice(split + 1).trim();
+  }
+  if (remaining) chunks.push(remaining);
+  let index = 0;
+  const speakNext = () => {
+    if (!voiceModeActive) return;
+    if (index >= chunks.length) {
+      voiceModeUtterance = null;
+      scheduleVoiceModeListen(450);
+      return;
+    }
+    const utterance = new SpeechSynthesisUtterance(chunks[index++]);
+    utterance.lang = S.voiceLang || navigator.language || "en-US";
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    voiceModeUtterance = utterance;
+    utterance.onend = () => {
+      if (voiceModeUtterance === utterance) voiceModeUtterance = null;
+      speakNext();
+    };
+    utterance.onerror = () => {
+      if (voiceModeUtterance === utterance) voiceModeUtterance = null;
+      if (voiceModeActive) scheduleVoiceModeListen(500);
+    };
+    window.speechSynthesis.speak(utterance);
+  };
+  speakNext();
+}
+function stopVoiceMode() {
+  voiceModeActive = false;
+  window.clearTimeout(voiceModeRestartTimer);
+  const recognition = voiceModeRecognition;
+  voiceModeRecognition = null;
+  if (recognition) {
+    recognition.onresult = null; recognition.onend = null; recognition.onerror = null;
+    try { recognition.abort(); } catch (_) {}
+  }
+  if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+  voiceModeUtterance = null;
+  updateVoiceModeButton();
+}
+function toggleVoiceMode() {
+  if (voiceModeActive) { stopVoiceMode(); toast("Voice conversation stopped"); return; }
+  if (!SR || !("speechSynthesis" in window)) {
+    toast("Hands-free Voice Mode needs browser speech recognition and speech synthesis support");
+    return;
+  }
+  voiceModeActive = true;
+  updateVoiceModeButton();
+  startVoiceModeListening();
+  toast("Voice Mode on · speak naturally; replies will be read aloud");
+}
+$("#voiceMode").onclick = toggleVoiceMode;
 /* leaving a draft: ask first so unsent text and files are never lost silently */
 function clearPendingFiles() {
   pendingFiles.forEach(p => { if (p.url) URL.revokeObjectURL(p.url); });
@@ -3023,7 +3165,7 @@ const SCHEMA = [
     { l: "Export current conversation", c: "btn", b: [["Markdown", () => exportConv("md")], ["JSON", () => exportConv("json")]] },
     { l: "Clear local preferences", d: "Resets settings and pins on this device only. Your server-side conversations are NOT deleted.", c: "btn", b: [["Clear", async () => { if (await ask({ title: "Clear local preferences?", text: "Only this browser’s settings and pins are removed. Conversations stored in your account stay.", ok: "Clear", danger: true })) { S = { ...DEF }; save(); pins = []; localStorage.removeItem("mahicloud.pins"); applySettings(); renderSettings(); toast("Local preferences cleared"); } }, 1]] },
     { l: "Delete conversations", d: "Use the ⋯ menu on a conversation in the sidebar to delete it from your account.", c: "info" }] },
-  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Prompt library", "Ctrl/⌘ Shift P"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
+  { id: "keys", t: "Shortcuts", i: [["New chat", "Ctrl/⌘ K"], ["Focus composer", "Ctrl/⌘ J"], ["Prompt library", "Ctrl/⌘ Shift P"], ["Voice conversation", "Talk button · Esc stops"], ["Search conversations", "/"], ["Toggle sidebar", "Ctrl/⌘ B"], ["Open settings", "Ctrl/⌘ ,"], ["Send", "Enter"], ["New line", "Shift Enter"], ["Close dialog / menu", "Esc"]].map(([l, v]) => ({ l, c: "key", v })) },
   { id: "adv", t: "Advanced", i: [{ l: "Diagnostics", c: "diag" }, { l: "Reset all settings to defaults", c: "btn", b: [["Reset", () => { S = { ...DEF }; save(); applySettings(); renderSettings(); toast("Defaults restored"); }]] }] }
 ];
 let tab = "general";
@@ -3220,7 +3362,7 @@ addEventListener("keydown", e => {
       return;
     }
   }
-  if (e.key === "Escape") { if (ask$) return ask$(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
+  if (e.key === "Escape") { if (ask$) return ask$(); if (voiceModeActive) return stopVoiceMode(); if ($("#ovPrompts").classList.contains("on")) return closePromptLibrary(); if ($("#ovSet").classList.contains("on")) return closeSettings(); if (closeActiveMenu) closeActiveMenu(true); if (document.documentElement.dataset.device !== "desktop") toggleSide(false); }
   else if (mod && e.shiftKey && k === "p") { e.preventDefault(); openPromptLibrary(); }
   else if (mod && k === "k") { e.preventDefault(); guardLeave(newChat); }
   else if (mod && k === "j") { e.preventDefault(); $("#in").focus(); }
