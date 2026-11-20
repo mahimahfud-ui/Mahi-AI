@@ -402,6 +402,19 @@
       button(task.status === "paused" ? "Resume task" : "Pause task", async () => {
         try { await call("task_update", { id: task.id, status: task.status === "paused" ? "active" : "paused" }); await refresh(); }
         catch (error) { status(error.message, true); }
+      }, "btn"),
+      button(task.status === "archived" ? "Restore task" : "Archive task", async () => {
+        const nextStatus = task.status === "archived" ? "active" : "archived";
+        try {
+          await call("task_update", { id: task.id, status: nextStatus });
+          const active = getActiveTask();
+          if (nextStatus === "archived" && active?.task_id === task.id) {
+            localStorage.removeItem(activeKey());
+            state.activeTask = null;
+          }
+          await refresh();
+          toast(nextStatus === "archived" ? "Task archived" : "Task restored");
+        } catch (error) { status(error.message, true); }
       }, "btn")
     );
     actions.append(
@@ -414,7 +427,20 @@
         } catch (error) { status(error.message || "Invalid checkpoint JSON.", true); }
       }, "btn pri"),
       button("Checkpoint history", () => showTaskVersions(task.id, state.branchId), "btn"),
-      button("Timeline", () => showTaskEvents(task.id, state.branchId), "btn")
+      button("Timeline", () => showTaskEvents(task.id, state.branchId), "btn"),
+      button(selected?.status === "archived" ? "Restore branch" : "Archive branch", async () => {
+        const nextStatus = selected?.status === "archived" ? "active" : "archived";
+        try {
+          await call("task_branch_update", { task_id: task.id, branch_id: state.branchId, status: nextStatus });
+          const active = getActiveTask();
+          if (nextStatus === "archived" && active?.task_id === task.id && active?.branch_id === state.branchId) {
+            localStorage.removeItem(activeKey());
+            state.activeTask = null;
+          }
+          await refresh();
+          toast(nextStatus === "archived" ? "Branch archived" : "Branch restored");
+        } catch (error) { status(error.message, true); }
+      }, "btn")
     );
     const history = node("div", "ws-history"); history.id = "wsTaskHistory";
     editor.append(
@@ -434,10 +460,18 @@
     } catch (error) { status(error.message, true); }
   }
   function chooseTask(id) {
+    const current = getActiveTask();
     state.taskId = id;
-    const first = state.branches.find(branch => branch.task_id === id);
+    const preferred = current?.task_id === id
+      ? state.branches.find(branch => branch.task_id === id && branch.id === current.branch_id)
+      : null;
+    const first = preferred || state.branches.find(branch => branch.task_id === id && branch.status !== "archived");
     state.branchId = first ? first.id : "";
-    setActiveTask(false);
+    if (current && current.task_id !== id) {
+      localStorage.removeItem(activeKey());
+      state.activeTask = null;
+      toast("Task context disabled for chats");
+    }
     render();
   }
   async function forkBranch() {
