@@ -19,6 +19,12 @@ test("production deployments are serialized and use read-only GitHub permissions
   assert.match(workflow, /cancel-in-progress:\s*false/);
 });
 
+test("Supabase CLI is pinned and hosted function deployments use noninteractive consent", () => {
+  assert.match(workflow, /version:\s*3\.2\.0/);
+  assert.doesNotMatch(workflow, /version:\s*latest/i);
+  assert.match(workflow, /supabase functions deploy mahi-ai-chat --project-ref [a-z0-9]+ --yes/);
+});
+
 test("missing Supabase credentials fail closed instead of reporting a false deployment success", () => {
   assert.match(workflow, /secrets\.SUPABASE_ACCESS_TOKEN/);
   assert.match(workflow, /\[ -z "\$\{SUPABASE_ACCESS_TOKEN:\-\}" \]/);
