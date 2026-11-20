@@ -2296,13 +2296,15 @@ function drawFolderFilters() {
   };
   add("", "All chats", convs.length);
   if (unfiled) add("__unfiled__", "Unfiled", unfiled);
-  [...folders.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([name,count]) => add(name, name, count));
+  [...folders.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([name,count]) => add("folder:" + name, name, count));
 }
 function drawList() {
   const l = $("#list"), q = $("#search").value.trim().toLowerCase(); l.replaceChildren();
   drawFolderFilters();
   let v = convs.filter(c => {
-    const folderMatch = !activeFolderFilter || (activeFolderFilter === "__unfiled__" ? !c.folder : c.folder === activeFolderFilter);
+    const folderMatch = !activeFolderFilter ||
+      (activeFolderFilter === "__unfiled__" ? !c.folder :
+        activeFolderFilter.startsWith("folder:") && c.folder === activeFolderFilter.slice(7));
     const searchMatch = !q || (c.title || "New chat").toLowerCase().includes(q) || (hits && hits.has(c.id)) ||
       (c.tags || []).some(tag => tag.toLowerCase().includes(q));
     return folderMatch && searchMatch;
