@@ -81,7 +81,7 @@ test("malformed saved preferences cannot abort MahiCloud startup", () => {
   const settings = between("let S = { ...DEF };", "const FONTS =");
   assert.match(settings, /saved && typeof saved === "object" && !Array.isArray(saved)/);
   assert.match(settings, /value !== null && typeof value === typeof fallback/);
-  assert.match(settings, /if (!/^#\[0-9a-f\]\{6\}\$/i.test(S.accent)) S.accent = DEF.accent/);
+  assert.ok(settings.includes("if (!/^#[0-9a-f]{6}$/i.test(S.accent)) S.accent = DEF.accent;"));
   assert.match(settings, /Number.isFinite(S.fontSize)/);
 });
 
