@@ -38,6 +38,8 @@ test("an incomplete Google callback is stopped before guest boot and shown as an
   assert.match(boot, /!isGoogleIdentity\(session\.user\)/);
   assert.match(boot, /showGoogleAuthRecovery\(\);\s*return;/);
   assert.ok(boot.indexOf("showGoogleAuthRecovery();") < boot.indexOf("await Api.ensure()"));
+  assert.match(boot, /if \(pendingGoogleFlow \|\| savedSessionPresent\)/);
+  assert.match(boot, /Could not start a guest session\. Enable anonymous sign-ins/);
   assert.match(html, /Google sign-in did not complete\. No account was created or linked\./);
   assert.match(html, /id="continueAsGuest" hidden/);
 });
