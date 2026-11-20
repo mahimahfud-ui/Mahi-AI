@@ -24,8 +24,8 @@ test("MahiCloud exposes a persistent workspace from the sidebar and loads the ed
 });
 
 test("workspace files are owner-scoped, versioned, editable and can be excluded from AI context", () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_workspace_files/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_workspace_file_versions/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_workspace_files/i);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_workspace_file_versions/i);
   assert.match(migration, /Users manage their own workspace files/);
   assert.match(migration, /Users read their own workspace file history/);
   assert.match(controlMigration, /index_for_ai boolean NOT NULL DEFAULT true/);
@@ -38,8 +38,8 @@ test("workspace files are owner-scoped, versioned, editable and can be excluded 
 });
 
 test("structured memories have edit/delete/archive/version/restore controls and replace opaque chat excerpts", () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_entries/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_versions/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_entries/i);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_memory_versions/i);
   assert.match(migration, /Users manage their own structured memories/);
   assert.match(edge, /MAHICLOUD STRUCTURED MEMORY/);
   assert.match(edge, /recent_messages: \[\]/);
@@ -51,10 +51,10 @@ test("structured memories have edit/delete/archive/version/restore controls and 
 });
 
 test("task continuity supports branches, checkpoints, event history and selected-task context injection", () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_tasks/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_task_branches/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_task_branch_versions/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_task_events/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_tasks/i);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_task_branches/i);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_task_branch_versions/i);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.mahi_ai_task_events/i);
   assert.match(workspace, /task_branch_create/);
   assert.match(workspace, /task_checkpoint/);
   assert.match(workspace, /task_branch_restore/);
