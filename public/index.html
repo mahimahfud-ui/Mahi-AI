@@ -1019,6 +1019,31 @@ body{min-width:0}
   #composer .box,#composer .box::before,#composer #in::placeholder,#composer .tl .ib.tool,#composer #send{transition:none!important}
 }
 
+
+/* ===== Task mode selector ===== */
+.tb.task-mode-trigger{gap:8px;min-width:82px;justify-content:center}
+.tb.task-mode-trigger .mode-chevron{width:13px;height:13px;opacity:.65;transition:transform .2s var(--ease)}
+.tb.task-mode-trigger[aria-expanded="true"] .mode-chevron{transform:rotate(180deg)}
+#taskModeMenu{position:fixed;z-index:90;width:296px;max-height:76dvh;overflow:auto;padding:8px;border:1px solid var(--bd);border-radius:17px;background:color-mix(in srgb,var(--s1) 96%,transparent);backdrop-filter:blur(22px) saturate(145%);-webkit-backdrop-filter:blur(22px) saturate(145%);box-shadow:0 18px 58px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.045);animation:taskMenuIn .18s var(--ease)}
+#taskModeMenu[hidden]{display:none!important}
+@keyframes taskMenuIn{from{opacity:0;transform:translateY(5px) scale(.985)}to{opacity:1;transform:none}}
+.task-mode-heading{display:grid;gap:2px;padding:8px 10px 10px;border-bottom:1px solid var(--bd);margin-bottom:5px}
+.task-mode-heading b{font-size:.82rem;font-weight:650;color:var(--tx)}
+.task-mode-heading span{font-size:.71rem;color:var(--tx3)}
+.task-mode-option{display:flex;align-items:center;gap:10px;width:100%;min-height:47px;padding:6px 9px;border-radius:11px;text-align:left;color:var(--tx2);transition:background .16s var(--ease),color .16s var(--ease),transform .16s var(--ease)}
+.task-mode-option:hover{background:var(--s2);color:var(--tx)}
+.task-mode-option:active{transform:scale(.99)}
+.task-mode-glyph{width:31px;height:31px;display:grid;place-items:center;flex:none;border:1px solid var(--bd);border-radius:9px;background:var(--bg);font-size:.86rem;font-weight:650;color:var(--tx2)}
+.task-mode-copy{display:grid;gap:0;flex:1;min-width:0}
+.task-mode-copy b{font-size:.82rem;font-weight:570;color:var(--tx)}
+.task-mode-copy small{font-size:.68rem;line-height:1.3;color:var(--tx3)}
+.task-mode-check{width:20px;height:20px;display:grid;place-items:center;border-radius:50%;font-size:.75rem;color:transparent;flex:none}
+.task-mode-option.selected{background:color-mix(in srgb,var(--ac) 11%,var(--s1))}
+.task-mode-option.selected .task-mode-glyph{border-color:color-mix(in srgb,var(--ac) 35%,var(--bd));color:var(--ac);background:color-mix(in srgb,var(--ac) 9%,var(--bg))}
+.task-mode-option.selected .task-mode-copy b{color:var(--ac)}
+.task-mode-option.selected .task-mode-check{color:var(--ac);background:color-mix(in srgb,var(--ac) 13%,transparent)}
+@media(max-width:700px){.tb.task-mode-trigger{min-width:76px;padding-inline:9px;gap:5px}.tb.task-mode-trigger svg:first-child{width:15px;height:15px}}
+@media(prefers-reduced-motion:reduce){#taskModeMenu,.task-mode-option,.tb.task-mode-trigger .mode-chevron{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
@@ -1063,7 +1088,7 @@ body{min-width:0}
         <div class="tools">
           <div class="tl">
             <button type="button" class="ib tool labeled-tool" id="attach" aria-label="Attach files" title="Attach files · PDF, images, text and code"><svg viewBox="0 0 24 24"><path d="M21 11.5 12.3 20.2a5.5 5.5 0 0 1-7.8-7.8L13.7 3.2a3.7 3.7 0 0 1 5.2 5.2l-8.8 8.8a1.8 1.8 0 0 1-2.6-2.6L15 7.2"/></svg><span class="tool-label">Attach</span></button>
-            <button type="button" class="tb think" id="tThink" aria-pressed="false" title="Think: reason more carefully before answering"><svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span>Think</span></button>
+            <button type="button" class="tb think task-mode-trigger" id="tMode" aria-haspopup="menu" aria-expanded="false" aria-controls="taskModeMenu" aria-pressed="false" title="Choose how MahiCloud should work on your request"><svg viewBox="0 0 24 24"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg><span id="tModeLabel">Auto</span><svg class="mode-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
             <button type="button" class="ib tool labeled-tool" id="mic" aria-label="Voice input" aria-pressed="false" title="Voice input · Dictate a message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="tool-label">Voice</span></button>
             <span class="rec" id="rec" hidden aria-live="polite"><i></i><i></i><i></i><i></i><i></i><span>Listening…</span><button type="button" class="tb" id="recCancel">Cancel</button></span>
           </div>
@@ -1076,6 +1101,17 @@ body{min-width:0}
       </div>
       <div class="hint" id="hint"></div>
     </form>
+    <div id="taskModeMenu" class="task-mode-menu" role="menu" aria-label="Choose a task mode" hidden>
+      <div class="task-mode-heading"><b>Choose a work mode</b><span>Optimized for the task you select</span></div>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="true" data-task-mode="auto"><span class="task-mode-glyph">✦</span><span class="task-mode-copy"><b>Auto</b><small>Automatically detect the best approach</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="think"><span class="task-mode-glyph">◈</span><span class="task-mode-copy"><b>Think</b><small>Compare multiple AI providers, then synthesize</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="coding"><span class="task-mode-glyph">&lt;/&gt;</span><span class="task-mode-copy"><b>Coding</b><small>Build, debug, review and architect code</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="study"><span class="task-mode-glyph">▤</span><span class="task-mode-copy"><b>Study</b><small>Learn step by step with examples and practice</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="research"><span class="task-mode-glyph">⌕</span><span class="task-mode-copy"><b>Research</b><small>Prioritize reliable sources and current facts</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="writing"><span class="task-mode-glyph">✎</span><span class="task-mode-copy"><b>Writing</b><small>Draft, rewrite and refine with your tone</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="math"><span class="task-mode-glyph">∑</span><span class="task-mode-copy"><b>Math</b><small>Careful calculations and checked solutions</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="general"><span class="task-mode-glyph">○</span><span class="task-mode-copy"><b>General</b><small>Focused help for everyday questions</small></span><span class="task-mode-check">✓</span></button>
+    </div>
   </main>
 </div>
 <div class="ov" id="ovSet"><div class="dlg" id="set" role="dialog" aria-modal="true" aria-label="Settings">
@@ -1372,8 +1408,20 @@ function md(src) {
 
 /* ===== 3. Settings store (persisted, applied immediately) ===== */
 const SKEY = "mahicloud.settings.v1";
-const DEF = { theme: "dark", accent: "#d4b98a", font: "sans", fontSize: 16, msgWidth: 760, density: "comfortable", radius: 14, motion: "normal", bg: "glow", enterToSend: true, startup: "welcome", confirm: true, time: "12", autoScroll: true, stream: true, markdown: true, timestamps: true, actions: true, instructions: "", style: "default", name: "", hc: false, largeText: false, reduceMotion: false, temp: false, think: false, voiceLang: "" };
+const TASK_MODES = [
+  { id: "auto", label: "Auto", description: "Automatically detect the best approach" },
+  { id: "think", label: "Think", description: "Compare multiple AI providers, then synthesize" },
+  { id: "coding", label: "Coding", description: "Build, debug, review and architect code" },
+  { id: "study", label: "Study", description: "Learn step by step with examples and practice" },
+  { id: "research", label: "Research", description: "Prioritize reliable sources and current facts" },
+  { id: "writing", label: "Writing", description: "Draft, rewrite and refine with your tone" },
+  { id: "math", label: "Math", description: "Careful calculations and checked solutions" },
+  { id: "general", label: "General", description: "Focused help for everyday questions" }
+];
+const DEF = { theme: "dark", accent: "#d4b98a", font: "sans", fontSize: 16, msgWidth: 760, density: "comfortable", radius: 14, motion: "normal", bg: "glow", enterToSend: true, startup: "welcome", confirm: true, time: "12", autoScroll: true, stream: true, markdown: true, timestamps: true, actions: true, instructions: "", style: "default", name: "", hc: false, largeText: false, reduceMotion: false, temp: false, taskMode: "auto", voiceLang: "" };
 let S = { ...DEF }; try { Object.assign(S, JSON.parse(localStorage.getItem(SKEY)) || {}); } catch (_) {}
+if (!TASK_MODES.some(mode => mode.id === S.taskMode)) S.taskMode = S.think === true ? "think" : "auto";
+delete S.think;
 S.temp = false; /* temporary mode never survives a reload */
 const FONTS = { sans: 'Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif', serif: 'ui-serif,Georgia,"Times New Roman",serif', mono: 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace' };
 function save() {
@@ -1391,9 +1439,16 @@ function applySettings() {
   st.setProperty("--fs", (S.fontSize + (S.largeText ? 2 : 0)) + "px"); st.setProperty("--mw", S.msgWidth + "px"); st.setProperty("--r", S.radius + "px"); st.setProperty("--font", FONTS[S.font] || FONTS.sans);
   document.querySelector('meta[name=theme-color]').content = th === "light" ? "#f7f7f9" : "#0a0a0c";
   $("#tempBadge").hidden = !S.temp;
-  $("#tThink").classList.toggle("on", !!S.think);
-  $("#tThink").setAttribute("aria-pressed", String(!!S.think));
-  $("#tThink").title = S.think ? "Think mode is on for the next message" : "Enable Think mode for the next message";
+  const activeTaskMode = TASK_MODES.find(mode => mode.id === S.taskMode) || TASK_MODES[0];
+  $("#tModeLabel").textContent = activeTaskMode.label;
+  $("#tMode").classList.toggle("on", activeTaskMode.id !== "auto");
+  $("#tMode").setAttribute("aria-pressed", String(activeTaskMode.id !== "auto"));
+  $("#tMode").title = activeTaskMode.description;
+  $("#taskModeMenu").querySelectorAll("[data-task-mode]").forEach(option => {
+    const selected = option.dataset.taskMode === activeTaskMode.id;
+    option.setAttribute("aria-checked", String(selected));
+    option.classList.toggle("selected", selected);
+  });
   $("#tTemp").classList.toggle("on", !!S.temp);
   $("#tTemp").setAttribute("aria-pressed", String(!!S.temp));
   $("#tTemp").title = S.temp ? "End temporary chat · this session is not saved" : "Start a temporary chat · not saved to history or memory";
@@ -1715,17 +1770,17 @@ async function send(text, edit) {
   text = String(text || "").trim(); if (busy || (!text && !pendingFiles.length)) return;
   if (!navigator.onLine) return showErr("You appear to be offline. Check your connection and try again.", () => send(text, edit));
   hideErr(); const prev = msgs.slice(), prevCid = cid; lastText = text; edit = edit || pend; pend = null;
-  const files = edit ? [] : pendingFiles.slice(), think = !!S.think; let refs = [];
+  const files = edit ? [] : pendingFiles.slice(), taskMode = TASK_MODES.some(mode => mode.id === S.taskMode) ? S.taskMode : "auto"; let refs = [];
   if (rec) { const r = rec; r.onresult = null; r.abort(); rec = null; setRec(false); }
   pendingFiles = []; renderChips();
   if (edit) { msgs = msgs.slice(0, edit.index); renderAll(); }
-  view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), think }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
+  view(true); msgs.push({ role: "user", content: text || "Attached file(s).", local: Date.now(), files: files.map(p => p.file.name), taskMode }); addMsg(msgs[msgs.length - 1], msgs.length - 1);
   const ai = addMsg({ role: "assistant", content: "" }, msgs.length, true);
   $("#in").value = ""; grow(); setBusy(true); ctl = new AbortController(); let full = "", done = false;
   try {
     refs = files.length ? await uploadFiles(files.map(p => p.file), ctl.signal) : [];
     const res = await Api.chat({
-      conversation_id: S.temp ? null : cid, temporary_chat: S.temp, think_mode: think, selected_model: "", branch_context: false,
+      conversation_id: S.temp ? null : cid, temporary_chat: S.temp, task_mode: taskMode, think_mode: taskMode === "think", selected_model: "", branch_context: false,
       custom_instructions: S.instructions, response_style: S.style,
       ...(edit ? { edit_from_created_at: edit.created_at, edit_from_content: edit.content } : {}),
       messages: msgs.slice(-24).map(m => ({ role: m.role, content: m.content })), attachments: refs
@@ -2046,7 +2101,45 @@ let restoreComposerAfterFilePicker = false;
 $("#attach").addEventListener("pointerdown", () => { restoreComposerAfterFilePicker = document.activeElement === $("#in"); }, { passive: true });
 $("#attach").onclick = () => $("#file").click();
 $("#file").addEventListener("change", e => { const selected = [...(e.target.files || [])]; const hasFiles = selected.length > 0; addFiles(selected); e.target.value = ""; if (hasFiles && restoreComposerAfterFilePicker && document.documentElement.dataset.input === "touch") requestAnimationFrame(() => $("#in").focus({ preventScroll: true })); restoreComposerAfterFilePicker = false; });
-$("#tThink").onclick = () => set("think", !S.think);
+function closeTaskModeMenu() {
+  const menu = $("#taskModeMenu");
+  if (!menu || menu.hidden) return;
+  menu.hidden = true;
+  $("#tMode").setAttribute("aria-expanded", "false");
+}
+function openTaskModeMenu() {
+  const menu = $("#taskModeMenu"), trigger = $("#tMode");
+  menu.hidden = false;
+  menu.style.width = Math.min(296, innerWidth - 24) + "px";
+  const rect = trigger.getBoundingClientRect();
+  const width = menu.getBoundingClientRect().width;
+  const height = Math.min(menu.scrollHeight, Math.floor(innerHeight * .76));
+  const left = Math.max(12, Math.min(rect.left, innerWidth - width - 12));
+  const top = rect.bottom + 8 + height <= innerHeight - 12
+    ? rect.bottom + 8
+    : Math.max(12, rect.top - height - 8);
+  menu.style.left = left + "px";
+  menu.style.top = top + "px";
+  trigger.setAttribute("aria-expanded", "true");
+}
+function setTaskMode(mode) {
+  S.taskMode = TASK_MODES.some(item => item.id === mode) ? mode : "auto";
+  save(); applySettings();
+}
+$("#tMode").onclick = () => $("#taskModeMenu").hidden ? openTaskModeMenu() : closeTaskModeMenu();
+$("#taskModeMenu").addEventListener("click", event => {
+  const option = event.target.closest("[data-task-mode]");
+  if (!option) return;
+  setTaskMode(option.dataset.taskMode);
+  closeTaskModeMenu();
+});
+document.addEventListener("pointerdown", event => {
+  if (!$("#taskModeMenu").hidden && !$("#taskModeMenu").contains(event.target) && !$("#tMode").contains(event.target)) closeTaskModeMenu();
+});
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && !$("#taskModeMenu").hidden) { closeTaskModeMenu(); $("#tMode").focus(); }
+});
+window.addEventListener("resize", closeTaskModeMenu);
 $("#tTemp").onclick = toggleTemp;
 $("#mic").onclick = toggleMic; $("#recCancel").onclick = cancelVoice;
 if (!SR) { const m = $("#mic"); m.disabled = true; m.title = "Voice input isn’t supported in this browser"; m.setAttribute("aria-label", "Voice input unavailable"); }
