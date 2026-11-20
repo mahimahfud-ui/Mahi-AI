@@ -2593,7 +2593,14 @@ addEventListener("offline", () => toast("You’re offline"));
   }
   try { await Api.ensure(); }
   catch (_) {
-    showGoogleAuthRecovery();
+    let savedSessionPresent = false;
+    try { savedSessionPresent = !!localStorage.getItem(SESSION_KEY); } catch (_) {}
+    if (pendingGoogleFlow || savedSessionPresent) {
+      showGoogleAuthRecovery();
+    } else {
+      $("#who").textContent = "Setup required";
+      showErr("Could not start a guest session. Enable anonymous sign-ins in Supabase and check the site's allowed origins.");
+    }
     $("#in").disabled = true;
     return;
   }
