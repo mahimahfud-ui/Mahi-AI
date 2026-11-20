@@ -935,6 +935,90 @@ body{min-width:0}
   .account-action{min-height:44px}
 }
 
+
+/* ===== MahiCloud signature composer: premium tactile finish ===== */
+#composer .box{
+  position:relative;
+  isolation:isolate;
+  overflow:hidden;
+  border:1px solid color-mix(in srgb,var(--bd) 88%,transparent);
+  background:
+    linear-gradient(155deg,color-mix(in srgb,var(--s2) 34%,var(--s1)),color-mix(in srgb,var(--s1) 97%,var(--bg)));
+  box-shadow:
+    0 14px 38px -24px rgba(0,0,0,.78),
+    0 2px 7px -4px rgba(0,0,0,.42),
+    inset 0 1px 0 rgba(255,255,255,.055);
+  transition:border-color 280ms var(--ease-premium),box-shadow 320ms var(--ease-premium),background 280ms ease,transform 280ms var(--ease-premium);
+}
+#composer .box::before{
+  content:"";
+  position:absolute;
+  z-index:-1;
+  pointer-events:none;
+  inset:0;
+  opacity:.48;
+  background:radial-gradient(75% 110% at 50% -55%,color-mix(in srgb,var(--ac) 17%,transparent),transparent 72%);
+  transition:opacity 300ms ease;
+}
+#composer .box:focus-within{
+  border-color:color-mix(in srgb,var(--ac) 58%,var(--bd));
+  background:linear-gradient(155deg,color-mix(in srgb,var(--s2) 42%,var(--s1)),var(--s1));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb,var(--ac) 16%,transparent),
+    0 0 0 5px color-mix(in srgb,var(--ac) 8%,transparent),
+    0 16px 42px -24px rgba(0,0,0,.8),
+    inset 0 1px 0 rgba(255,255,255,.075);
+}
+#composer .box:focus-within::before{opacity:.9}
+#composer #in{
+  position:relative;
+  caret-color:var(--ac);
+  color:var(--tx);
+  letter-spacing:-.012em;
+  line-height:1.62;
+}
+#composer #in::placeholder{
+  color:color-mix(in srgb,var(--tx3) 88%,var(--tx2));
+  transition:color 220ms ease,opacity 220ms ease;
+}
+#composer .box:focus-within #in::placeholder{color:var(--tx3);opacity:.72}
+#composer .tools{
+  position:relative;
+  padding-top:7px;
+  margin-top:3px;
+  border-top:1px solid color-mix(in srgb,var(--bd) 62%,transparent);
+}
+#composer .tl .ib.tool,#composer .tr .ib.tool{
+  transition:background 220ms ease,border-color 220ms ease,color 220ms ease,transform 180ms var(--ease-premium),box-shadow 220ms ease;
+}
+#composer .tl .ib.tool:hover,#composer .tr .ib.tool:hover{
+  background:color-mix(in srgb,var(--s3) 62%,transparent);
+  border-color:color-mix(in srgb,var(--bd) 75%,transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045);
+}
+#composer .tb.think{
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.055),0 2px 5px -4px rgba(0,0,0,.55);
+}
+#composer #send{
+  width:42px;height:42px;border-radius:14px;
+  background:linear-gradient(155deg,color-mix(in srgb,var(--ac) 84%,#fff 16%),var(--ac) 72%);
+  box-shadow:0 5px 14px -7px color-mix(in srgb,var(--ac) 72%,transparent),inset 0 1px 0 rgba(255,255,255,.28);
+}
+#composer #send:not(:disabled):hover{
+  transform:translateY(-2px) scale(1.025);
+  box-shadow:0 8px 19px -8px color-mix(in srgb,var(--ac) 78%,transparent),inset 0 1px 0 rgba(255,255,255,.32);
+}
+#composer #send:disabled{opacity:.34;filter:saturate(.72);box-shadow:none}
+#composer #send:active:not(:disabled){transform:scale(.94)}
+@media(max-width:700px){
+  #composer .box{border-radius:20px;padding:8px 9px 8px 12px}
+  #composer .tools{padding-top:6px;margin-top:2px}
+  #composer #send{width:42px;height:42px;border-radius:14px}
+}
+@media(prefers-reduced-motion:reduce){
+  #composer .box,#composer .box::before,#composer #in::placeholder,#composer .tl .ib.tool,#composer #send{transition:none!important}
+}
+
 </style>
 </head>
 <body>
