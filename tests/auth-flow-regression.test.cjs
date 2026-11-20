@@ -79,7 +79,7 @@ test("Auth and REST request deadlines include response-body consumption", () => 
 
 test("malformed saved preferences cannot abort MahiCloud startup", () => {
   const settings = between("let S = { ...DEF };", "const FONTS =");
-  assert.match(settings, /saved && typeof saved === "object" && !Array.isArray(saved)/);
+  assert.ok(settings.includes('saved && typeof saved === "object" && !Array.isArray(saved)'));
   assert.match(settings, /value !== null && typeof value === typeof fallback/);
   assert.ok(settings.includes("if (!/^#[0-9a-f]{6}$/i.test(S.accent)) S.accent = DEF.accent;"));
   assert.match(settings, /Number.isFinite(S.fontSize)/);
@@ -92,7 +92,7 @@ test("startup initialization errors are visible instead of leaving Connecting fo
   assert.match(html, /startup exceeded 30 seconds/);
   const boot = between("(async function boot()", "</script>");
   assert.match(boot, /try \{\s*setMahiBootStage\("initializing interface"/);
-  assert.match(boot, /catch \(error\) \{\s*markMahiStartupFailure(error)/);
+  assert.ok(boot.includes("catch (error) {"));\n  assert.ok(boot.includes("markMahiStartupFailure(error)"));
   assert.ok(boot.includes('setMahiBootStage("connecting to Supabase Auth"'));
   assert.ok(boot.includes('setMahiBootStage("loading conversations"'));
 });
