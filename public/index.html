@@ -1102,15 +1102,15 @@ body{min-width:0}
       <div class="hint" id="hint"></div>
     </form>
     <div id="taskModeMenu" class="task-mode-menu" role="menu" aria-label="Choose a task mode" hidden>
-      <div class="task-mode-heading"><b>Choose a work mode</b><span>Optimized for the task you select</span></div>
+      <div class="task-mode-heading"><b>Choose a work mode</b><span>All available AI providers follow your selected mode</span></div>
       <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="true" data-task-mode="auto"><span class="task-mode-glyph">✦</span><span class="task-mode-copy"><b>Auto</b><small>Automatically detect the best approach</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="think"><span class="task-mode-glyph">◈</span><span class="task-mode-copy"><b>Think</b><small>Compare multiple AI providers, then synthesize</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="coding"><span class="task-mode-glyph">&lt;/&gt;</span><span class="task-mode-copy"><b>Coding</b><small>Build, debug, review and architect code</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="study"><span class="task-mode-glyph">▤</span><span class="task-mode-copy"><b>Study</b><small>Learn step by step with examples and practice</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="research"><span class="task-mode-glyph">⌕</span><span class="task-mode-copy"><b>Research</b><small>Prioritize reliable sources and current facts</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="writing"><span class="task-mode-glyph">✎</span><span class="task-mode-copy"><b>Writing</b><small>Draft, rewrite and refine with your tone</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="math"><span class="task-mode-glyph">∑</span><span class="task-mode-copy"><b>Math</b><small>Careful calculations and checked solutions</small></span><span class="task-mode-check">✓</span></button>
-      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="general"><span class="task-mode-glyph">○</span><span class="task-mode-copy"><b>General</b><small>Focused help for everyday questions</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="think"><span class="task-mode-glyph">◈</span><span class="task-mode-copy"><b>Think</b><small>Deep reasoning and cross-provider verification</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="coding"><span class="task-mode-glyph">&lt;/&gt;</span><span class="task-mode-copy"><b>Coding</b><small>Code architecture, debugging and secure solutions</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="study"><span class="task-mode-glyph">▤</span><span class="task-mode-copy"><b>Study</b><small>Step-by-step teaching, examples and practice</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="research"><span class="task-mode-glyph">⌕</span><span class="task-mode-copy"><b>Research</b><small>Evidence-focused research and source cross-checking</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="writing"><span class="task-mode-glyph">✎</span><span class="task-mode-copy"><b>Writing</b><small>Polished drafting, rewriting and editing</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="math"><span class="task-mode-glyph">∑</span><span class="task-mode-copy"><b>Math</b><small>Verified calculations and worked solutions</small></span><span class="task-mode-check">✓</span></button>
+      <button type="button" class="task-mode-option" role="menuitemradio" aria-checked="false" data-task-mode="general"><span class="task-mode-glyph">○</span><span class="task-mode-copy"><b>General</b><small>Balanced multi-provider help for everyday tasks</small></span><span class="task-mode-check">✓</span></button>
     </div>
   </main>
 </div>
@@ -1410,13 +1410,13 @@ function md(src) {
 const SKEY = "mahicloud.settings.v1";
 const TASK_MODES = [
   { id: "auto", label: "Auto", description: "Automatically detect the best approach" },
-  { id: "think", label: "Think", description: "Compare multiple AI providers, then synthesize" },
-  { id: "coding", label: "Coding", description: "Build, debug, review and architect code" },
-  { id: "study", label: "Study", description: "Learn step by step with examples and practice" },
-  { id: "research", label: "Research", description: "Prioritize reliable sources and current facts" },
-  { id: "writing", label: "Writing", description: "Draft, rewrite and refine with your tone" },
-  { id: "math", label: "Math", description: "Careful calculations and checked solutions" },
-  { id: "general", label: "General", description: "Focused help for everyday questions" }
+  { id: "think", label: "Think", description: "Deep reasoning and cross-provider verification" },
+  { id: "coding", label: "Coding", description: "Code architecture, debugging and secure solutions" },
+  { id: "study", label: "Study", description: "Step-by-step teaching, examples and practice" },
+  { id: "research", label: "Research", description: "Evidence-focused research and source cross-checking" },
+  { id: "writing", label: "Writing", description: "Polished drafting, rewriting and editing" },
+  { id: "math", label: "Math", description: "Verified calculations and worked solutions" },
+  { id: "general", label: "General", description: "Balanced multi-provider help for everyday tasks" }
 ];
 const DEF = { theme: "dark", accent: "#d4b98a", font: "sans", fontSize: 16, msgWidth: 760, density: "comfortable", radius: 14, motion: "normal", bg: "glow", enterToSend: true, startup: "welcome", confirm: true, time: "12", autoScroll: true, stream: true, markdown: true, timestamps: true, actions: true, instructions: "", style: "default", name: "", hc: false, largeText: false, reduceMotion: false, temp: false, taskMode: "auto", voiceLang: "" };
 let S = { ...DEF }; try { Object.assign(S, JSON.parse(localStorage.getItem(SKEY)) || {}); } catch (_) {}
