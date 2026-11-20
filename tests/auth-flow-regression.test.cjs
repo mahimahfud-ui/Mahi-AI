@@ -87,14 +87,14 @@ test("malformed saved preferences cannot abort MahiCloud startup", () => {
 
 test("startup initialization errors are visible instead of leaving Connecting forever", () => {
   assert.ok(html.indexOf("window.__MAHI_BOOT_COMPLETE = false") < html.indexOf("const CFG ="));
-  assert.match(html, /window.addEventListener("error"/);
-  assert.match(html, /window.addEventListener("unhandledrejection"/);
+  assert.ok(html.includes('window.addEventListener("error"'));
+  assert.ok(html.includes('window.addEventListener("unhandledrejection"'));
   assert.match(html, /startup exceeded 30 seconds/);
   const boot = between("(async function boot()", "</script>");
   assert.match(boot, /try \{\s*setMahiBootStage\("initializing interface"/);
   assert.match(boot, /catch \(error\) \{\s*markMahiStartupFailure(error)/);
-  assert.match(boot, /setMahiBootStage("connecting to Supabase Auth"/);
-  assert.match(boot, /setMahiBootStage("loading conversations"/);
+  assert.ok(boot.includes('setMahiBootStage("connecting to Supabase Auth"'));
+  assert.ok(boot.includes('setMahiBootStage("loading conversations"'));
 });
 
 test("static HTML requests browser revalidation after a new production deployment", () => {
