@@ -1727,7 +1727,7 @@ function previewDocument(language, source) {
     return shell('<style>' + escapeClosing(source, "style") + '</style><main><h2>CSS live preview</h2><p>Your stylesheet is applied to this preview page.</p><button>Example button</button><article>Sample content</article></main>');
   }
   if (["js","javascript","mjs"].includes(lang)) {
-    return shell('<main id="app"><h2>JavaScript preview</h2><p>Output and console messages appear below.</p><div id="output"></div><pre id="console" style="white-space:pre-wrap;background:#111;color:#d7f7df;padding:12px;border-radius:8px;min-height:48px"></pre></main><script>const log=document.getElementById("console");["log","info","warn","error"].forEach(k=>{const old=console[k];console[k]=(...a)=>{log.textContent+=(k.toUpperCase()+": "+a.map(x=>{try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(_){return String(x)}}).join(" ")+"\n");old.apply(console,a)}});try{\n' + escapeClosing(source, "script") + '\n}catch(e){log.textContent+="ERROR: "+e.message}</script>');
+    return shell('<main id="app"><h2>JavaScript preview</h2><p>Output and console messages appear below.</p><div id="output"></div><pre id="console" style="white-space:pre-wrap;background:#111;color:#d7f7df;padding:12px;border-radius:8px;min-height:48px"></pre></main><script>const log=document.getElementById("console");["log","info","warn","error"].forEach(k=>{const old=console[k];console[k]=(...a)=>{log.textContent+=(k.toUpperCase()+": "+a.map(x=>{try{return typeof x==="object"?JSON.stringify(x):String(x)}catch(_){return String(x)}}).join(" ")+"\n");old.apply(console,a)}});try{\n' + escapeClosing(source, "script") + '\n}catch(e){log.textContent+="ERROR: "+e.message}<\\/script>');
   }
   return null;
 }
