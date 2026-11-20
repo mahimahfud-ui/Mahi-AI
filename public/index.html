@@ -2268,6 +2268,7 @@ async function loadList(quiet) {
     const guest = !user || user.is_anonymous === true || (!user.email && !user.phone);
     const name = user && (user.email || user.user_metadata?.full_name || user.user_metadata?.name);
     $("#who").textContent = guest ? "Guest workspace · synced" : (name || "Account · synced");
+    activatePromptScope();
     drawList();
     void syncPromptLibrary({ silent: true });
     return true;
@@ -2872,6 +2873,8 @@ $("#in").addEventListener("paste", e => { const f = [...((e.clipboardData && e.c
 
 /* ===== 7b. Prompt library: browser-local reusable templates ===== */
 const PROMPTS_KEY = "mahicloud.prompts.v1";
+const PROMPT_MIGRATED_OWNER_KEY = "mahicloud.prompts.first-sync-owner.v1";
+let activePromptStorageKey = PROMPTS_KEY;
 const PROMPT_CATEGORIES = ["General", "Study", "Coding", "Research", "Writing", "Planning"];
 const BUILTIN_PROMPTS = [
   { id: "builtin-explain", title: "Explain a concept clearly", category: "Study", body: "Explain [topic] in plain language. Start with the core idea, use a practical analogy, then give one concrete example. Define unfamiliar terms and finish with a short recap." },
@@ -2899,14 +2902,40 @@ function normalizeSavedPrompt(item) {
     deletedAt: Number.isFinite(item.deletedAt) ? item.deletedAt : 0
   };
 }
-function loadSavedPrompts() {
+function loadSavedPrompts(storageKey = PROMPTS_KEY) {
   try {
-    const value = JSON.parse(localStorage.getItem(PROMPTS_KEY) || "[]");
+    const value = JSON.parse(localStorage.getItem(storageKey) || "[]");
     return Array.isArray(value) ? value.map(normalizeSavedPrompt).filter(Boolean).slice(0, 400) : [];
   } catch (_) { return []; }
 }
 let customPrompts = loadSavedPrompts();
 let editingPromptId = null;
+function activatePromptScope() {
+  const user = Api.sess && Api.sess.user;
+  const eligible = !!(user && user.is_anonymous !== true && isGoogleIdentity(user));
+  const targetKey = eligible ? PROMPTS_KEY + ":" + user.id : PROMPTS_KEY;
+  if (targetKey === activePromptStorageKey) return;
+
+  persistSavedPrompts();
+  let next = loadSavedPrompts(targetKey);
+  if (eligible) {
+    let priorOwner = "";
+    let targetExists = false;
+    try {
+      priorOwner = localStorage.getItem(PROMPT_MIGRATED_OWNER_KEY) || "";
+      targetExists = localStorage.getItem(targetKey) !== null;
+    } catch (_) {}
+    // Migrate legacy browser-local prompts to the first Google-linked account once.
+    // Never copy the previous account's prompt cache into a different account.
+    if (!targetExists && !priorOwner) {
+      next = customPrompts.slice(0, 400);
+      try { localStorage.setItem(PROMPT_MIGRATED_OWNER_KEY, user.id); } catch (_) {}
+    }
+  }
+  customPrompts = next;
+  activePromptStorageKey = targetKey;
+  if ($("#ovPrompts")?.classList.contains("on")) renderPromptLibrary();
+}
 let promptSyncPromise = null;
 let promptSyncTimer = null;
 let promptSyncDirty = false;
@@ -2935,6 +2964,7 @@ function schedulePromptSync() {
   promptSyncTimer = window.setTimeout(() => { void syncPromptLibrary({ silent: true }); }, 900);
 }
 async function syncPromptLibrary({ silent = false } = {}) {
+  activatePromptScope();
   if (!promptSyncEligible()) {
     setPromptSyncStatus("Saved in this browser · Link Google to sync across devices");
     return false;
@@ -3005,7 +3035,7 @@ async function syncPromptLibrary({ silent = false } = {}) {
   return promptSyncPromise;
 }
 function persistSavedPrompts() {
-  try { localStorage.setItem(PROMPTS_KEY, JSON.stringify(customPrompts.slice(0, 400))); }
+  try { localStorage.setItem(activePromptStorageKey, JSON.stringify(customPrompts.slice(0, 400))); }
   catch (_) { toast("Could not save prompts in this browser. Check available site storage."); }
 }
 function openPromptEditor(prompt, initialBody) {
@@ -3063,6 +3093,7 @@ function renderPromptLibrary() {
   });
 }
 function openPromptLibrary() {
+  activatePromptScope();
   $("#promptEditor").hidden = true;
   $("#ovPrompts").classList.add("on");
   setPromptSyncStatus(promptSyncEligible() ? "Google account sync is available" : "Saved in this browser · Link Google to sync across devices", promptSyncEligible());
