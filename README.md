@@ -83,7 +83,7 @@ For the Abu Bokor alias, the app has an owner-provided mapping to Risky Saif (@r
 
 ## Persistent Workspace and Task Continuity
 
-Open **Workspace** from the sidebar to use a private, server-backed workspace for text, Markdown, code, JSON, SQL, plans, and project notes. Files can be created, edited, soft-deleted, restored from version history, and individually marked **Allow MahiCloud to use this file in relevant chats**. AI indexing is disabled automatically for sensitive-looking file paths and common private-key/token patterns. The workspace currently allows up to 200 active files, 256 KB per file, and 5 MB of active text content per account; it is not a binary-file or general-purpose cloud-drive replacement.
+Open **Workspace** from the sidebar to use a private, server-backed workspace for text, Markdown, code, JSON, SQL, plans, and project notes. Files can be created, edited, soft-deleted, restored from version history, and individually marked **Allow MahiCloud to use this file in relevant chats**. AI indexing is disabled automatically for sensitive-looking file paths and common private-key/token patterns. The workspace currently allows up to 200 active files, 256 KB per file, and 5 MB of active text content per account; it is not a binary-file or general-purpose cloud-drive replacement. File version history retains the newest 20 revisions per file.
 
 Workspace file records and their version snapshots are stored in Supabase Postgres. RLS policies bind every row to its owning Supabase user ID. The Edge Function validates the caller's session and repeats the owner ID filter on every workspace operation. The service-role key is never sent to the browser.
 
@@ -93,14 +93,14 @@ The **Memory** tab in Workspace exposes the exact memory entries MahiCloud can u
 
 MahiCloud now builds memory context from those structured, versioned entries only. It no longer treats recent chat excerpts as long-term memory. The model is instructed to say a fact is not in saved memory when no matching entry exists, rather than claiming to remember it. Stable facts and preferences may still be detected automatically, and the user can explicitly save a note with `Remember that I prefer Banglish answers`. Passwords, API keys, tokens, private keys, and selected sensitive personal details are rejected from memory storage.
 
-Users can control memory in chat:
+Memory storage is capped at 200 active entries per account. MahiCloud injects at most the 40 most recently updated entries per request, and each entry keeps its newest 20 revisions. Users can control memory in chat:
 - `Forget everything you remember` — permanently clear saved memory entries and disable memory.
 - `Turn memory off` — stop injecting structured memory; saved entries remain available to edit.
 - `Turn memory on` or `Remember my chats` — enable structured memory context again.
 
 ## Resumable tasks and parallel branches
 
-The **Tasks** tab stores task objectives, a JSON state document, progress summary, branch lineage, checkpoints, and a branch-specific event timeline. Chat turns are appended to the selected task branch when **Use in chats** is enabled. A task can be paused and resumed; **Fork branch** starts an independent track from the selected branch's current checkpoint. Each branch has versioned checkpoints that can be restored. To resume a task, select the intended branch and keep **Use in chats** enabled; MahiCloud receives that saved state and recent task events rather than guessing where the work stopped.
+The **Tasks** tab stores task objectives, a JSON state document, progress summary, branch lineage, checkpoints, and a branch-specific event timeline. Each account can keep up to 25 unarchived tasks and 5 unarchived branches per task. Chat turns are appended to the selected task branch when **Use in chats** is enabled; each branch keeps its latest 30 task events and 20 checkpoint revisions. A task can be paused, resumed, or archived; **Fork branch** starts an independent track from the selected branch's current checkpoint. To resume a task, select the intended branch and keep **Use in chats** enabled; MahiCloud receives that saved state and recent task events rather than guessing where the work stopped.
 
 Temporary chats intentionally do not write Workspace files or task events. Guest workspace data remains tied to that guest Supabase user ID and browser session. Link the guest to Google with **Continue with Google** to keep the same user ID and access the same workspace, memories, and tasks on another device.
 
