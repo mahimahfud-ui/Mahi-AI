@@ -1,42 +1,39 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
-const path = require("node:path");
 
-const root = path.resolve(__dirname, "..");
-const html = fs.readFileSync(path.join(root, "public", "index.html"), "utf8");
-const lagoon = fs.readFileSync(path.join(root, "public", "mahi.css"), "utf8");
+const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
 
-test("Lagoon is loaded after existing component styles", () => {
-  const legacy = html.indexOf('./admin-control.css');
-  const overlay = html.indexOf('./mahi.css?v=20261031fontsystem1');
-  assert.ok(legacy >= 0, "existing admin stylesheet remains linked");
-  assert.ok(overlay > legacy, "Lagoon override loads after existing styles");
-  assert.match(html, /\.\/styles\.css/);
-  assert.match(html, /\.\/theme\.css/);
-  assert.match(html, /\.\/code-blocks\.css/);
+test("MahiCloud keeps its own dark brand, logo and chat identity", () => {
+  assert.match(html, /<title>MahiCloud<\/title>/);
+  assert.match(html, /meta name="application-name" content="MahiCloud"/);
+  assert.match(html, /Cybernetic%20Half-Face%20Portrait\.png/);
+  assert.match(html, /--bg:#0a0a0c/);
+  assert.doesNotMatch(html, /Lagoon|Omnix|Claude UI/i);
 });
 
-test("existing feature scripts and key interface elements remain present", () => {
-  for (const script of ["./app.js", "./live-voice.js", "./admin-control.js", "./code-blocks.js", "./themes.js"]) {
-    assert.ok(html.includes(script), `missing existing script: ${script}`);
+test("the current chat shell and account panel remain present without legacy app replacement", () => {
+  for (const id of ["app", "side", "newChat", "search", "list", "toggle", "welcome", "msgs", "composer", "openAccount", "ovAccount"]) {
+    assert.ok(html.includes('id="' + id + '"'), "missing current app section: " + id);
   }
-  for (const id of ["newChat", "chatList", "chatForm", "sendButton", "accountModal", "voiceOverlay", "apiExplorer", "openAdminControl"]) {
-    assert.ok(html.includes(`id="${id}"`), `missing existing UI element: ${id}`);
-  }
+  assert.match(html, /function addMsg\(m, i, typing\)/);
+  assert.match(html, /function renderSettings\(\)/);
+  assert.match(html, /function renderAccountUI\(\)/);
 });
 
-test("Lagoon provides responsive layout and reduced-motion support", () => {
-  assert.match(lagoon, /@media\s*\(max-width:\s*600px\)/);
-  assert.match(lagoon, /@media\s*\(max-width:\s*360px\)/);
-  assert.match(lagoon, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
-  assert.match(lagoon, /\.composer:focus-within/);
-  assert.match(lagoon, /:focus-visible/);
+test("the existing page has responsive, accessible layout and motion controls", () => {
+  assert.match(html, /@media\(max-width:700px\)/);
+  assert.match(html, /@media \(max-width:380px\)/);
+  assert.match(html, /@media\(prefers-reduced-motion:reduce\)/);
+  assert.match(html, /:focus-visible/);
+  assert.match(html, /safe-area-inset-bottom/);
+  assert.match(html, /aria-label="Toggle sidebar"/);
 });
 
-test("the redesign is presentation-only and does not remove legacy styles", () => {
-  assert.match(lagoon, /Existing stylesheets remain in place/);
-  for (const legacy of ["./styles.css", "./theme.css", "./motion.css", "./craft.css", "./motion-b.css", "./ui-overrides.css"]) {
-    assert.ok(html.includes(legacy), `legacy stylesheet unexpectedly removed: ${legacy}`);
-  }
+test("the application keeps live backend and safe code preview integration", () => {
+  assert.match(html, /\/functions\/v1\/mahi-ai-chat/);
+  assert.match(html, /data-run aria-label="Run code in preview"/);
+  assert.match(html, /data-copy/);
+  assert.match(html, /sandbox="allow-scripts"/);
+  assert.match(html, /connect-src \'none\'/);
 });
