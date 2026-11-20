@@ -77,6 +77,8 @@ test("Voice Conversation Mode uses browser speech APIs and can stop listening an
   assert.match(voice, /window\.speechSynthesis\.cancel\(\)/);
   assert.match(voice, /function toggleVoiceMode\(\)/);
   assert.match(voice, /function scheduleVoiceModeListen\(/);
+  const send = section("async function send(text, edit)", "const friendly =");
+  assert.match(send, /if \(voiceModeRecognition\) \{[\\s\\S]*activeRecognition\.abort\(\)/);
   assert.match(html, /if \(voiceModeActive\) speakVoiceResponse\(full\)/);
   assert.match(html, /if \(voiceModeActive\) return stopVoiceMode\(\)/);
 });
