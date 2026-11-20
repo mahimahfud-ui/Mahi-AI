@@ -488,6 +488,10 @@
   function init(options) {
     api = options.api; toast = options.toast || toast; ask = options.ask || ask; getUserId = options.getUserId || getUserId;
     makeShell();
+    Promise.resolve(getUserId()).then(id => {
+      state.userId = id || "";
+      state.activeTask = state.userId ? activeTask() : null;
+    }).catch(() => {});
     const trigger = document.getElementById("openWorkspace");
     if (trigger) trigger.addEventListener("click", open);
   }
