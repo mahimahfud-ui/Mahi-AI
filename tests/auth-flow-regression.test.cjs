@@ -54,17 +54,17 @@ test("continuing as guest is explicit and warns before creating a new user ID af
 
 test("normal chat startup does not wait for the optional Supabase JS OAuth bundle", () => {
   const boot = between("(async function boot()", "</script>");
-  assert.equal((boot.match(/getSupabaseAuthClient\\(\\)/g) || []).length, 1);
-  assert.match(boot, /if \\(pendingGoogleFlow\\) \\{[\\s\\S]*await getSupabaseAuthClient\\(\\)/);
+  assert.equal((boot.match(/getSupabaseAuthClient\(\)/g) || []).length, 1);
+  assert.match(boot, /if \(pendingGoogleFlow\) \{[\s\S]*await getSupabaseAuthClient\(\)/);
   assert.ok(boot.indexOf("await Api.ensure()") > boot.indexOf("if (pendingGoogleFlow)"));
   assert.doesNotMatch(boot, /syncSupabaseAuthSession/);
 });
 
 test("startup Auth and conversation requests have finite network timeouts", () => {
   const api = between("const Api = {", "/* ===== Google account linking");
-  assert.match(api, /boundedFetch\\(CFG\\.supabaseUrl \\+ "\\/auth\\/v1\\/signup"/);
-  assert.match(api, /boundedFetch\\(CFG\\.supabaseUrl \\+ "\\/auth\\/v1\\/token\\?grant_type=refresh_token"/);
-  assert.match(api, /boundedFetch\\(CFG\\.supabaseUrl \\+ "\\/rest\\/v1\\/"/);
-  assert.match(html, /function boundedFetch\\(/);
-  assert.match(html, /function withTimeout\\(/);
+  assert.match(api, /boundedFetch\(CFG\.supabaseUrl \+ "\/auth\/v1\/signup"/);
+  assert.match(api, /boundedFetch\(CFG\.supabaseUrl \+ "\/auth\/v1\/token\?grant_type=refresh_token"/);
+  assert.match(api, /boundedFetch\(CFG\.supabaseUrl \+ "\/rest\/v1\/"/);
+  assert.match(html, /function boundedFetch\(/);
+  assert.match(html, /function withTimeout\(/);
 });
