@@ -1566,6 +1566,12 @@ async function exportCapsule(id) {
       }))
     };
     const body = JSON.stringify(payload, null, 2);
+    const confirmed = await ask({
+      title: "Export private Mahi Capsule?",
+      text: "This file contains the selected conversation text (" + rows.length + " messages). It may include personal or confidential information. Keep the file private and remove any secrets from the chat before exporting.",
+      ok: "Export capsule"
+    });
+    if (!confirmed) return;
     const safe = String(title).replace(/[^a-z0-9_-]+/gi, "-").replace(/^-|-$/g, "").slice(0, 48) || "mahi-project";
     const blob = new Blob([body], { type: "application/vnd.mahicloud.capsule+json" });
     const url = URL.createObjectURL(blob), a = el("a");
