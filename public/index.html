@@ -1945,7 +1945,17 @@ SC.addEventListener("scroll", () => { if (near()) $("#jumpLatest").hidden = true
 $("#jumpLatest").addEventListener("click", () => SC.scrollTo({ top: SC.scrollHeight, behavior: document.documentElement.dataset.motion === "reduced" ? "auto" : "smooth" }));
 function showErr(t, retry) { $("#errT").textContent = t; const b = $("#errB"); b.textContent = retry ? "Retry" : "Dismiss"; b.onclick = () => { $("#err").classList.remove("on"); if (retry) retry(); }; $("#err").classList.add("on"); }
 const hideErr = () => $("#err").classList.remove("on");
-function greet() { const h = new Date().getHours(), g = h < 5 ? "Working late" : h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening"; $("#greet").textContent = g + (S.name ? ", " + S.name : ""); }
+function greetingForHour(hour = new Date().getHours()) {
+  const h = ((Math.floor(Number(hour)) % 24) + 24) % 24;
+  if (h < 5 || h >= 21) return "Good night";
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+function greet() { $("#greet").textContent = greetingForHour() + (S.name ? ", " + S.name : ""); }
+setInterval(greet, 60_000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) greet(); });
+window.addEventListener("focus", greet);
 const SUGGEST = [["Explain something", "Explain how neural networks learn, simply."], ["Draft a message", "Help me write a polite follow-up email."], ["Write code", "Write a debounce function in JavaScript with an example."], ["Plan my day", "Help me plan a focused, realistic workday."]];
 SUGGEST.forEach(([t, p]) => { const b = el("button", "card"); b.type = "button"; b.append(el("b", "", t), el("span", "", p)); b.onclick = () => { $("#in").value = p; grow(); $("#in").focus(); }; $("#cards").append(b); });
 function view(chat) { $("#welcome").hidden = chat; MAIN.hidden = !chat; if (!chat) { MAIN.replaceChildren(); $("#jumpLatest").hidden = true; } }
