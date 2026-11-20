@@ -62,9 +62,17 @@ test("normal chat startup does not wait for the optional Supabase JS OAuth bundl
 
 test("startup Auth and conversation requests have finite network timeouts", () => {
   const api = between("const Api = {", "/* ===== Google account linking");
-  assert.match(api, /boundedFetch\(CFG\.supabaseUrl \+ "\/auth\/v1\/signup"/);
-  assert.match(api, /boundedFetch\(CFG\.supabaseUrl \+ "\/auth\/v1\/token\?grant_type=refresh_token"/);
-  assert.match(api, /boundedFetch\(CFG\.supabaseUrl \+ "\/rest\/v1\/"/);
+  assert.match(api, /boundedFetchJson\(CFG\.supabaseUrl \+ "\/auth\/v1\/signup"/);
+  assert.match(api, /boundedFetchJson\(CFG\.supabaseUrl \+ "\/auth\/v1\/token\?grant_type=refresh_token"/);
+  assert.match(api, /boundedFetchJson\(CFG\.supabaseUrl \+ "\/rest\/v1\/"/);
   assert.match(html, /function boundedFetch\(/);
   assert.match(html, /function withTimeout\(/);
+});
+
+test("Auth and REST request deadlines include response-body consumption", () => {
+  const helper = between("async function boundedFetchJson(", "async function withTimeout(");
+  assert.match(helper, /const timer = window\.setTimeout\(\(\) => controller\.abort\(\), timeoutMs\)/);
+  assert.match(helper, /const body = await response\.text\(\)/);
+  assert.ok(helper.indexOf("await response.text()") < helper.indexOf("window.clearTimeout(timer)"));
+  assert.match(helper, /return \{ response, data \}/);
 });

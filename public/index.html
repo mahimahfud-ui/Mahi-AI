@@ -1187,6 +1187,30 @@ function boundedFetch(url, options = {}, timeoutMs = 12000) {
     if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromUpstream);
   });
 }
+// JSON requests keep the timeout active until the response body is fully consumed.
+// fetch() alone resolves at response headers, which is not enough for startup requests.
+async function boundedFetchJson(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const upstreamSignal = options.signal;
+  const abortFromUpstream = () => controller.abort();
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) controller.abort();
+    else upstreamSignal.addEventListener("abort", abortFromUpstream, { once: true });
+  }
+  const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    const body = await response.text();
+    let data = null;
+    if (body) {
+      try { data = JSON.parse(body); } catch (_) {}
+    }
+    return { response, data };
+  } finally {
+    window.clearTimeout(timer);
+    if (upstreamSignal) upstreamSignal.removeEventListener("abort", abortFromUpstream);
+  }
+}
 async function withTimeout(promise, timeoutMs, message) {
   let timer;
   try {
@@ -1233,13 +1257,12 @@ const Api = {
   sess: null,
   async createGuestSession() {
     const now = Date.now() / 1000;
-    const response = await boundedFetch(CFG.supabaseUrl + "/auth/v1/signup", {
+    const { response, data: session } = await boundedFetchJson(CFG.supabaseUrl + "/auth/v1/signup", {
       method: "POST",
       headers: baseHeaders,
       body: JSON.stringify({ data: {} })
     });
     if (!response.ok) throw new Error("Could not start a guest session. Enable anonymous sign-ins in Supabase and try again.");
-    const session = await response.json();
     if (!session?.access_token || !session?.user?.id) throw new Error("Supabase did not return a valid guest session.");
     session.expires_at = session.expires_at || Math.floor(now) + (session.expires_in || 3600);
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(session)); } catch (_) {}
@@ -1260,13 +1283,13 @@ const Api = {
     if (s && s.access_token && (s.expires_at || 0) > now + 60) return (this.sess = s);
     if (!s) return this.createGuestSession();
     if (!s.refresh_token) throw new Error("Your saved MahiCloud session is incomplete. Sign in again; it was not replaced with a new guest session.");
-    const response = await boundedFetch(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", {
+    const { response, data: refreshedSession } = await boundedFetchJson(CFG.supabaseUrl + "/auth/v1/token?grant_type=refresh_token", {
       method: "POST",
       headers: baseHeaders,
       body: JSON.stringify({ refresh_token: s.refresh_token })
     });
     if (!response.ok) throw new Error("Your saved MahiCloud session could not be refreshed. Sign in with Google again; it was not replaced with a new guest session.");
-    s = await response.json();
+    s = refreshedSession;
     if (!s?.access_token || !s?.user?.id) throw new Error("Supabase returned an invalid refreshed session.");
     s.expires_at = s.expires_at || Math.floor(now) + (s.expires_in || 3600);
     try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (_) {}
@@ -1274,9 +1297,9 @@ const Api = {
   },
   async rest(path, o = {}) {
     const s = await this.ensure();
-    const r = await boundedFetch(CFG.supabaseUrl + "/rest/v1/" + path, { ...o, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token, ...(o.headers || {}) } }, 15000);
-    if (!r.ok) throw new Error("HTTP " + r.status);
-    return r.status === 204 ? null : r.json().catch(() => null);
+    const { response, data } = await boundedFetchJson(CFG.supabaseUrl + "/rest/v1/" + path, { ...o, headers: { ...baseHeaders, Authorization: "Bearer " + s.access_token, ...(o.headers || {}) } }, 15000);
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    return response.status === 204 ? null : data;
   },
   conversations: () => Api.rest("mahi_ai_conversations?select=id,title,updated_at&order=updated_at.desc&limit=50"),
   messages: id => Api.rest("mahi_ai_messages?select=id,role,content,created_at&conversation_id=eq." + id + "&order=created_at.desc&limit=200").then(d => (d || []).reverse()),
