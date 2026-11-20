@@ -89,6 +89,7 @@ jobs:
           node --check public/black-theme.js
           node --check public/ai-intro.js
           node --check public/config.js
+          node -e 'const fs=require("fs"); const html=fs.readFileSync("public/index.html","utf8"); const blocks=[...html.matchAll(/<script\\b(?![^>]*\\bsrc=)[^>]*>([\\s\\S]*?)<\\/script>/gi)].map(m=>m[1]).filter(s=>s.trim()); if(!blocks.length) throw new Error("No inline application script found in public/index.html"); blocks.forEach((code,index)=>{ try { new Function(code); } catch (error) { console.error("Inline script "+(index+1)+" syntax error:",error); process.exitCode=1; } }); if(!process.exitCode) console.log("Inline public/index.html JavaScript syntax OK ("+blocks.length+" block(s))");'
           node --check public/themes.js
           node --check public/code-blocks.js
           node --check public/halo-ui.js
