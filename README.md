@@ -15,6 +15,7 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 - Draft recovery: unsent composer text is saved per conversation in the current browser tab for up to 24 hours and restored when revisiting that chat. Temporary chats and attachments are not persisted; reattach files after restoring a text draft.
 - Chat folders and tags: group conversations by a user-named folder, filter the sidebar by folder, and add up to 8 tags per conversation. Folder/tag metadata is stored with the conversation and follows the signed-in account across devices.
 - Voice Conversation Mode: hands-free browser speech recognition sends the spoken turn and reads the assistant reply aloud, then listens again. It requires microphone permission plus browser SpeechRecognition and SpeechSynthesis support; press Talk again or Esc to stop.
+- Persistent Workspace: private text/code files, structured editable memory with version history, and resumable tasks with forkable branches and checkpoints.
 
 ## Google sign-in and account persistence
 
@@ -80,19 +81,28 @@ The public profile identifies Mahi Mahfud (@mahimahfud) as the founder and owner
 
 For the Abu Bokor alias, the app has an owner-provided mapping to Risky Saif (@risk_taker_saif) and can share [the supplied Instagram profile](https://www.instagram.com/risk_taker_saif/). The mapping is contextual rather than independently verified; the assistant must not present derogatory labels or unverified family, relationship, or biographical claims as facts.
 
-## Long-term memory
+## Persistent Workspace and Task Continuity
 
-MahiCloud now has server-side, per-user cross-chat memory. For each authenticated guest/user, the Edge Function retrieves up to 12 recent messages from earlier conversations (excluding the currently open conversation) plus up to 15 saved notes. It adds only a bounded amount of context to the provider prompt. It also auto-saves clearly stated stable facts, response preferences, and current project context using simple patterns, without making an extra model call. It does not summarize or preserve every line of every old chat, so very old details are best saved explicitly.
+Open **Workspace** from the sidebar to use a private, server-backed workspace for text, Markdown, code, JSON, SQL, plans, and project notes. Files can be created, edited, soft-deleted, restored from version history, and individually marked **Allow MahiCloud to use this file in relevant chats**. AI indexing is disabled automatically for sensitive-looking file paths and common private-key/token patterns. The workspace currently allows up to 200 active files, 256 KB per file, and 5 MB of active text content per account; it is not a binary-file or general-purpose cloud-drive replacement. File version history retains the newest 20 revisions per file.
 
-Users can control memory in chat:
-- `Remember that I prefer Banglish answers` — save a personal preference or note for future chats.
-- `Forget everything you remember` — clear saved notes and disable automatic cross-chat memory.
-- `Turn memory off` — stop injecting saved notes and old-chat excerpts; existing saved notes remain stored.
-- `Turn memory on` or `Remember my chats` — enable memory again.
+Workspace file records and their version snapshots are stored in Supabase Postgres. RLS policies bind every row to its owning Supabase user ID. The Edge Function validates the caller's session and repeats the owner ID filter on every workspace operation. The service-role key is never sent to the browser.
 
-Passwords, API keys, access tokens, and selected sensitive personal details are not accepted as saved notes. Memory tables have RLS enabled and are inaccessible directly to `anon` and `authenticated`; only the server-side service-role Edge Function can read or write memory. The database function `mahi_ai_get_memory_context` is executable only by `service_role`.
+## Structured long-term memory
 
-Guest-session limitation: memory is tied to the Supabase Auth user ID. Clearing browser site data, losing a guest session, or switching devices can create a different guest user, so old memories may not follow. Stable cross-device memory requires adding a persistent sign-in/link-account flow.
+The **Memory** tab in Workspace exposes the exact memory entries MahiCloud can use: category, title, content, structured JSON data, tags, confidence, source, revision, and update time. Users can create, edit, archive, delete, inspect version history, and restore an older revision. Existing legacy notes are imported into this editable format.
+
+MahiCloud now builds memory context from those structured, versioned entries only. It no longer treats recent chat excerpts as long-term memory. The model is instructed to say a fact is not in saved memory when no matching entry exists, rather than claiming to remember it. Stable facts and preferences may still be detected automatically, and the user can explicitly save a note with `Remember that I prefer Banglish answers`. Passwords, API keys, tokens, private keys, and selected sensitive personal details are rejected from memory storage.
+
+Memory storage is capped at 200 active entries per account. MahiCloud injects at most the 40 most recently updated entries per request, and each entry keeps its newest 20 revisions. Users can control memory in chat:
+- `Forget everything you remember` — permanently clear saved memory entries and disable memory.
+- `Turn memory off` — stop injecting structured memory; saved entries remain available to edit.
+- `Turn memory on` or `Remember my chats` — enable structured memory context again.
+
+## Resumable tasks and parallel branches
+
+The **Tasks** tab stores task objectives, a JSON state document, progress summary, branch lineage, checkpoints, and a branch-specific event timeline. Each account can keep up to 25 unarchived tasks and 5 unarchived branches per task. Chat turns are appended to the selected task branch when **Use in chats** is enabled; each branch keeps its latest 30 task events and 20 checkpoint revisions. A task can be paused, resumed, or archived; **Fork branch** starts an independent track from the selected branch's current checkpoint. To resume a task, select the intended branch and keep **Use in chats** enabled; MahiCloud receives that saved state and recent task events rather than guessing where the work stopped.
+
+Temporary chats intentionally do not write Workspace files or task events. Guest workspace data remains tied to that guest Supabase user ID and browser session. Link the guest to Google with **Continue with Google** to keep the same user ID and access the same workspace, memories, and tasks on another device.
 
 ## Attachments and media routing
 
