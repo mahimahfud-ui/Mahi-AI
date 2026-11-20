@@ -1439,7 +1439,12 @@ const Api = {
     if (!response.ok) throw new Error("HTTP " + response.status);
     return response.status === 204 ? null : data;
   },
-  conversations: () => Api.rest("mahi_ai_conversations?select=id,title,updated_at&order=updated_at.desc&limit=50"),
+  conversations: () => Api.rest("mahi_ai_conversations?select=id,title,updated_at,folder,tags&order=updated_at.desc&limit=100"),
+  organizeConversation: (id, patch) => Api.rest("mahi_ai_conversations?id=eq." + id, {
+    method: "PATCH",
+    body: JSON.stringify({ ...patch, updated_at: new Date().toISOString() }),
+    headers: { Prefer: "return=minimal" }
+  }),
   messages: id => Api.rest("mahi_ai_messages?select=id,role,content,created_at&conversation_id=eq." + id + "&order=created_at.desc&limit=200").then(d => (d || []).reverse()),
   searchMessages: q => Api.rest("mahi_ai_messages?select=conversation_id&content=ilike." + encodeURIComponent("*" + q.replace(/[*,()]/g, " ") + "*") + "&limit=300"),
   rename: (id, title) => Api.rest("mahi_ai_conversations?id=eq." + id, { method: "PATCH", body: JSON.stringify({ title }), headers: { Prefer: "return=minimal" } }),
@@ -2222,38 +2227,130 @@ async function syncMeta() { try { if (!cid) return; const rows = await Api.messa
 
 /* ===== 6. Conversations ===== */
 let ask$;
-function ask({ title, text, input, ok = "OK", danger }) {
+function ask({ title, text, input, ok = "OK", danger, placeholder }) {
   return new Promise(res => {
-    $("#aT").textContent = title; $("#aP").textContent = text || ""; const i = $("#aI"), y = $("#aY"); i.hidden = !input; i.value = input || ""; y.textContent = ok; y.className = "btn " + (danger ? "dng" : "pri");
-    const ov = $("#ovAsk"); ov.classList.add("on"); (input ? i : y).focus(); if (input) i.select();
+    const showInput = input !== undefined && input !== false;
+    $("#aT").textContent = title; $("#aP").textContent = text || "";
+    const i = $("#aI"), y = $("#aY");
+    i.hidden = !showInput; i.value = typeof input === "string" ? input : "";
+    i.placeholder = placeholder || "";
+    y.textContent = ok; y.className = "btn " + (danger ? "dng" : "pri");
+    const ov = $("#ovAsk"); ov.classList.add("on"); (showInput ? i : y).focus(); if (showInput) i.select();
     const end = v => { ov.classList.remove("on"); ask$ = null; res(v); }; ask$ = () => end(null);
-    y.onclick = () => end(input ? i.value : true); $("#aN").onclick = () => end(null); i.onkeydown = e => { if (e.key === "Enter") { e.preventDefault(); end(i.value); } };
+    y.onclick = () => end(showInput ? i.value : true);
+    $("#aN").onclick = () => end(null);
+    i.onkeydown = e => { if (e.key === "Enter" && showInput) { e.preventDefault(); end(i.value); } };
   });
 }
+let activeFolderFilter = "";
 async function loadList(quiet) {
   const l = $("#list"); if (!quiet) { l.replaceChildren(); for (let i = 0; i < 5; i++) l.append(el("div", "sk")); }
   try {
-    convs = await Api.conversations() || [];
+    convs = (await Api.conversations() || []).map(c => ({
+      ...c,
+      folder: typeof c.folder === "string" ? c.folder : "",
+      tags: Array.isArray(c.tags) ? c.tags.filter(tag => typeof tag === "string").slice(0, 8) : []
+    }));
     const user = Api.sess && Api.sess.user;
     const guest = !user || user.is_anonymous === true || (!user.email && !user.phone);
     const name = user && (user.email || user.user_metadata?.full_name || user.user_metadata?.name);
     $("#who").textContent = guest ? "Guest workspace · synced" : (name || "Account · synced");
     drawList();
+    void syncPromptLibrary({ silent: true });
     return true;
   }
   catch (_) { $("#who").textContent = "Offline / not connected"; l.replaceChildren(); const d = el("div", "empty", "Couldn’t load conversations."), b = el("button", "btn", "Retry"); b.onclick = () => loadList(); d.append(el("br"), b); l.append(d); return false; }
 }
+function drawFolderFilters() {
+  const root = $("#folderFilters");
+  if (!root) return;
+  root.replaceChildren();
+  const folders = new Map();
+  let unfiled = 0;
+  convs.forEach(c => {
+    const folder = String(c.folder || "").trim();
+    if (folder) folders.set(folder, (folders.get(folder) || 0) + 1);
+    else unfiled++;
+  });
+  const add = (key, label, count) => {
+    const b = el("button", "folder-filter" + (activeFolderFilter === key ? " on" : ""));
+    b.type = "button";
+    b.setAttribute("aria-pressed", String(activeFolderFilter === key));
+    b.append(el("span", "", label), el("small", "", String(count)));
+    b.onclick = () => { activeFolderFilter = key; drawList(); };
+    root.append(b);
+  };
+  add("", "All chats", convs.length);
+  if (unfiled) add("__unfiled__", "Unfiled", unfiled);
+  [...folders.entries()].sort((a,b) => a[0].localeCompare(b[0])).forEach(([name,count]) => add(name, name, count));
+}
 function drawList() {
   const l = $("#list"), q = $("#search").value.trim().toLowerCase(); l.replaceChildren();
-  let v = convs.filter(c => !q || (c.title || "New chat").toLowerCase().includes(q) || (hits && hits.has(c.id)));
+  drawFolderFilters();
+  let v = convs.filter(c => {
+    const folderMatch = !activeFolderFilter || (activeFolderFilter === "__unfiled__" ? !c.folder : c.folder === activeFolderFilter);
+    const searchMatch = !q || (c.title || "New chat").toLowerCase().includes(q) || (hits && hits.has(c.id)) ||
+      (c.tags || []).some(tag => tag.toLowerCase().includes(q));
+    return folderMatch && searchMatch;
+  });
   v = [...v.filter(c => pins.includes(c.id)), ...v.filter(c => !pins.includes(c.id))];
-  if (!v.length) return void l.append(el("div", "empty", q ? "No conversations match." : "Your conversations will appear here."));
+  if (!v.length) return void l.append(el("div", "empty", q ? "No conversations match." : (activeFolderFilter ? "No chats in this folder." : "Your conversations will appear here.")));
   v.forEach(c => {
     const r = el("div", "ci" + (c.id === cid ? " on" : "")); r.setAttribute("role", "listitem");
-    const t = el("button", "t", (pins.includes(c.id) ? "📌 " : "") + (c.title || "New chat")); t.title = c.title || "New chat"; t.onclick = () => openConv(c.id);
-    const m = el("button", "ib"); m.setAttribute("aria-label", "Conversation actions"); m.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>';
-    m.onclick = e => { e.stopPropagation(); menu(m, c); }; r.oncontextmenu = e => { e.preventDefault(); menu(m, c); }; r.append(t, m); l.append(r);
+    const t = el("button", "t", (pins.includes(c.id) ? "📌 " : "") + (c.title || "New chat"));
+    t.title = c.title || "New chat"; t.onclick = () => openConv(c.id);
+    const m = el("button", "ib"); m.setAttribute("aria-label", "Conversation actions");
+    m.innerHTML = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>';
+    m.onclick = e => { e.stopPropagation(); menu(m, c); };
+    r.oncontextmenu = e => { e.preventDefault(); menu(m, c); };
+    r.append(t, m);
+    if (c.folder || (c.tags || []).length) {
+      const meta = el("div", "ci-meta");
+      if (c.folder) meta.append(el("span", "ci-folder", c.folder));
+      (c.tags || []).forEach(tag => meta.append(el("span", "ci-tag", "#" + tag)));
+      r.append(meta);
+    }
+    l.append(r);
   });
+}
+async function updateConversationOrganization(conversation, patch) {
+  try {
+    await Api.organizeConversation(conversation.id, patch);
+    Object.assign(conversation, patch);
+    drawList();
+    if (cid === conversation.id && patch.folder !== undefined) {
+      const title = $("#title");
+      title.textContent = (conversation.title || "Conversation") + (conversation.folder ? " · " + conversation.folder : "");
+    }
+    toast("Conversation organization saved");
+  } catch (error) {
+    toast("Could not save folder or tags (" + String(error?.message || error).slice(0, 80) + ")");
+  }
+}
+async function moveConversationToFolder(conversation) {
+  const value = await ask({
+    title: "Move conversation to folder",
+    text: "Enter a folder name. Use the same name to group chats; leave it blank to remove the folder.",
+    input: conversation.folder || "",
+    placeholder: "e.g. Study, Work, Projects",
+    ok: "Save folder"
+  });
+  if (value == null) return;
+  const folder = value.replace(/\s+/g, " ").trim().slice(0, 40);
+  if (/[\u0000-\u001f]/.test(folder)) return toast("Folder name contains invalid characters");
+  await updateConversationOrganization(conversation, { folder });
+}
+async function editConversationTags(conversation) {
+  const value = await ask({
+    title: "Edit conversation tags",
+    text: "Separate tags with commas. Use up to 8 tags, each 24 characters or fewer.",
+    input: (conversation.tags || []).join(", "),
+    placeholder: "e.g. urgent, school, python",
+    ok: "Save tags"
+  });
+  if (value == null) return;
+  const tags = [...new Map(value.split(",").map(tag => tag.trim().replace(/\s+/g, " ").slice(0, 24)).filter(Boolean).map(tag => [tag.toLowerCase(), tag])).values()].slice(0, 8);
+  await updateConversationOrganization(conversation, { tags });
 }
 let closeActiveMenu = null;
 function menu(anchor, c) {
@@ -2274,6 +2371,8 @@ function menu(anchor, c) {
     localStorage.setItem("mahicloud.pins", JSON.stringify(pins));
     drawList();
   });
+  item(c.folder ? "Move to another folder" : "Add to folder", () => moveConversationToFolder(c));
+  item("Edit tags (" + (c.tags || []).length + ")", () => editConversationTags(c));
   item("Rename", () => renameConv(c));
   item("Export Markdown", () => exportConv("md", c.id));
   item("Export Mahi Capsule", () => exportCapsule(c.id));
