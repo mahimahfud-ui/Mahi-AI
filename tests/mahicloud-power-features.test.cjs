@@ -91,7 +91,8 @@ test("Voice Conversation Mode uses browser speech APIs and can stop listening an
   assert.match(voice, /recognition\.abort\(\)/);
   assert.match(voice, /window\.speechSynthesis\.cancel\(\)/);
   assert.match(voice, /function toggleVoiceMode\(\)/);
-  assert.match(voice, /if \(voiceModeActive\) return toast\("Voice Mode is already handling the microphone/);
+  const manualMic = section("function toggleMic()", "function cancelVoice()");
+  assert.match(manualMic, /if \(voiceModeActive\) return toast\("Voice Mode is already handling the microphone/);
   assert.match(voice, /manualRecognition\.abort\(\)/);
   assert.match(voice, /function scheduleVoiceModeListen\(/);
   const send = section("async function send(text, edit)", "const friendly =");
