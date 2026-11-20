@@ -11,6 +11,8 @@ The public-facing product name is **MahiCloud**. The existing GitHub repository 
 - **Answer Lab:** inspect any assistant answer with current-source claim verification, red-team challenge, decision maps with assumption sensitivity, execution plans, and adaptive teach-back. Save selected insights through the existing per-user memory controls.
 - **Mahi Capsules:** export a conversation as a portable `.mahi-capsule` file and resume it on another device as a new project context. Imports are schema/size validated and require confirmation; exports require a privacy confirmation because they contain conversation text.
 - Temporary chats stay out of saved conversation history and long-term memory; they remain only in the open browser session until you leave or start another chat.
+- Prompt Library: searchable built-in starter prompts plus up to 100 custom prompts with categories, favorites, editing, deletion, copy, and one-click insertion. Custom prompts are stored locally in the current browser, not synced to the account.
+- Draft recovery: unsent composer text is saved per conversation in the current browser tab for up to 24 hours and restored when revisiting that chat. Temporary chats and attachments are not persisted; reattach files after restoring a text draft.
 
 ## Google sign-in and account persistence
 
