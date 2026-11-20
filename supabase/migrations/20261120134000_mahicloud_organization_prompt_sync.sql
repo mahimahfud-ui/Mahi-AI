@@ -26,20 +26,6 @@ BEGIN
       CHECK (cardinality(tags) <= 8);
   END IF;
 
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'mahi_ai_conversations_tags_length'
-      AND conrelid = 'public.mahi_ai_conversations'::regclass
-  ) THEN
-    ALTER TABLE public.mahi_ai_conversations
-      ADD CONSTRAINT mahi_ai_conversations_tags_length
-      CHECK (
-        NOT EXISTS (
-          SELECT 1 FROM unnest(tags) AS tag
-          WHERE char_length(tag) = 0 OR char_length(tag) > 24
-        )
-      );
-  END IF;
 END
 $$;
 
