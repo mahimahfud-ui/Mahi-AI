@@ -3716,10 +3716,14 @@ Deno.serve(async (req: Request) => {
               : "Workspace file " + workspaceFileIntent.path + " was not found, so nothing was deleted.");
         } else {
           explicitFile = await workspaceService.findFile(user.id, workspaceFileIntent.path);
-          if (explicitFile && !explicitFile.deleted_at && explicitFile.index_for_ai === true) {
+          if (explicitFile && !explicitFile.deleted_at && explicitFile.index_for_ai !== true) {
+            memoryActionNotice = (memoryActionNotice ? memoryActionNotice + " " : "") +
+              "AI access is disabled for " + workspaceFileIntent.path + ". I did not read or overwrite it. Enable its Workspace AI access toggle before asking me to edit it.";
+            workspaceFileIntent = null;
+          } else if (explicitFile && !explicitFile.deleted_at) {
             workspaceFileIntent.existingContent = String(explicitFile.content || "");
           }
-          workspaceFileIntent.indexForAi = explicitFile ? explicitFile.index_for_ai === true : true;
+          if (workspaceFileIntent) workspaceFileIntent.indexForAi = explicitFile ? explicitFile.index_for_ai === true : true;
         }
       }
       if (!!workspaceTaskId !== !!workspaceBranchId) {
