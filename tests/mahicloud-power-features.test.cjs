@@ -53,6 +53,7 @@ test("cross-device prompt sync is per-user and only available to permanent sign-
   assert.match(sync, /isGoogleIdentity\(user\)/);
   assert.match(sync, /mahi_ai_prompts\?select=/);
   assert.match(sync, /on_conflict=user_id,id/);
+  assert.match(sync, /order=updated_at\.desc&limit=400/);
   assert.match(sync, /resolution=merge-duplicates/);
   assert.match(sync, /deleted_at:/);
   assert.match(sync, /updatedAt/);
@@ -76,6 +77,8 @@ test("Voice Conversation Mode uses browser speech APIs and can stop listening an
   assert.match(voice, /recognition\.abort\(\)/);
   assert.match(voice, /window\.speechSynthesis\.cancel\(\)/);
   assert.match(voice, /function toggleVoiceMode\(\)/);
+  assert.match(voice, /if \(voiceModeActive\) return toast\("Voice Mode is already handling the microphone/);
+  assert.match(voice, /manualRecognition\.abort\(\)/);
   assert.match(voice, /function scheduleVoiceModeListen\(/);
   const send = section("async function send(text, edit)", "const friendly =");
   assert.match(send, /if \(voiceModeRecognition\) \{[\\s\\S]*activeRecognition\.abort\(\)/);
