@@ -13,6 +13,8 @@ on:
       - "public/code-blocks.css"
       - "public/config.js"
       - "public/index.html"
+      - "public/workspace.js"
+      - "public/workspace.css"
       - "public/mahi.css"
       - "public/black-theme.css"
       - "public/black-theme.js"
@@ -45,6 +47,8 @@ on:
       - "public/code-blocks.css"
       - "public/config.js"
       - "public/index.html"
+      - "public/workspace.js"
+      - "public/workspace.css"
       - "public/mahi.css"
       - "public/black-theme.css"
       - "public/black-theme.js"
@@ -80,6 +84,8 @@ jobs:
         run: deno test supabase/functions/mahi-ai-chat/image-intent.test.ts
       - name: Test Admin Control instruction compilation
         run: deno test supabase/functions/mahi-ai-chat/admin-instructions.test.ts
+      - name: Test persistent workspace and task context
+        run: deno test supabase/functions/mahi-ai-chat/workspace.test.ts
       - name: Check Node server syntax
         run: node --check server.js
       - name: Check browser JavaScript syntax
@@ -89,6 +95,7 @@ jobs:
           node --check public/black-theme.js
           node --check public/ai-intro.js
           node --check public/config.js
+          node --check public/workspace.js
           node -e 'const fs=require("fs");const html=fs.readFileSync("public/index.html","utf8");const start=html.indexOf("<script>");const end=html.lastIndexOf("</script>");if(start<0||end<=start)throw new Error("Inline application script not found");new Function(html.slice(start+8,end));console.log("Inline public/index.html JavaScript syntax OK");'
           node --check public/themes.js
           node --check public/code-blocks.js
