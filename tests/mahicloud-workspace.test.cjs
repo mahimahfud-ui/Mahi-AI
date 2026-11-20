@@ -11,6 +11,7 @@ const migration = fs.readFileSync(require.resolve("../supabase/migrations/202611
 const controlMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141320_add_workspace_ai_index_control.sql"), "utf8");
 const retentionMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143023_workspace_history_retention_limits.sql"), "utf8");
 const permissionsMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143247_workspace_least_privilege_grants.sql"), "utf8");
+const apiOnlyMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143607_workspace_api_only_mutations.sql"), "utf8");
 
 test("MahiCloud exposes a persistent workspace from the sidebar and loads the editor assets", () => {
   assert.match(html, /id="openWorkspace"/);
@@ -83,6 +84,8 @@ test("workspace history retention and database grants are explicitly bounded", (
   assert.match(permissionsMigration, /GRANT SELECT ON TABLE[\s\S]*mahi_ai_memory_versions/);
   assert.match(permissionsMigration, /GRANT SELECT, INSERT ON TABLE public\.mahi_ai_task_events/);
   assert.match(permissionsMigration, /FROM PUBLIC, anon, authenticated/);
+  assert.match(apiOnlyMigration, /REVOKE ALL ON TABLE[\s\S]*FROM authenticated/);
+  assert.match(apiOnlyMigration, /GRANT SELECT ON TABLE[\s\S]*TO authenticated/);
 });
 
 test("workspace AI file writes require explicit instructions and preserve account ownership", () => {
