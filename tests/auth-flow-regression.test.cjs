@@ -68,3 +68,11 @@ test("startup Auth and conversation requests have finite network timeouts", () =
   assert.match(html, /function boundedFetch\(/);
   assert.match(html, /function withTimeout\(/);
 });
+
+test("Auth and REST request deadlines include response-body consumption", () => {
+  const helper = between("async function boundedFetchJson(", "async function withTimeout(");
+  assert.match(helper, /const timer = window\.setTimeout\(\(\) => controller\.abort\(\), timeoutMs\)/);
+  assert.match(helper, /const body = await response\.text\(\)/);
+  assert.ok(helper.indexOf("await response.text()") < helper.indexOf("window.clearTimeout(timer)"));
+  assert.match(helper, /return \{ response, data \}/);
+});
