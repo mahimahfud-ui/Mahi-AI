@@ -3683,6 +3683,78 @@ Deno.serve(async (req: Request) => {
       if (!memoryActionNotice) memoryActionNotice = "Long-term memory could not be loaded for this request. Do not claim past chats were accessed.";
     }
   }
+
+  let workspaceTaskId = !temporaryChat && typeof input?.workspace_task_id === "string" ? input.workspace_task_id : "";
+  let workspaceBranchId = !temporaryChat && typeof input?.workspace_branch_id === "string" ? input.workspace_branch_id : "";
+  let workspaceFileIntent: WorkspaceFileIntent | null = null;
+  let workspaceContextText = "";
+  if (temporaryChat) {
+    if (/\bworkspace\s+file\b/i.test(displayPrompt)) {
+      memoryActionNotice += " Workspace file changes are not available in temporary chats.";
+    }
+    workspaceTaskId = "";
+    workspaceBranchId = "";
+  } else {
+    try {
+      workspaceFileIntent = parseWorkspaceFileIntent(displayPrompt);
+      let explicitFile: any = null;
+      if (workspaceFileIntent) {
+        if (workspaceFileIntent.action === "delete") {
+          const deleted = await workspaceService.deleteFile(user.id, workspaceFileIntent.path);
+          memoryActionNotice = (memoryActionNotice ? memoryActionNotice + " " : "") +
+            (deleted
+              ? "Workspace file " + workspaceFileIntent.path + " was moved to its recoverable deleted state."
+              : "Workspace file " + workspaceFileIntent.path + " was not found, so nothing was deleted.");
+        } else {
+          explicitFile = await workspaceService.findFile(user.id, workspaceFileIntent.path);
+          if (explicitFile && !explicitFile.deleted_at && explicitFile.index_for_ai === true) {
+            workspaceFileIntent.existingContent = String(explicitFile.content || "");
+          }
+          workspaceFileIntent.indexForAi = explicitFile ? explicitFile.index_for_ai === true : true;
+        }
+      }
+      if (!!workspaceTaskId !== !!workspaceBranchId) {
+        await updateUsage(usageId, { success: false, error_code: "invalid_workspace_task_selection" });
+        return json(400, { error: "Select both a saved task and one of its branches." }, responseCors);
+      }
+      const [workspaceFiles, taskContext] = await Promise.all([
+        workspaceService.loadWorkspaceKnowledge(user.id, displayPrompt).catch((error) => {
+          logStructured("warn", "workspace_knowledge_unavailable", {
+            request_id: requestId,
+            error_name: error instanceof Error ? error.name : "UnknownError"
+          });
+          return [];
+        }),
+        workspaceTaskId && workspaceBranchId
+          ? workspaceService.loadTaskContext(user.id, workspaceTaskId, workspaceBranchId)
+          : Promise.resolve(null)
+      ]);
+      if (workspaceTaskId && workspaceBranchId && !taskContext) {
+        await updateUsage(usageId, { success: false, error_code: "workspace_task_not_found" });
+        return json(404, { error: "That saved task or branch is unavailable. Refresh Workspace and select an active branch." }, responseCors);
+      }
+      if (explicitFile && !explicitFile.deleted_at && explicitFile.index_for_ai === true &&
+          !workspaceFiles.some((item: any) => item.id === explicitFile.id)) {
+        workspaceFiles.unshift(explicitFile);
+      }
+      workspaceContextText = formatStructuredWorkspaceContext(workspaceFiles, taskContext);
+      if (workspaceFileIntent?.action === "write") {
+        const writeInstruction = [
+          "[EXPLICIT WORKSPACE FILE WRITE REQUEST]",
+          "The user explicitly asked to create or update the user-owned file at: " + workspaceFileIntent.path,
+          "Return the complete file contents only. Do not use Markdown fences, a preamble, or an explanation. Do not invent secrets, credentials, tokens, or private keys.",
+          workspaceFileIntent.existingContent
+            ? "The existing version is included in the workspace context. Update it as requested while preserving unrelated content."
+            : "This file does not yet exist. Generate a complete first version from the user's requirements."
+        ].join("\n");
+        workspaceContextText = [workspaceContextText, writeInstruction].filter(Boolean).join("\n\n").slice(0, 24000);
+      }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Workspace context could not be prepared.";
+      await updateUsage(usageId, { success: false, error_code: "workspace_context_failed" });
+      return json(400, { error: reason.slice(0, 240) }, responseCors);
+    }
+  }
   const inputChars = contextualMessages.reduce((sum, message) => sum + message.content.length, 0);
   void updateUsage(usageId, {
     task_type: task,
@@ -3751,13 +3823,22 @@ Deno.serve(async (req: Request) => {
     }
   }
   const memoryContextText = formatUserMemoryContext(userMemoryContext);
-  messagesForProvider = appendUserMemoryContext(messagesForProvider, memoryContextText, memoryActionNotice);
+  const combinedPersistentContext = [memoryContextText, workspaceContextText].filter(Boolean).join("\n\n").slice(0, 24000);
+  messagesForProvider = appendUserMemoryContext(messagesForProvider, combinedPersistentContext, memoryActionNotice);
   if (memoryContextText) {
     logStructured("info", "user_memory_context_added", {
       request_id: requestId,
       saved_memory_count: userMemoryContext?.memories.length || 0,
-      prior_message_count: userMemoryContext?.recent_messages.length || 0,
+      prior_message_count: 0,
       context_chars: memoryContextText.length
+    });
+  }
+  if (workspaceContextText) {
+    logStructured("info", "workspace_context_added", {
+      request_id: requestId,
+      task_selected: !!workspaceTaskId,
+      file_write_requested: workspaceFileIntent?.action === "write",
+      context_chars: workspaceContextText.length
     });
   }
   return await streamChatResponse(
