@@ -1081,6 +1081,54 @@ body{min-width:0}
  #codePreview .pv-code{border-right:0}
 }
 @media(prefers-reduced-motion:reduce){#codePreview.on{animation:none}}
+
+
+/* ===== Reusable prompt library ===== */
+#openPrompts{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
+#openPrompts .kbd{font-size:.65rem;color:var(--tx3);white-space:nowrap}
+#savePrompt{color:var(--tx3)}
+#savePrompt:hover{color:var(--ac)}
+#ovPrompts .prompt-dialog{width:min(900px,100%);height:min(760px,calc(100% - 12px));display:flex;flex-direction:column;overflow:hidden;padding:0}
+.prompt-head{display:flex;align-items:flex-start;gap:14px;padding:20px 22px 14px;border-bottom:1px solid var(--bd)}
+.prompt-head>div{flex:1;min-width:0}
+.prompt-head h3{font-size:1.1rem;font-weight:650;letter-spacing:-.02em}
+.prompt-head p{font-size:.82rem;color:var(--tx2);margin-top:3px}
+.prompt-tools{display:grid;grid-template-columns:minmax(0,1fr) 155px auto auto;gap:8px;padding:13px 18px;border-bottom:1px solid var(--bd)}
+.prompt-tools input,.prompt-tools select,.prompt-editor input,.prompt-editor select,.prompt-editor textarea{min-width:0;padding:9px 11px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);outline:0}
+.prompt-tools input:focus,.prompt-tools select:focus,.prompt-editor input:focus,.prompt-editor select:focus,.prompt-editor textarea:focus{border-color:var(--ac)}
+.prompt-editor{display:grid;grid-template-columns:minmax(0,1fr) 160px;gap:9px;padding:14px 18px;border-bottom:1px solid var(--bd);background:var(--s2)}
+.prompt-editor[hidden]{display:none!important}
+.prompt-editor input,.prompt-editor textarea{width:100%}
+.prompt-editor textarea{grid-column:1/-1;min-height:112px;max-height:220px;resize:vertical}
+.prompt-editor-actions{grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px}
+.prompt-list{flex:1;min-height:0;overflow:auto;padding:14px 18px 20px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:10px}
+.prompt-card{min-width:0;border:1px solid var(--bd);border-radius:14px;background:var(--bg);padding:13px;display:flex;flex-direction:column;gap:9px;transition:border-color .18s,transform .18s}
+.prompt-card:hover{border-color:color-mix(in srgb,var(--ac) 55%,var(--bd));transform:translateY(-1px)}
+.prompt-card-top{display:flex;align-items:flex-start;gap:8px}
+.prompt-card-top>div{flex:1;min-width:0}
+.prompt-card-title{font-size:.9rem;font-weight:620;overflow-wrap:anywhere}
+.prompt-card-meta{font-size:.68rem;color:var(--tx3);margin-top:2px}
+.prompt-card-desc{font-size:.8rem;line-height:1.45;color:var(--tx2);white-space:pre-wrap;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;min-height:4.6em}
+.prompt-card-actions{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-top:auto}
+.prompt-card-actions .btn{padding:6px 9px;font-size:.76rem}
+.prompt-card-actions .prompt-spacer{flex:1}
+.prompt-fav{color:var(--tx3);font-size:1rem;padding:2px 5px;border-radius:7px}
+.prompt-fav[aria-pressed=true]{color:var(--ac);background:color-mix(in srgb,var(--ac) 12%,transparent)}
+.prompt-empty{grid-column:1/-1;text-align:center;padding:42px 16px;color:var(--tx3);font-size:.88rem}
+@media(max-width:700px){
+ #openPrompts .kbd{display:none}
+ #ovPrompts{padding:8px}
+ #ovPrompts .prompt-dialog{height:calc(100% - 8px);border-radius:16px}
+ .prompt-head{padding:15px 14px 11px}
+ .prompt-tools{grid-template-columns:minmax(0,1fr) auto;padding:10px 12px}
+ .prompt-tools select{grid-column:1}
+ .prompt-tools #promptNew,.prompt-tools #promptSaveCurrent{grid-row:2}
+ .prompt-editor{grid-template-columns:minmax(0,1fr);padding:11px 12px}
+ .prompt-editor textarea,.prompt-editor-actions{grid-column:1}
+ .prompt-list{grid-template-columns:minmax(0,1fr);padding:11px 12px 16px}
+}
+@media(prefers-reduced-motion:reduce){.prompt-card{transition:none}}
+
 </style>
 </head>
 <body>
@@ -1089,6 +1137,7 @@ body{min-width:0}
     <div class="brand"><span class="mark"><img src="https://raw.githubusercontent.com/mahimahfud-ui/Mahi-AI/main/Cybernetic%20Half-Face%20Portrait.png" alt="MahiCloud face logo" loading="eager" decoding="async"></span>MahiCloud</div>
     <div class="sidetop">
       <button class="btn pri" id="newChat"><span style="display:inline-flex;gap:8px;align-items:center"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New chat</span></button>
+      <button class="btn" id="openPrompts" type="button"><span>Prompt library</span><kbd class="kbd">Ctrl ⇧ P</kbd></button>
       <input id="search" type="search" placeholder="Search conversations" aria-label="Search conversations">
     </div>
     <div id="list" role="list"></div>
@@ -1125,6 +1174,7 @@ body{min-width:0}
         <div class="tools">
           <div class="tl">
             <button type="button" class="ib tool labeled-tool" id="attach" aria-label="Attach files" title="Attach files · PDF, images, text and code"><svg viewBox="0 0 24 24"><path d="M21 11.5 12.3 20.2a5.5 5.5 0 0 1-7.8-7.8L13.7 3.2a3.7 3.7 0 0 1 5.2 5.2l-8.8 8.8a1.8 1.8 0 0 1-2.6-2.6L15 7.2"/></svg><span class="tool-label">Attach</span></button>
+            <button type="button" class="ib tool" id="savePrompt" aria-label="Save composer text as a prompt" title="Save current text to your Prompt Library"><svg viewBox="0 0 24 24"><path d="M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v14l-7.5-4-7.5 4V6A1.5 1.5 0 0 1 6 4.5z"/><path d="M9 4.5v5h6v-5"/></svg></button>
             <button type="button" class="tb think task-mode-trigger" id="tMode" aria-haspopup="menu" aria-expanded="false" aria-controls="taskModeMenu" aria-pressed="false" title="Choose how MahiCloud should work on your request"><svg viewBox="0 0 24 24"><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3z"/><path d="m19 15 .9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9L19 15z"/></svg><span id="tModeLabel">Auto</span><svg class="mode-chevron" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></svg></button>
             <button type="button" class="ib tool labeled-tool" id="mic" aria-label="Voice input" aria-pressed="false" title="Voice input · Dictate a message"><svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg><span class="tool-label">Voice</span></button>
             <span class="rec" id="rec" hidden aria-live="polite"><i></i><i></i><i></i><i></i><i></i><span>Listening…</span><button type="button" class="tb" id="recCancel">Cancel</button></span>
@@ -1165,6 +1215,30 @@ body{min-width:0}
   <p class="account-note" id="accountNote">Link Google to this guest workspace to preserve its existing chat history and memory.</p>
   <div class="row-e account-footer"><button type="button" class="btn dng" id="accountSignOut" hidden>Sign out</button><button type="button" class="btn" id="accountClose">Close</button></div>
 </div></div>
+
+<div class="ov" id="ovPrompts">
+  <section class="dlg prompt-dialog" role="dialog" aria-modal="true" aria-labelledby="promptHeading">
+    <header class="prompt-head">
+      <div><h3 id="promptHeading">Prompt Library</h3><p>Reusable instructions stored only in this browser.</p></div>
+      <button type="button" class="ib" id="promptClose" aria-label="Close Prompt Library">✕</button>
+    </header>
+    <div class="prompt-tools">
+      <input id="promptSearch" type="search" placeholder="Search prompts" aria-label="Search prompts">
+      <select id="promptCategoryFilter" aria-label="Filter by category">
+        <option value="">All categories</option><option>General</option><option>Study</option><option>Coding</option><option>Research</option><option>Writing</option><option>Planning</option>
+      </select>
+      <button class="btn" type="button" id="promptNew">New prompt</button>
+      <button class="btn pri" type="button" id="promptSaveCurrent">Save current</button>
+    </div>
+    <form class="prompt-editor" id="promptEditor" hidden>
+      <input id="promptTitle" maxlength="80" placeholder="Prompt title" aria-label="Prompt title" required>
+      <select id="promptCategory" aria-label="Prompt category"><option>General</option><option>Study</option><option>Coding</option><option>Research</option><option>Writing</option><option>Planning</option></select>
+      <textarea id="promptBody" maxlength="8000" placeholder="Write a reusable prompt…" aria-label="Prompt text" required></textarea>
+      <div class="prompt-editor-actions"><button class="btn" type="button" id="promptCancel">Cancel</button><button class="btn pri" type="submit" id="promptSave">Save prompt</button></div>
+    </form>
+    <div class="prompt-list" id="promptList" role="list" aria-live="polite"></div>
+  </section>
+</div>
 <div id="toasts" aria-live="polite"></div>
 
 <script>
