@@ -59,3 +59,5 @@
  .ws-actions .btn{flex:1}
 }
 @media(prefers-reduced-motion:reduce){.ws-tab,.ws-list-item{transition:none}}
+
+.ws-side-caption{display:block;font-size:.65rem;color:var(--tx3);margin-top:1px}
