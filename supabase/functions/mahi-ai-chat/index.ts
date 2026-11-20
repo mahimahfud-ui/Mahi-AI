@@ -3542,10 +3542,12 @@ Deno.serve(async (req: Request) => {
     coding: "coding", study: "study", research: "web_research",
     writing: "creative", math: "reasoning", general: "general"
   };
-  const task = detectedTask === "image_generation" ? detectedTask
-    : (requestedTaskMode !== "auto" && requestedTaskMode !== "think" && explicitTaskMap[requestedTaskMode])
-      ? explicitTaskMap[requestedTaskMode]!
-      : detectedTask;
+  const selectedTaskRoute = requestedTaskMode === "math" && shouldUseCodeExecution(displayPrompt)
+    ? "code_execution"
+    : requestedTaskMode !== "auto" && requestedTaskMode !== "think"
+      ? explicitTaskMap[requestedTaskMode]
+      : undefined;
+  const task = detectedTask === "image_generation" ? detectedTask : selectedTaskRoute || detectedTask;
   const adminInstructionConfig = await getCachedMahiAIAdminConfig();
   const adminInstructionContext = [
     buildMahiAIAdminInstructionContext(adminInstructionConfig),
