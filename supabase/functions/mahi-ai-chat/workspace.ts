@@ -89,6 +89,11 @@ export function createWorkspaceService(
       index_for_ai: indexForAi === true && !workspaceLooksSensitive(path, content),
       deleted_at: null, updated_at: new Date().toISOString(), revision: existing ? Number(existing.revision || 1) + 1 : 1
     };
+    const active = await rows("mahi_ai_workspace_files?select=id,content&user_id=" + eq(userId) + "&deleted_at=is.null&limit=" + (FILE_LIMIT + 1));
+    if (!Array.isArray(active) || (!existing && active.length >= FILE_LIMIT)) throw new Error("Workspace file limit reached (200 active files).");
+    const used = active.filter((file: any) => !existing || file.id !== existing.id).reduce((sum: number, file: any) =>
+      sum + (typeof file.content === "string" ? new TextEncoder().encode(file.content).byteLength : 0), 0);
+    if (used + new TextEncoder().encode(content).byteLength > TOTAL_BYTES) throw new Error("Workspace text storage is limited to 5 MB per account.");
     if (existing) {
       const saved = await rows("mahi_ai_workspace_files?user_id=" + eq(userId) + "&id=" + eq(existing.id) + "&select=id,path,mime_type,index_for_ai,revision,updated_at", {
         method: "PATCH", headers: { Prefer: "return=representation" }, body: JSON.stringify(payload)
@@ -96,10 +101,6 @@ export function createWorkspaceService(
       if (!Array.isArray(saved) || !saved.length) throw new Error("Workspace file could not be updated.");
       return saved[0];
     }
-    const active = await rows("mahi_ai_workspace_files?select=id,content&user_id=" + eq(userId) + "&deleted_at=is.null&limit=" + (FILE_LIMIT + 1));
-    if (!Array.isArray(active) || active.length >= FILE_LIMIT) throw new Error("Workspace file limit reached (200 active files).");
-    const used = active.reduce((sum: number, file: any) => sum + (typeof file.content === "string" ? new TextEncoder().encode(file.content).byteLength : 0), 0);
-    if (used + new TextEncoder().encode(content).byteLength > TOTAL_BYTES) throw new Error("Workspace text storage is limited to 5 MB per account.");
     const saved = await rows("mahi_ai_workspace_files?select=id,path,mime_type,index_for_ai,revision,updated_at", {
       method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ user_id: userId, ...payload })
     });
@@ -133,7 +134,10 @@ export function createWorkspaceService(
     const sensitive = isSensitiveMemory(title + " " + content);
     if (sensitive) throw new Error(sensitive);
     const data = input.data && typeof input.data === "object" ? input.data : {};
-    if (JSON.stringify(data).length > 12000) throw new Error("Structured memory data is too large.");
+    const serializedData = JSON.stringify(data);
+    if (serializedData.length > 12000) throw new Error("Structured memory data is too large.");
+    const dataSensitive = isSensitiveMemory(title + " " + content + " " + serializedData);
+    if (dataSensitive) throw new Error(dataSensitive);
     const confidence = Number(input.confidence ?? 1);
     if (!Number.isFinite(confidence) || confidence < 0 || confidence > 1) throw new Error("Memory confidence must be between 0 and 1.");
     let existing: any = null;
@@ -160,6 +164,15 @@ export function createWorkspaceService(
     const current = await rows("mahi_ai_memory_entries?select=id&user_id=" + eq(userId) + "&deleted_at=is.null&is_archived=eq.false&limit=" + (MEMORY_LIMIT + 1));
     if (!Array.isArray(current) || current.length >= MEMORY_LIMIT) throw new Error("Memory limit reached (200 active entries). Archive or delete entries first.");
     const key = typeof input.memory_key === "string" && input.memory_key.trim() ? input.memory_key.trim().slice(0, 120) : "user_" + crypto.randomUUID();
+    const keyed = await rows("mahi_ai_memory_entries?select=id,memory_key,revision&user_id=" + eq(userId) + "&memory_key=" + eq(key) + "&limit=1");
+    if (Array.isArray(keyed) && keyed.length) {
+      const savedExisting = await rows("mahi_ai_memory_entries?user_id=" + eq(userId) + "&id=" + eq(keyed[0].id) + "&select=id,memory_key,category,title,content,data,tags,confidence,source_kind,revision,updated_at", {
+        method: "PATCH", headers: { Prefer: "return=representation" },
+        body: JSON.stringify({ ...payload, revision: Number(keyed[0].revision || 1) + 1 })
+      });
+      if (!Array.isArray(savedExisting) || !savedExisting.length) throw new Error("Memory entry could not be updated.");
+      return savedExisting[0];
+    }
     const saved = await rows("mahi_ai_memory_entries?select=id,memory_key,category,title,content,data,tags,confidence,source_kind,revision,updated_at", {
       method: "POST", headers: { Prefer: "return=representation" }, body: JSON.stringify({ user_id: userId, memory_key: key, ...payload })
     });
