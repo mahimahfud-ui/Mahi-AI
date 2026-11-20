@@ -5,7 +5,7 @@ export type WorkspaceFileIntent = { action: "write" | "delete"; path: string; ex
 
 const FILE_LIMIT = 200;
 const TOTAL_BYTES = 5 * 1024 * 1024;
-const FILE_BYTES = 256 * 1024;
+const WORKSPACE_FILE_BYTES = 256 * 1024;
 const MEMORY_LIMIT = 200;
 export const WORKSPACE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID = WORKSPACE_UUID;
@@ -77,7 +77,7 @@ export function createWorkspaceService(
 
   async function saveFile(userId: string, pathValue: string, content: string, mimeType = "", indexForAi = true, fileId = ""): Promise<any> {
     const path = normalizeWorkspacePath(pathValue);
-    if (typeof content !== "string" || new TextEncoder().encode(content).byteLength > FILE_BYTES) throw new Error("Workspace text files are limited to 256 KB each.");
+    if (typeof content !== "string" || new TextEncoder().encode(content).byteLength > WORKSPACE_FILE_BYTES) throw new Error("Workspace text files are limited to 256 KB each.");
     let existing: any = null;
     if (fileId) {
       if (!UUID.test(fileId)) throw new Error("Invalid workspace file identifier.");
