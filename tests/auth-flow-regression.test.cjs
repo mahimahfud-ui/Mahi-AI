@@ -36,7 +36,7 @@ test("an incomplete Google callback is stopped before guest boot and shown as an
   const boot = between("(async function boot()", "</script>");
   assert.match(boot, /const pendingGoogleFlow = readGoogleAuthPending\(\)/);
   assert.match(boot, /!isGoogleIdentity\(session\.user\)/);
-  assert.match(boot, /showGoogleAuthRecovery\(\);\s*return;/);
+  assert.match(boot, /showGoogleAuthRecovery\(\);\s*finishMahiBoot\(\);\s*return;/);
   assert.ok(boot.indexOf("showGoogleAuthRecovery();") < boot.indexOf("await Api.ensure()"));
   assert.match(boot, /if \(pendingGoogleFlow \|\| savedSessionPresent\)/);
   assert.match(boot, /Could not start a guest session\. Enable anonymous sign-ins/);
