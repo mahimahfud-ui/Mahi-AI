@@ -9,7 +9,7 @@ test("the current Settings panel exposes working appearance controls", () => {
   assert.match(html, /function renderSettings\(\)/);
   assert.match(html, /id: "appearance", t: "Appearance"/);
   assert.match(html, /\{ k: "theme", l: "Theme", c: "sel"/);
-  assert.match(html, /\{ k: "accent", l: "Accent color", c: "col"/);
+  assert.match(html, /\{ k: "accent", l: "Accent color", d: "Pick any color\.", c: "col"/);
 });
 
 test("theme changes update the document and save preferences to local storage", () => {
