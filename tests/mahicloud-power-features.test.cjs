@@ -25,6 +25,7 @@ test("chat folders and tags are stored on the user's existing conversation rows"
   assert.match(organizationMigration, /mahi_ai_conversations_user_folder_updated_idx/);
   assert.match(html, /select=id,title,updated_at,folder,tags/);
   assert.match(html, /function drawFolderFilters\(\)/);
+  assert.match(html, /add\("folder:" \+ name, name, count\)/);
   assert.match(html, /activeFolderFilter/);
   assert.match(html, /function moveConversationToFolder\(/);
   assert.match(html, /function editConversationTags\(/);
@@ -59,6 +60,19 @@ test("cross-device prompt sync is per-user and only available to permanent sign-
   assert.match(sync, /updatedAt/);
   assert.match(sync, /promptSyncDirty/);
   assert.match(html, /id="promptSyncNow"/);
+});
+
+test("local prompt caches are isolated by Google user ID while preserving first-login migration", () => {
+  const prompts = section("const PROMPTS_KEY", "function openPromptEditor(");
+  assert.match(prompts, /const PROMPT_MIGRATED_OWNER_KEY/);
+  assert.match(prompts, /let activePromptStorageKey = PROMPTS_KEY/);
+  assert.match(prompts, /function activatePromptScope\(\)/);
+  assert.match(prompts, /PROMPTS_KEY \+ ":" \+ user\.id/);
+  assert.match(prompts, /targetKey === activePromptStorageKey/);
+  assert.match(prompts, /if \(!targetExists && !priorOwner\)/);
+  assert.match(prompts, /Never copy the previous account's prompt cache into a different account/);
+  assert.match(prompts, /localStorage\.setItem\(activePromptStorageKey/);
+  assert.match(html, /activatePromptScope\(\);\s*drawList\(\);\s*void syncPromptLibrary/);
 });
 
 test("prompt deletions are synced as tombstones instead of being resurrected on another device", () => {
