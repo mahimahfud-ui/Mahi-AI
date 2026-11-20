@@ -17,7 +17,7 @@ test("MahiCloud exposes a persistent workspace from the sidebar and loads the ed
   assert.match(html, /workspace\.css/);
   assert.match(html, /workspace\.js/);
   assert.match(html, /MahiWorkspace\?\.init/);
-  assert.match(ui, /window\.MahiWorkspace = \{ init, open, close, getActiveTask \}/);
+  assert.match(ui, /window\.MahiWorkspace = \{ init, open, close, setUserId, getActiveTask \}/);
   assert.match(css, /\.workspace-dialog/);
 });
 
