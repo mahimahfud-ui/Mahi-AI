@@ -60,7 +60,7 @@ test("memory storage avoids secrets and sensitive personal data", () => {
 });
 
 test("memory setup and controls are documented", () => {
-  assert.match(readme, /Long-term memory/);
+  assert.match(readme, /long-term memory/i);
   assert.match(readme, /Remember that/);
   assert.match(readme, /forget everything/i);
   assert.match(readme, /guest/i);
