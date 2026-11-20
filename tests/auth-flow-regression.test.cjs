@@ -36,7 +36,7 @@ test("an incomplete Google callback is stopped before guest boot and shown as an
   const boot = between("(async function boot()", "</script>");
   assert.match(boot, /const pendingGoogleFlow = readGoogleAuthPending\(\)/);
   assert.match(boot, /!isGoogleIdentity\(session\.user\)/);
-  assert.match(boot, /showGoogleAuthRecovery\(\);\s*return;/);
+  assert.match(boot, /showGoogleAuthRecovery\(\);\s*finishMahiBoot\(\);\s*return;/);
   assert.ok(boot.indexOf("showGoogleAuthRecovery();") < boot.indexOf("await Api.ensure()"));
   assert.match(boot, /if \(pendingGoogleFlow \|\| savedSessionPresent\)/);
   assert.match(boot, /Could not start a guest session\. Enable anonymous sign-ins/);
@@ -75,4 +75,29 @@ test("Auth and REST request deadlines include response-body consumption", () => 
   assert.match(helper, /const body = await response\.text\(\)/);
   assert.ok(helper.indexOf("await response.text()") < helper.indexOf("window.clearTimeout(timer)"));
   assert.match(helper, /return \{ response, data \}/);
+});
+
+test("malformed saved preferences cannot abort MahiCloud startup", () => {
+  const settings = between("let S = { ...DEF };", "const FONTS =");
+  assert.ok(settings.includes('saved && typeof saved === "object" && !Array.isArray(saved)'));
+  assert.match(settings, /value !== null && typeof value === typeof fallback/);
+  assert.ok(settings.includes("if (!/^#[0-9a-f]{6}$/i.test(S.accent)) S.accent = DEF.accent;"));
+  assert.ok(settings.includes("Number.isFinite(S.fontSize)"));
+});
+
+test("startup initialization errors are visible instead of leaving Connecting forever", () => {
+  assert.ok(html.indexOf("window.__MAHI_BOOT_COMPLETE = false") < html.indexOf("const CFG ="));
+  assert.ok(html.includes('window.addEventListener("error"'));
+  assert.ok(html.includes('window.addEventListener("unhandledrejection"'));
+  assert.match(html, /startup exceeded 30 seconds/);
+  const boot = between("(async function boot()", "</script>");
+  assert.match(boot, /try \{\s*setMahiBootStage\("initializing interface"/);
+  assert.ok(boot.includes("catch (error) {"));
+  assert.ok(boot.includes("markMahiStartupFailure(error)"));
+  assert.ok(boot.includes('setMahiBootStage("connecting to Supabase Auth"'));
+  assert.ok(boot.includes('setMahiBootStage("loading conversations"'));
+});
+
+test("static HTML requests browser revalidation after a new production deployment", () => {
+  assert.match(html, /http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/);
 });
