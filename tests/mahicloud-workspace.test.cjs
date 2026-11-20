@@ -9,6 +9,8 @@ const edge = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat
 const workspace = fs.readFileSync(require.resolve("../supabase/functions/mahi-ai-chat/workspace.ts"), "utf8");
 const migration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141108_mahicloud_persistent_workspace_memory_tasks.sql"), "utf8");
 const controlMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120141320_add_workspace_ai_index_control.sql"), "utf8");
+const retentionMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143023_workspace_history_retention_limits.sql"), "utf8");
+const permissionsMigration = fs.readFileSync(require.resolve("../supabase/migrations/20261120143247_workspace_least_privilege_grants.sql"), "utf8");
 
 test("MahiCloud exposes a persistent workspace from the sidebar and loads the editor assets", () => {
   assert.match(html, /id="openWorkspace"/);
@@ -59,6 +61,26 @@ test("task continuity supports branches, checkpoints, event history and selected
   assert.match(edge, /workspaceTaskId/);
   assert.match(edge, /workspaceService\.saveChatEvent/);
   assert.match(html, /workspace_branch_id/);
+});
+
+test("task and branch quotas can be managed by archiving without trapping the user", () => {
+  assert.match(workspace, /Task limit reached \(25 active tasks\)/);
+  assert.match(workspace, /Branch limit reached \(5 branches per task\)/);
+  assert.match(workspace, /task_branch_update/);
+  assert.match(ui, /Archive task/);
+  assert.match(ui, /Restore task/);
+  assert.match(ui, /Archive branch/);
+  assert.match(ui, /Restore branch/);
+  assert.match(ui, /Use in chats/);
+});
+
+test("workspace history retention and database grants are explicitly bounded", () => {
+  assert.match(retentionMigration, /revision <= NEW\.revision - 20/);
+  assert.match(retentionMigration, /OFFSET 30/);
+  assert.match(permissionsMigration, /REVOKE ALL ON TABLE/);
+  assert.match(permissionsMigration, /GRANT SELECT ON TABLE[\s\S]*mahi_ai_memory_versions/);
+  assert.match(permissionsMigration, /GRANT SELECT, INSERT ON TABLE public\.mahi_ai_task_events/);
+  assert.match(permissionsMigration, /FROM PUBLIC, anon, authenticated/);
 });
 
 test("workspace AI file writes require explicit instructions and preserve account ownership", () => {
