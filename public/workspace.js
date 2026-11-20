@@ -101,7 +101,11 @@
   }
   function getActiveTask() {
     if (!state.userId) return null;
-    return activeTask();
+    const selected = activeTask();
+    return selected ? {
+      workspace_task_id: selected.task_id,
+      workspace_branch_id: selected.branch_id
+    } : null;
   }
   function makeShell() {
     if (root) return;
