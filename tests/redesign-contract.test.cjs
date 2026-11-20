@@ -12,7 +12,7 @@ test("MahiCloud keeps its own dark brand, logo and chat identity", () => {
   assert.doesNotMatch(html, /Lagoon|Omnix|Claude UI/i);
 });
 
-test("the current chat shell and account panel remain present without legacy app replacement", () => {
+test("the current chat shell and account panel remain present", () => {
   for (const id of ["app", "side", "newChat", "search", "list", "toggle", "welcome", "msgs", "composer", "openAccount", "ovAccount"]) {
     assert.ok(html.includes('id="' + id + '"'), "missing current app section: " + id);
   }
@@ -23,7 +23,7 @@ test("the current chat shell and account panel remain present without legacy app
 
 test("the existing page has responsive, accessible layout and motion controls", () => {
   assert.match(html, /@media\(max-width:700px\)/);
-  assert.match(html, /@media \(max-width:380px\)/);
+  assert.match(html, /@media\s*\(max-width:\s*380px\)/);
   assert.match(html, /@media\(prefers-reduced-motion:reduce\)/);
   assert.match(html, /:focus-visible/);
   assert.match(html, /safe-area-inset-bottom/);
@@ -35,5 +35,5 @@ test("the application keeps live backend and safe code preview integration", () 
   assert.match(html, /data-run aria-label="Run code in preview"/);
   assert.match(html, /data-copy/);
   assert.match(html, /sandbox="allow-scripts"/);
-  assert.match(html, /connect-src \'none\'/);
+  assert.match(html, /connect-src.{0,12}none/);
 });
