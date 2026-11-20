@@ -2620,6 +2620,7 @@ function setRec(on) {
   m.title = on ? "Stop voice input" : "Voice input · Dictate a message";
 }
 function toggleMic() {
+  if (voiceModeActive) return toast("Voice Mode is already handling the microphone · use Talk to stop it");
   if (rec) return rec.stop();
   if (!SR) return toast("Voice input isn’t supported in this browser");
   const r = new SR(); rec = r; r.lang = S.voiceLang || navigator.language || "en-US"; r.interimResults = true; r.continuous = true;
@@ -2760,6 +2761,15 @@ function toggleVoiceMode() {
   if (!SR || !("speechSynthesis" in window)) {
     toast("Hands-free Voice Mode needs browser speech recognition and speech synthesis support");
     return;
+  }
+  if (rec) {
+    const manualRecognition = rec;
+    rec = null;
+    manualRecognition.onresult = null;
+    manualRecognition.onend = null;
+    manualRecognition.onerror = null;
+    try { manualRecognition.abort(); } catch (_) {}
+    setRec(false);
   }
   voiceModeActive = true;
   updateVoiceModeButton();
@@ -2934,7 +2944,7 @@ async function syncPromptLibrary({ silent = false } = {}) {
   setPromptSyncStatus("Syncing securely with your Google account…", true, true);
   promptSyncPromise = (async () => {
     const userId = Api.sess.user.id;
-    const remote = await Api.rest("mahi_ai_prompts?select=id,title,body,category,favorite,created_at,updated_at,deleted_at&order=updated_at.asc&limit=400");
+    const remote = await Api.rest("mahi_ai_prompts?select=id,title,body,category,favorite,created_at,updated_at,deleted_at&order=updated_at.desc&limit=400");
     const merged = new Map(customPrompts.map(item => [item.id, item]));
     (remote || []).forEach(row => {
       const fromServer = normalizeSavedPrompt({
