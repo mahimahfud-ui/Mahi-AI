@@ -7,7 +7,8 @@ const FILE_LIMIT = 200;
 const TOTAL_BYTES = 5 * 1024 * 1024;
 const FILE_BYTES = 256 * 1024;
 const MEMORY_LIMIT = 200;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+export const WORKSPACE_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID = WORKSPACE_UUID;
 
 function eq(value: string): string { return "eq." + encodeURIComponent(value); }
 
@@ -374,7 +375,7 @@ export function createWorkspaceService(
       return json(400, { error: "Unknown workspace action." }, headers);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown workspace error";
-      logStructured("warn", "workspace_action_failed", { action: actionName, user_id_prefix: userId.slice(0, 8), error: message.slice(0, 100) });
+      console.warn("MahiCloud workspace action failed", actionName, userId.slice(0, 8), message.slice(0, 100));
       return json(400, { error: message.slice(0, 240) || "Workspace action failed." }, headers);
     }
   }
