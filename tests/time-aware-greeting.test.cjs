@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 
 const html = fs.readFileSync(require.resolve("../public/index.html"), "utf8");
-const match = html.match(/function greetingForHour\\(hour = new Date\\(\\)\\.getHours\\(\\)\\) \\{[\\s\\S]*?\\n\\}/);
+const match = html.match(/function greetingForHour\(hour = new Date\(\)\.getHours\(\)\) \{[\s\S]*?\n\}/);
 assert.ok(match, "time-aware greeting helper must exist");
 const greetingForHour = new Function(match[0] + "; return greetingForHour;")();
 
@@ -20,7 +20,7 @@ test("welcome greeting follows local device time across every part of the day", 
 });
 
 test("greeting refreshes while the app remains open and when the user returns to the tab", () => {
-  assert.match(html, /setInterval\\(greet, 60_000\\)/);
-  assert.match(html, /document\\.addEventListener\\("visibilitychange", \\(\\) => \\{ if \\(!document\\.hidden\\) greet\\(\\); \\}\\)/);
-  assert.match(html, /window\\.addEventListener\\("focus", greet\\)/);
+  assert.match(html, /setInterval\(greet, 60_000\)/);
+  assert.match(html, /document\.addEventListener\("visibilitychange", \(\) => \{ if \(!document\.hidden\) greet\(\); \}\)/);
+  assert.match(html, /window\.addEventListener\("focus", greet\)/);
 });
