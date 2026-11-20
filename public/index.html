@@ -1948,11 +1948,32 @@ function openCodePreview(box) {
   $("#pvClose").focus();
 }
 function closeCodePreview() { const modal = $("#codePreview"); if (!modal) return; modal.classList.remove("on"); $("#pvFrame").srcdoc = "about:blank"; }
-$("#pvClose").addEventListener("click", closeCodePreview);
-$("#codePreview").addEventListener("click", e => { if (e.target.id === "codePreview") closeCodePreview(); });
-$("#pvRefresh").addEventListener("click", () => { const frame = $("#pvFrame"); const doc = frame.srcdoc; frame.srcdoc = doc; });
-$("#pvTabs").addEventListener("click", e => { const b = e.target.closest("[data-pv-tab]"); if (!b) return; $("#codePreview").dataset.mobileView = b.dataset.pvTab; $("#pvTabs").querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b)); });
-document.addEventListener("keydown", e => { if (e.key === "Escape" && $("#codePreview").classList.contains("on")) closeCodePreview(); });
+// This script is parsed before the code-preview markup near the end of <body>.
+// Defer these optional controls until the browser has parsed that markup.
+function wireCodePreviewEvents() {
+  const closeButton = $("#pvClose");
+  const modal = $("#codePreview");
+  const refreshButton = $("#pvRefresh");
+  const tabs = $("#pvTabs");
+
+  closeButton?.addEventListener("click", closeCodePreview);
+  modal?.addEventListener("click", e => { if (e.target.id === "codePreview") closeCodePreview(); });
+  refreshButton?.addEventListener("click", () => { const frame = $("#pvFrame"); if (!frame) return; const doc = frame.srcdoc; frame.srcdoc = doc; });
+  tabs?.addEventListener("click", e => {
+    const b = e.target.closest("[data-pv-tab]");
+    if (!b || !modal) return;
+    modal.dataset.mobileView = b.dataset.pvTab;
+    tabs.querySelectorAll("button").forEach(x => x.classList.toggle("on", x === b));
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key === "Escape" && modal?.classList.contains("on")) closeCodePreview();
+  });
+}
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", wireCodePreviewEvents, { once: true });
+} else {
+  wireCodePreviewEvents();
+}
 
 function setBusy(v) {
   busy = v; const s = $("#send"); s.type = v ? "button" : "submit";
